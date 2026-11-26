@@ -6,3 +6,8 @@ agency's real domain in its NGUIDs. Pushing unrequested datasets at agencies, or
 placeholder domains, would read as speaking for them. The opt-in page is also where an agency can take the
 sharing paths: submit to the National Address Database, clarify its license, and share with Overture or
 Esri Community Maps.
+
+**Amended 2026-11-26 (Ryan, with ADR 0011):** an openly licensed Package is published in the public catalog
+before its authority opts in, marked *unclaimed*: under the `.unclaimed.invalid` placeholder domain, titled
+and described as not issued by the authority. Opting in still decides who it is handed to and when it carries
+the agency's real domain; nothing is pushed at an agency.

@@ -60,8 +60,8 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
             "SELECT geoid, name, domain, opted_in, authority FROM package_area JOIN package_domain USING (geoid) ORDER BY 1").fetchall():
         d = os.path.join(root, geoid)
         os.makedirs(d, exist_ok=True)
-        c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM ssap WHERE geoid = '{geoid}' ORDER BY uid) "
-                  f"TO '{os.path.join(d, 'site_structure_address_point.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
+        db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM ssap WHERE geoid = '{geoid}'",
+                            os.path.join(d, "site_structure_address_point.parquet"), "uid")
         bounds = boundaries.write_package(c, job, geoid, d)
         road = roads.write_package(c, geoid, d, release, road_meta)
         other = layers.write_package(c, jurisdiction, geoid, d)
@@ -81,7 +81,8 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
                      "mandatory_fields": list(SSAP_REQUIRED), "rcl_mandatory_fields": list(nena.RCL_REQUIRED)},
             "recipient": authority, "opted_in": opted, "nguid_domain": domain,
             "distribution": ("handed to the opted-in 911 authority" if opted else
-                             "built for the public scorecard only; not handed out until the 911 authority opts in (ADR 0003)"),
+                             "published openly as unclaimed when every source is open, under the placeholder domain; "
+                             "handed to the 911 authority once it opts in (ADR 0003, 0011)"),
             "rows": rows, **counts,
             "record_gers_coverage": round(counts["records_with_gers_id"] / counts["records"], 4) if counts["records"] else None,
             "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},

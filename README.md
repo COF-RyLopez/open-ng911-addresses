@@ -59,6 +59,37 @@ data/output/release=<overture release>/<job>/
     <geoid>/domains.json         the value domains used: NENA-STA-006.3, plus CLDXF-CA in a Canadian Package
 ```
 
+Layer files are GeoParquet 2.0, rows in Hilbert order, so they can be published as they are.
+
+## Publishing: the Portolan catalog
+
+`python -m open_ng911.catalog` turns a release's Packages into a static STAC catalog that conforms to the
+[Portolan](https://github.com/portolan-sdi/portolan-spec) spec, ready to push to Source Cooperative or any
+S3-compatible bucket (ADR 0011):
+
+```
+data/catalog/
+    report.json                  every Package: published, or withheld and why (not pushed)
+    public/                      the tree to push
+        catalog.json README.md AGENTS.md
+        scorecard/               one GeoParquet row per Package, published or not: counts, coverage, licence,
+                                 opt-in state, on the county / census division outline
+        us/<job>/<package>/      a Collection per published Package: manifest.json, domains.json, a thumbnail,
+                                 PMTiles of its layers with a MapLibre style (made with manby), and one Item
+                                 per NENA layer with its GeoParquet
+```
+
+A Package's data goes public only when every source in it is openly licensed (no `unknown` or `share-alike`
+source, no Gap-fill candidate whose Overture source licence isn't open) and its job passed the gate. A Package
+whose 911 authority hasn't opted in is published as *unclaimed*, under its placeholder domain (ADR 0003 as
+amended, ADR 0011). [examples/catalog](examples/catalog) is the catalog built from the test fixtures
+(`python scripts/sample_catalog.py`). To check and upload one:
+
+```sh
+uv tool install portolan-cli                # its own env: it pins an older DuckDB
+(cd data/catalog/public && portolan check)
+```
+
 ## Run it
 
 ```sh
@@ -66,6 +97,7 @@ uv pip install -e ".[dev]"
 pytest -q -m "not live"                     # offline, on fixtures
 python -m open_ng911.build --job us-vt      # live: TIGERweb, Vermont's E911 service, Overture on S3
 python -m open_ng911.build --job ca-pe      # live: StatCan boundaries, PEI civic addresses, Overture on S3
+python -m open_ng911.catalog                # the Portolan catalog over everything under data/output
 OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <previous address_lineage.parquet>
 ```
 

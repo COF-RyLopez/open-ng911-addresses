@@ -1,0 +1,259 @@
+{
+  "type": "Collection",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/web-map-links/v1.3.0/schema.json"
+  ],
+  "id": "ca-pe-1102",
+  "title": "Queens, Prince Edward Island: NG9-1-1 Package (unclaimed)",
+  "description": "The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 1 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1102.unclaimed.invalid until the authority opts in. Left out because a source's licence isn't open yet: PsapPolygon, PolicePolygon, FirePolygon, EmsPolygon (ng911:withheld_layers says which source).",
+  "license": "other",
+  "updated": "2026-11-26T20:34:45Z",
+  "keywords": [
+    "NG9-1-1",
+    "NENA",
+    "addresses",
+    "road centerlines",
+    "Prince Edward Island",
+    "Queens",
+    "unclaimed"
+  ],
+  "providers": [
+    {
+      "name": "Government of Prince Edward Island, Civic Addressing",
+      "roles": [
+        "producer",
+        "licensor"
+      ]
+    },
+    {
+      "name": "Government of Prince Edward Island (road centreline)",
+      "roles": [
+        "producer",
+        "licensor"
+      ]
+    },
+    {
+      "name": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+      "roles": [
+        "producer",
+        "licensor"
+      ]
+    },
+    {
+      "name": "Statistics Canada",
+      "roles": [
+        "producer"
+      ],
+      "url": "https://www.statcan.gc.ca/en/census/geography"
+    },
+    {
+      "name": "Overture Maps Foundation",
+      "roles": [
+        "producer"
+      ],
+      "url": "https://overturemaps.org",
+      "description": "Addresses theme, for the Gap-fill candidates (per-source licences, not ODbL)"
+    },
+    {
+      "name": "open-ng911-addresses",
+      "roles": [
+        "processor",
+        "host"
+      ],
+      "url": "https://github.com/COF-RyLopez/open-ng911-addresses"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -63.4,
+          46.1,
+          -63.0,
+          46.4
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2026-11-26T20:34:45Z",
+          "2026-11-26T20:34:45Z"
+        ]
+      ]
+    }
+  },
+  "ng911:package": "ca-pe-1102",
+  "ng911:job": "ca-pe",
+  "ng911:recipient": "Prince Edward Island 911 Administration (Department of Justice and Public Safety)",
+  "ng911:opted_in": false,
+  "ng911:nguid_domain": "ca-pe-1102.unclaimed.invalid",
+  "ng911:nena_standard": "NENA-STA-006.3-2026",
+  "ng911:value_domains": "CLDXF-CA",
+  "ng911:overture_release": "2026-11-18.0",
+  "ng911:records": 2,
+  "ng911:gap_fill_candidates": 1,
+  "ng911:record_gers_coverage": 0.5,
+  "ng911:road_segments": 0,
+  "ng911:road_gers_coverage": null,
+  "ng911:road_source": null,
+  "ng911:withheld_layers": {
+    "psap_polygon": [
+      "source_license:ca-pe-esz-psap=unknown"
+    ],
+    "police_polygon": [
+      "source_license:ca-pe-esz-police=unknown"
+    ],
+    "fire_polygon": [
+      "source_license:ca-pe-esz-fire=unknown"
+    ],
+    "ems_polygon": [
+      "source_license:ca-pe-esz-ems=unknown"
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-site-structure-address-point/ca-pe-1102-site-structure-address-point.json",
+      "type": "application/geo+json",
+      "title": "Queens: SiteStructureAddressPoint"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-a2-polygon/ca-pe-1102-a2-polygon.json",
+      "type": "application/geo+json",
+      "title": "Queens: A2Polygon"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-a3-polygon/ca-pe-1102-a3-polygon.json",
+      "type": "application/geo+json",
+      "title": "Queens: A3Polygon"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-provisioning-polygon/ca-pe-1102-provisioning-polygon.json",
+      "type": "application/geo+json",
+      "title": "Queens: ProvisioningPolygon"
+    },
+    {
+      "rel": "pmtiles",
+      "href": "./ca-pe-1102.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "Queens (vector tiles)",
+      "pmtiles:layers": [
+        "a2_polygon",
+        "a3_polygon",
+        "site_structure_address_point"
+      ]
+    },
+    {
+      "rel": "license",
+      "href": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "type": "text/html",
+      "title": "Licence: Government of Prince Edward Island, Civic Addressing"
+    },
+    {
+      "rel": "license",
+      "href": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "type": "text/html",
+      "title": "Licence: Statistics Canada census divisions"
+    },
+    {
+      "rel": "via",
+      "type": "text/html",
+      "title": "Source: Government of Prince Edward Island, Civic Addressing (addresses)",
+      "href": "https://github.com/openaddresses/openaddresses/blob/master/sources/ca/pe/province.json"
+    },
+    {
+      "rel": "via",
+      "type": "text/html",
+      "title": "Source: Government of Prince Edward Island (road centreline) (centerlines)",
+      "href": "https://github.com/openaddresses/openaddresses/blob/master/sources/ca/pe/province.json"
+    },
+    {
+      "rel": "agents",
+      "href": "./AGENTS.md",
+      "type": "text/markdown",
+      "title": "Agent/LLM usage guide"
+    },
+    {
+      "rel": "describedby",
+      "href": "./README.md",
+      "type": "text/markdown",
+      "title": "Human-readable documentation"
+    }
+  ],
+  "assets": {
+    "manifest": {
+      "href": "./manifest.json",
+      "type": "application/json",
+      "roles": [
+        "metadata"
+      ],
+      "title": "Package manifest",
+      "description": "Counts, field fill, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
+      "file:size": 48757,
+      "file:checksum": "122029e0ccf771749d2c940ce48cd396c4ecb0479c4718117723b19a0711e31333f9"
+    },
+    "domains": {
+      "href": "./domains.json",
+      "type": "application/json",
+      "roles": [
+        "metadata"
+      ],
+      "title": "Value domains",
+      "description": "The value domains the layers use (CLDXF-CA).",
+      "file:size": 14112,
+      "file:checksum": "122085f0ccfdca57ce03ebe48e5a8ab13f9a86ada46dac591714d7c51960d654f681"
+    },
+    "thumbnail": {
+      "href": "./thumbnail.png",
+      "type": "image/png",
+      "roles": [
+        "thumbnail"
+      ],
+      "title": "Thumbnail",
+      "description": "Outline, municipalities, roads and address points.",
+      "file:size": 738,
+      "file:checksum": "12200f2e4f01be3b8f3661cea2d4f284390fc93aaac9976b47ecf698e3d7664527db"
+    },
+    "pmtiles": {
+      "href": "./ca-pe-1102.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "roles": [
+        "visual"
+      ],
+      "title": "Vector tiles",
+      "description": "PMTiles of a2_polygon, a3_polygon, site_structure_address_point for web maps, made with manby.",
+      "file:size": 6257,
+      "file:checksum": "122007d06ccdb9e82ae8bf3498aec44b880338b5b438114ac83fe57445f191aa66f6"
+    },
+    "style-default": {
+      "href": "./styles/default.json",
+      "type": "application/vnd.mapbox.style+json",
+      "roles": [
+        "style",
+        "default"
+      ],
+      "title": "Default style",
+      "description": "MapLibre GL style for the vector tiles.",
+      "file:size": 1085,
+      "file:checksum": "1220c2ebb1a57ec0d993b1377ba3250e2a8d0fe7182e86d1a339b2dc0e48f85f319b"
+    }
+  }
+}

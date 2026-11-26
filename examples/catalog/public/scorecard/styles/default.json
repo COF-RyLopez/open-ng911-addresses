@@ -1,0 +1,30 @@
+{
+  "version": 8,
+  "name": "Package scorecard: default",
+  "sources": {
+    "data": {
+      "type": "vector",
+      "url": "pmtiles://../scorecard.pmtiles"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#ffffff"
+      }
+    },
+    {
+      "id": "scorecard",
+      "type": "fill",
+      "source": "data",
+      "source-layer": "scorecard",
+      "paint": {
+        "fill-color": "#3c3c3c",
+        "fill-opacity": 0.08,
+        "fill-outline-color": "#3c3c3c"
+      }
+    }
+  ]
+}

@@ -32,6 +32,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
 - `upstream.py` where government roads and Overture / TIGER disagree; `odbl_inventory.py` which government
   sources could stand in for Overture's ODbL themes (docs/standards/upstream-path.md).
+- `catalog.py` the Portolan/STAC catalog over a release's Packages (`python -m open_ng911.catalog`): reads the
+  manifests and layer files the jobs wrote, decides public or withheld per Package (ADR 0011), writes
+  `data/catalog/public/` and `report.json`. It never changes a Package; layer files are hard-linked in. Vector
+  tiles come from manby (`catalog.visual`), which tiles the GeoParquet directly; don't add tippecanoe.
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 and CLDXF-CA domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID
   and NGUID, `lineage.py` the ledger that carries UIDs across Overture releases, `package.py` writes every
@@ -70,6 +74,13 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   attach GERS IDs to government roads (ADR 0010): nothing but the ID and overlap numbers leaves that table. The Review layer is private per opted-in agency (ADR 0007).
 - **Unclear licences go in the tracker** (`registry/remediation/requests.toml`, `docs/license-remediation.md`),
   never into a guess. Agents don't contact agencies; a person does.
+- **Public catalog** (ADR 0011): a Package's data goes into `catalog/public/` only when every source is
+  open (address Sources and Gap-fill licences, `catalog.open_license`) and the job's gate passed;
+  any other layer with a closed Source is left out on its own (`catalog.layer_reasons`). A Package whose
+  authority hasn't opted in is published as *unclaimed* (placeholder domain, labelled in its title, description
+  and AGENTS.md); keep that label prominent and never put a real agency domain on it.
+- **Layer files go through `db.write_geoparquet`** (GeoParquet 2.0, Hilbert order, row groups under 150k) so
+  Portolan accepts them as they are; `portolan check` runs in the offline tests when portolan-cli is installed.
 - **Licenses**: a source with `license_status = "unknown"` never goes into anything public, including CI
   artifacts (CI uploads only `job.json` and manifests).
 - **Fix open data on our side**: OpenAddresses conform maps fields, it doesn't rewrite values; value fixes go

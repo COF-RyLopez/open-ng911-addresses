@@ -5,10 +5,13 @@ description = "Open-data NENA NG9-1-1 address packages for the 911 authorities o
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["duckdb>=2.0", "pyarrow>=17", "numpy>=2"]  # numpy: DuckDB Python UDFs (ids.install)
+# numpy: DuckDB Python UDFs (ids.install); manby: the catalog's PMTiles (catalog.visual), tippecanoe's tiling
+dependencies = ["duckdb>=2.0", "pyarrow>=17", "numpy>=2", "manby>=0.2.11"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "pyyaml>=6"]  # pyyaml: scripts/nena_layer_reference.py
+# portolan-cli (`portolan check`, `portolan push`) is not a dependency: it pins duckdb<1.6 and this project needs
+# 2.0, so install it as a separate tool: `uv tool install portolan-cli` (tests/test_catalog.py uses it when found).
 
 [project.scripts]
 open-ng911 = "open_ng911.build:main"

@@ -1,0 +1,42 @@
+{
+  "version": 8,
+  "name": "Prince: default",
+  "sources": {
+    "data": {
+      "type": "vector",
+      "url": "pmtiles://../ca-pe-1103.pmtiles"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#ffffff"
+      }
+    },
+    {
+      "id": "a2_polygon",
+      "type": "fill",
+      "source": "data",
+      "source-layer": "a2_polygon",
+      "paint": {
+        "fill-color": "#3c3c3c",
+        "fill-opacity": 0.08,
+        "fill-outline-color": "#3c3c3c"
+      }
+    },
+    {
+      "id": "site_structure_address_point",
+      "type": "circle",
+      "source": "data",
+      "source-layer": "site_structure_address_point",
+      "paint": {
+        "circle-color": "#1e5ac8",
+        "circle-radius": 3,
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 0.5
+      }
+    }
+  ]
+}

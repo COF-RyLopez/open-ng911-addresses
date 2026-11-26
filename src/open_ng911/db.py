@@ -27,6 +27,17 @@ def now():
     return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def write_geoparquet(c, sql, path, order):
+    """COPY a query with a `geom` column to GeoParquet the way Portolan reads it (catalog.py): GeoParquet 2.0
+    (native GEOMETRY type, so every row group carries spatial statistics), rows in Hilbert order over the
+    query's own extent so nearby features share a row group, ties broken by `order`, at most 100,000 rows per
+    row group (Portolan caps them at 150,000), zstd."""
+    c.execute(f"""COPY (WITH q AS ({sql}), e AS (SELECT ST_Extent(ST_Extent_Agg(geom)) AS box FROM q)
+                        SELECT q.* FROM q, e ORDER BY ST_Hilbert(q.geom, e.box), {order})
+                  TO {quote(path)} (FORMAT parquet, GEOPARQUET_VERSION 'V2', COMPRESSION zstd,
+                                    ROW_GROUP_SIZE 100000)""")
+
+
 def quote(v):
     """A SQL string literal."""
     return "'" + str(v).replace("'", "''") + "'"

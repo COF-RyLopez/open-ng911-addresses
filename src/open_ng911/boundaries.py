@@ -124,8 +124,8 @@ def gate(c):
 def write_package(c, job, geoid, out):
     """Write the Package's boundary layers into its folder; returns the manifest's 'boundaries' entry."""
     for table in ("a2_polygon", "a3_polygon"):
-        c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM {table} WHERE geoid = '{geoid}' ORDER BY source_code) "
-                  f"TO '{out}/{table}.parquet' (FORMAT parquet, COMPRESSION zstd)")
+        db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM {table} WHERE geoid = '{geoid}'",
+                            f"{out}/{table}.parquet", "source_code")
     k = registry.country(job)
     n_a3 = c.execute(f"SELECT count(*) FROM a3_polygon WHERE geoid = '{geoid}'").fetchall()[0][0]
     res = c.execute(f"""SELECT

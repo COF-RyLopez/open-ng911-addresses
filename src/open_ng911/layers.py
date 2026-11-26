@@ -196,8 +196,8 @@ def write_package(c, jurisdiction, geoid, d):
     for key, table in TABLE.items():
         n = c.execute(f"SELECT count(*) FROM {table} WHERE geoid = '{geoid}'").fetchall()[0][0]
         if n:
-            c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM {table} WHERE geoid = '{geoid}' ORDER BY uid) TO "
-                      f"'{os.path.join(d, table + '.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
+            db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM {table} WHERE geoid = '{geoid}'",
+                                os.path.join(d, table + ".parquet"), "uid")
         srcs = [r[0] for r in c.execute(f"SELECT DISTINCT source FROM {table} WHERE geoid = '{geoid}' ORDER BY 1").fetchall()]
         by_key = {s.key: s for s in jurisdiction.sources}
         out[nena_layer(key)] = {

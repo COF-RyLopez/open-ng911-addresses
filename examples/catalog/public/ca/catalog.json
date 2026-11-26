@@ -1,0 +1,41 @@
+{
+  "type": "Catalog",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json"
+  ],
+  "id": "ca",
+  "title": "Canada: NG9-1-1 Packages",
+  "description": "Published Packages in Canada, by state or province.",
+  "updated": "2026-11-26T20:34:45Z",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "child",
+      "href": "./ca-pe/catalog.json",
+      "type": "application/json",
+      "title": "Prince Edward Island: NG9-1-1 Packages"
+    },
+    {
+      "rel": "agents",
+      "href": "./AGENTS.md",
+      "type": "text/markdown",
+      "title": "Agent/LLM usage guide"
+    },
+    {
+      "rel": "describedby",
+      "href": "./README.md",
+      "type": "text/markdown",
+      "title": "Human-readable documentation"
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "type": "Feature",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
+  "id": "ca-pe-1102-a3-polygon",
+  "collection": "ca-pe-1102",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -63.14,
+          46.22
+        ],
+        [
+          -63.1,
+          46.22
+        ],
+        [
+          -63.1,
+          46.26
+        ],
+        [
+          -63.14,
+          46.26
+        ],
+        [
+          -63.14,
+          46.22
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -63.14,
+    46.22,
+    -63.1,
+    46.26
+  ],
+  "properties": {
+    "title": "Queens: A3Polygon",
+    "description": "The municipalities in the Package, clipped to it.",
+    "datetime": "2026-11-26T20:34:45Z",
+    "ng911:layer": "A3Polygon",
+    "table:row_count": 1,
+    "table:primary_geometry": "geom",
+    "table:columns": [
+      {
+        "name": "discrpagid",
+        "type": "varchar",
+        "description": "Agency responsible for the row: the NGUID domain, a .invalid placeholder until the 911 authority opts in"
+      },
+      {
+        "name": "dateupdate",
+        "type": "varchar",
+        "description": "When the build last wrote or changed the row (UTC)"
+      },
+      {
+        "name": "effective",
+        "type": "varchar",
+        "description": "When the boundary takes effect; empty when the source gives no date"
+      },
+      {
+        "name": "expire",
+        "type": "varchar",
+        "description": "When the boundary stops applying; empty when the source gives no date"
+      },
+      {
+        "name": "nguid",
+        "type": "varchar",
+        "description": "NENA globally unique ID, built from the row's own UID under discrpagid's domain (never a GERS ID)"
+      },
+      {
+        "name": "country",
+        "type": "varchar",
+        "description": "Country code: US or CA"
+      },
+      {
+        "name": "a1",
+        "type": "varchar",
+        "description": "State or province code"
+      },
+      {
+        "name": "a2",
+        "type": "varchar",
+        "description": "County or census division name"
+      },
+      {
+        "name": "a3",
+        "type": "varchar",
+        "description": "Municipality name, or 'Unincorporated' outside every municipality"
+      },
+      {
+        "name": "source_code",
+        "type": "varchar",
+        "description": "The boundary's identifier in its source (Census GEOID or StatCan code)"
+      },
+      {
+        "name": "geom",
+        "type": "geometry",
+        "description": "Geometry, WGS 84 longitude/latitude"
+      },
+      {
+        "name": "release",
+        "type": "varchar"
+      }
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {
+    "a3_polygon": {
+      "href": "./a3_polygon.parquet",
+      "type": "application/vnd.apache.parquet",
+      "roles": [
+        "data"
+      ],
+      "title": "A3Polygon GeoParquet",
+      "description": "The municipalities in the Package, clipped to it.",
+      "file:size": 2282,
+      "file:checksum": "12205a84b0d8b87a4cfc8c4c7eccb8ddac43b4eeb914971548e458c42daf5a8f0e62"
+    }
+  }
+}
