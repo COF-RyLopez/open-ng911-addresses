@@ -262,17 +262,55 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
     print(f"  [openaddresses] {source.key}: {c.execute('SELECT count(*) FROM agency_addr').fetchall()[0][0]:,} address points")
 
 
+DUPLICATE_M = 5.0  # the same number and street this close to a point from an earlier Source is one site
+
+
 def load_agency_addr(c, job, jurisdiction, work_dir):
+    """agency_addr from every address Source of the job, in registry order (an earlier Source wins a duplicate)."""
     sources = jurisdiction.sources_for("addresses")
-    assert len(sources) == 1, "Phase 1 scaffold reads one address source per job"  # several: union per package
-    s = sources[0]
-    entry = entry_for(s)
-    if entry.get("protocol") != "ESRI":
-        raise SystemExit(f"{s.key}: protocol {entry.get('protocol')!r} isn't supported yet (ESRI only)")
-    fields = {f["name"] for f in arcgis.layer_info(entry["data"]).get("fields", [])}
-    has_id = bool(s.id_field) and s.id_field in fields
-    if s.id_field and not has_id:
-        print(f"  [WARNING] {s.key}: id_field {s.id_field!r} isn't in the layer ({sorted(fields)}); minting UIDs")
-    path = os.path.join(work_dir, f"{s.key}.ndjson")
-    n, total = arcgis.fetch(entry["data"], path)
-    create_agency_addr(c, s, path, entry.get("conform", {}), has_id, no_geometry=total - n)
+    for i, s in enumerate(sources):
+        entry = entry_for(s)
+        if entry.get("protocol") != "ESRI":
+            raise SystemExit(f"{s.key}: protocol {entry.get('protocol')!r} isn't supported yet (ESRI only)")
+        fields = {f["name"] for f in arcgis.layer_info(entry["data"]).get("fields", [])}
+        has_id = bool(s.id_field) and s.id_field in fields
+        if s.id_field and not has_id:
+            print(f"  [WARNING] {s.key}: id_field {s.id_field!r} isn't in the layer ({sorted(fields)}); minting UIDs")
+        path = os.path.join(work_dir, f"{s.key}.ndjson")
+        n, total = arcgis.fetch(entry["data"], path)
+        create_agency_addr(c, s, path, entry.get("conform", {}), has_id, no_geometry=total - n)
+        stash(c, i)
+    combine(c, len(sources))
+
+
+def stash(c, i):
+    """Keep one Source's agency_addr and agency_dropped aside while the next Source is read."""
+    c.execute(f"ALTER TABLE agency_addr RENAME TO _agency_addr_{i}")
+    c.execute(f"ALTER TABLE agency_dropped RENAME TO _agency_dropped_{i}")
+
+
+def combine(c, n):
+    """agency_addr and agency_dropped of n stashed Sources. A point with the same number and street as one from an
+    earlier Source within DUPLICATE_M is the same site published twice (a county and a city both publishing it):
+    the earlier Source's is kept and the other counted as duplicate_across_sources."""
+    union = lambda t: " UNION ALL BY NAME ".join(f"SELECT {i} AS _rank, * FROM _{t}_{i}" for i in range(n))
+    c.execute(f"CREATE OR REPLACE TABLE agency_addr AS {union('agency_addr')}")
+    c.execute(f"CREATE OR REPLACE TABLE agency_dropped AS SELECT * EXCLUDE (_rank) FROM ({union('agency_dropped')})")
+    if n > 1:
+        c.execute(f"""CREATE OR REPLACE TEMP TABLE _cross AS
+            SELECT DISTINCT b.address_uid, b.source_key, b.site_type FROM agency_addr a JOIN agency_addr b
+              ON a._rank < b._rank AND a.number IS NOT DISTINCT FROM b.number AND upper(a.street) = upper(b.street)
+             AND ST_Distance_Sphere(a.geom, b.geom) < {DUPLICATE_M}""")
+        c.execute("""INSERT INTO agency_dropped SELECT source_key, 'duplicate_across_sources', site_type, count(*)
+                     FROM _cross GROUP BY ALL""")
+        c.execute("DELETE FROM agency_addr WHERE address_uid IN (SELECT address_uid FROM _cross)")
+        dup = c.execute("SELECT count(*) FROM _cross").fetchall()[0][0]
+        c.execute("DROP TABLE _cross")
+        if dup:
+            print(f"  [openaddresses] {dup:,} points published by an earlier Source too; the earlier one kept")
+    c.execute("ALTER TABLE agency_addr DROP COLUMN _rank")
+    for i in range(n):
+        c.execute(f"DROP TABLE _agency_addr_{i}")
+        c.execute(f"DROP TABLE _agency_dropped_{i}")
+    c.execute("CREATE OR REPLACE TABLE agency_excluded AS SELECT source_key, site_type, n FROM agency_dropped "
+              "WHERE reason = 'excluded_site_type'")
