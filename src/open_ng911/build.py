@@ -20,10 +20,11 @@ import os
 import sys
 
 from . import db, ids, lineage, matcher, nena, overture_release, package, registry, street
-from .sources import openaddresses, overture, tiger
+from .sources import openaddresses, overture, statcan, tiger
 
 LIVE_LOADERS = {
-    "package_area": lambda c, job, jur, work: tiger.load_package_area(c, job, work),
+    # counties from TIGER in the US, census divisions from StatCan in Canada (ADR 0006)
+    "package_area": lambda c, job, jur, work: (statcan if job.country == "CA" else tiger).load_package_area(c, job, work),
     "agency_addr": lambda c, job, jur, work: openaddresses.load_agency_addr(c, jur, work),
     "overture_addr": lambda c, job, jur, work: overture.load_overture_addr(c, jur, work),
 }
@@ -111,7 +112,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     os.makedirs(work_dir, exist_ok=True)
     c = c or db.connect()
     street.install(c)
-    nena.install(c)
+    nena.install(c, job.country)
     ids.install(c)
     updated = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 

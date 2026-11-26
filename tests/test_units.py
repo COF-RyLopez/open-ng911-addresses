@@ -42,7 +42,7 @@ def test_registry_jobs():
     jobs = registry.jobs()
     assert len(jobs) == 65  # 50 states, DC, Puerto Rico, 13 provinces and territories
     assert len({j.id for j in jobs}) == 65
-    assert [j.id for j in jobs if j.enabled] == ["us-vt"]
+    assert {"us-vt", "ca-pe"} <= {j.id for j in jobs if j.enabled}
     for j in jobs:
         if j.enabled:
             registry.jurisdiction(j)  # every enabled job has a valid jurisdiction registry

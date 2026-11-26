@@ -53,7 +53,8 @@ def create_agency_addr(c, source, path, conform, has_id):
     c.execute(f"""CREATE OR REPLACE TABLE agency_addr AS
         WITH f AS (
             SELECT {sid} AS source_id,
-                   {conform_sql(conform.get('number'))} AS number,
+                   -- a house number stored as a double ('427.0', PEI) is the integer it holds
+                   regexp_replace({conform_sql(conform.get('number'))}, '^([0-9]+)[.]0+$', '\\1') AS number,
                    {conform_sql(conform.get('street'))} AS street,
                    {conform_sql(conform.get('unit'))} AS unit,
                    {conform_sql(conform.get('city'))} AS city,

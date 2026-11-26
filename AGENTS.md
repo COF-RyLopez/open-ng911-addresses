@@ -15,7 +15,8 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   911 authorities (opt-in, domain) and Source agencies (OpenAddresses source, ID field, license status,
   sharing-path status). Edited by hand, and statuses change only after the agency confirms (ADR 0004, 0005).
 - `src/open_ng911/build.py` one job end to end; `python -m open_ng911.build --job us-vt`.
-- `sources/` one table each: `package_area` (TIGER counties), `agency_addr` (OpenAddresses registry →
+- `sources/` one table each: `package_area` (TIGER counties; StatCan census divisions in Canada, `statcan.py`,
+  which also reads census subdivisions as `municipality`), `agency_addr` (OpenAddresses registry →
   the agency's own endpoint), `overture_addr` (Overture addresses theme only).
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID and NGUID,
@@ -36,7 +37,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - **Fix open data on our side**: OpenAddresses conform maps fields, it doesn't rewrite values; value fixes go
   in `street.py`.
 - NENA output is NENA-STA-006.3-2026: lower-cased field names, registry words ("Avenue", "North").
-  Canada uses the same fields with CLDXF-CA values (ADR 0006).
+  Canada uses the same fields with CLDXF-CA values (ADR 0006): `nena.install(c, "CA")` adds Canada's English and
+  French street types (`nena/cldxf_ca_domains.json`) and French pre types ('Rue', 'Chemin'), and every Canadian
+  Package's `domains.json` carries CLDXF-CA's domains beside NENA's. The CLDXF-CA lists were compiled by hand:
+  check them against the published text before an opted-in hand-off.
 
 ## Running things
 
@@ -52,3 +56,5 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - `SET geometry_always_xy = true` (done in `db.connect`). Relations have no `fetchone()`: use
   `.fetchall()[0]`. Lambdas are `lambda x: ...`. `ST_MakeValid` before unions of nested polygons.
 - No pandas: read results with `cursor.description` + `fetchall()`.
+- Macros expand inline: nest `nena_pretype_raw(parse_street(...))` in one expression and the query can take
+  minutes to bind. Compute one step per CTE or table, as `build.assemble_ssap` does.
