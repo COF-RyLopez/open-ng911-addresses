@@ -12,6 +12,8 @@ import unicodedata
 from .. import db
 
 DOMAINS_FILE = os.path.join(os.path.dirname(__file__), "nena_sta006_3_domains.json")
+# Every layer's fields and the coded domains, from NENA's schema (scripts/nena_layer_reference.py writes it)
+FIELDS_FILE = os.path.join(os.path.dirname(__file__), "nena_sta006_3_fields.json")
 # Canada's values for the same fields (ADR 0006): street types in English and French, provinces, A2 kinds
 CLDXF_CA_FILE = os.path.join(os.path.dirname(__file__), "cldxf_ca_domains.json")
 
@@ -43,6 +45,15 @@ SPANISH_PRETYPES = ("CALLE", "CAMINO", "VIA", "PASEO", "AVENIDA", "CORTE")
 FRENCH_PRETYPE_ABBR = {"CH": "Chemin", "BOUL": "Boulevard", "CROIS": "Croissant", "MONTEE": "Montée", "PROM": "Promenade",
                        "TSSE": "Terrasse", "IMP": "Impasse", "RLE": "Ruelle"}
 
+# US secondary unit designators (USPS Publication 28) -> the word CLDXF-US writes in UnitPreTyp ('APT 4B' ->
+# 'Apartment' + '4B'). A unit with no designator ('4B', '#4') keeps an empty UnitPreTyp rather than a guessed one.
+UNIT_TYPES = {"APT": "Apartment", "APARTMENT": "Apartment", "STE": "Suite", "SUITE": "Suite", "UNIT": "Unit",
+              "RM": "Room", "ROOM": "Room", "FL": "Floor", "FLR": "Floor", "FLOOR": "Floor", "BLDG": "Building",
+              "BUILDING": "Building", "LOT": "Lot", "SPC": "Space", "SPACE": "Space", "TRLR": "Trailer",
+              "TRAILER": "Trailer", "DEPT": "Department", "OFC": "Office", "OFFICE": "Office", "HNGR": "Hangar",
+              "PH": "Penthouse", "SLIP": "Slip", "PIER": "Pier", "BSMT": "Basement", "FRNT": "Front",
+              "LBBY": "Lobby", "LOWR": "Lower", "UPPR": "Upper", "REAR": "Rear", "SIDE": "Side"}
+
 # NENA-STA-006.3 mandatory SiteStructureAddressPoint fields (the build gates on 100% fill)
 SSAP_REQUIRED = ("discrpagid", "dateupdate", "nguid", "country", "a1")
 
@@ -56,8 +67,42 @@ RCL_REQUIRED = ("discrpagid", "dateupdate", "rcl_nguid", "parity_l", "parity_r",
 
 
 def domains():
+    """NENA's value domains: the registry lists (street types, directionals ...) and the schema's coded domains
+    (Place_Type, service URNs, marker indicators ...)."""
     with open(DOMAINS_FILE) as f:
-        return json.load(f)["domains"]
+        d = json.load(f)["domains"]
+    return {**schema()["domains"], **d}
+
+
+_SCHEMA = {}
+
+
+def schema():
+    if not _SCHEMA:
+        with open(FIELDS_FILE) as f:
+            _SCHEMA.update(json.load(f))
+    return _SCHEMA
+
+
+def layer(name):
+    """One NENA layer from the schema: indicator, level, geometry, removed fields per country, fields."""
+    return schema()["layers"][name]
+
+
+def layer_fields(name, country="US"):
+    """The fields a layer has in one country (CLDXF-US drops Unit and AddCode, CLDXF-CA drops UnitPreTyp,
+    UnitValue and PostCodeEx), each {name, nena, type, length, required, domain}, in NENA's order. The
+    RoadCenterline NGUID is written as rcl_nguid."""
+    lyr = layer(name)
+    removed = set(lyr["removed"].get(country, []))
+    out = []
+    for f in lyr["fields"]:
+        if f["name"] in removed:
+            continue
+        if name == "RoadCenterLine" and f["name"] == "nguid":
+            f = {**f, "name": "rcl_nguid"}
+        out.append(f)
+    return out
 
 
 def cldxf_ca():
@@ -110,5 +155,11 @@ def install(c, country="US"):
                      {french_when}
                   END""")
     c.execute(f"CREATE OR REPLACE MACRO nena_pretype_word(raw) AS {db.case('upper(raw)', pretypes)}")
+    # a US unit as UnitPreTyp + UnitValue: 'APT 4B', 'Apt. 4B', 'Apartment #4B' -> Apartment, 4B; '#4' -> NULL, 4
+    units = "|".join(sorted(UNIT_TYPES, key=len, reverse=True))
+    c.execute(f"""CREATE OR REPLACE MACRO nena_unit_type(u) AS
+                     {db.case(f"regexp_extract(upper(trim(u)), '^({units})\\b', 1)", UNIT_TYPES)}""")
+    c.execute(f"""CREATE OR REPLACE MACRO nena_unit_value(u) AS nullif(trim(regexp_replace(
+                     regexp_replace(upper(trim(u)), '^({units})\\b[.]?', ''), '^ *#? *', '')), '')""")
     c.execute("""CREATE OR REPLACE MACRO nena_st_name(n, pre_raw) AS
                      CASE WHEN pre_raw IS NULL THEN n ELSE trim(n[length(pre_raw) + 1:]) END""")

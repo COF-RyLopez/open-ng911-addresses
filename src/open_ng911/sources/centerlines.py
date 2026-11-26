@@ -11,8 +11,10 @@ No Overture or OpenStreetMap geometry or names come in here: Overture's transpor
 reads it only to attach GERS IDs.
 
 Table road_seg(source_key, road_source, source_id, uid, street, from_l, to_l, from_r, to_r, zip_l, zip_r,
-road_class, oneway, speed_mph, geom, geoid). road_class and oneway are NENA values (RoadClass, OneWay); street is the
-full name as published, parsed later by street.py the same way as the addresses.
+road_class, oneway, speed_mph, geom, geoid, n_<field> ...). road_class and oneway are NENA values (RoadClass, OneWay);
+street is the full name as published, parsed later by street.py the same way as the addresses. The n_ columns are a
+government Source's own fields mapped straight to NENA RoadCenterline fields by its registry `nena` table
+(fieldmap.py); TIGER rows leave them empty.
 
 road_source_meta(source_key, road_source, agency, license_status, license_url, attribution, source_date, fetched,
 data_url): one row per source read, for the manifests.
@@ -21,7 +23,7 @@ import datetime
 import os
 import zipfile
 
-from .. import db, ids, registry
+from .. import db, fieldmap, ids, registry
 from . import arcgis, openaddresses
 
 ROAD_SEG_COLUMNS = ("source_key VARCHAR, road_source VARCHAR, source_id VARCHAR, uid VARCHAR, street VARCHAR, "
@@ -46,8 +48,17 @@ MTFCC_CLASS = {"S1100": "Primary", "S1200": "Secondary", "S1400": "Local", "S150
 TIGER_ADDRFEAT = "https://www2.census.gov/geo/tiger/TIGER{year}/ADDRFEAT/tl_{year}_{county}_addrfeat.zip"
 
 
+RCL = "RoadCenterLine"
+
+
+def native_column_defs(c):
+    country = fieldmap.country_of(c)
+    return ", ".join(f"{fieldmap.PREFIX}{n} {fieldmap.SQL_TYPE.get(f['type'], 'VARCHAR')}"
+                     for n, f in fieldmap.fields(RCL, country).items())
+
+
 def create_tables(c):
-    c.execute(f"CREATE OR REPLACE TABLE road_seg ({ROAD_SEG_COLUMNS})")
+    c.execute(f"CREATE OR REPLACE TABLE road_seg ({ROAD_SEG_COLUMNS}, {native_column_defs(c)})")
     c.execute(f"CREATE OR REPLACE TABLE road_source_meta ({META_COLUMNS})")
 
 
@@ -71,7 +82,11 @@ def insert_government(c, source, path, conform, has_id):
     ex = source.exclude
     keep = (f"coalesce(p->>'{ex['field']}', '') NOT IN ("
             + ", ".join(db.quote(v) for v in ex["values"]) + ")") if ex else "true"
-    c.execute(f"""{INSERT}
+    country = fieldmap.country_of(c)
+    raw = "".join(f",\n                   {r}" for r in fieldmap.raw_columns(source, RCL, country))
+    native = ", ".join(fieldmap.native_columns(source, RCL, country))
+    ncols = fieldmap.column_names(RCL, country)
+    c.execute(f"""CREATE OR REPLACE TEMP TABLE _gov AS
         WITH f AS (
             SELECT {sid} AS source_id,
                    {openaddresses.conform_sql(conform.get('name'))} AS street,
@@ -83,9 +98,14 @@ def insert_government(c, source, path, conform, has_id):
                    {openaddresses.conform_sql(conform.get('zip_right'))} AS zip_r,
                    lower({cls}) AS cls, lower({oneway}) AS ow,
                    try_cast({openaddresses.conform_sql(conform.get('speed'))} AS DOUBLE) AS kph,
-                   ST_Force2D(ST_GeomFromGeoJSON(g)) AS geom
+                   ST_Force2D(ST_GeomFromGeoJSON(g)) AS geom{raw}
             FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})
             WHERE {keep})
+        SELECT *, {native} FROM f
+        WHERE ST_GeometryType(geom) IN ('LINESTRING', 'MULTILINESTRING') AND NOT ST_IsEmpty(geom)""")
+    fieldmap.record(c, "_gov", source, RCL, country)
+    insert = INSERT[:-1] + ", " + ", ".join(ncols) + ")"
+    c.execute(f"""{insert}
         SELECT '{source.key}', 'government', source_id,
                -- the agency's own segment ID makes the UID; without one, the segment's own geometry (stable
                -- only while the segment is unedited)
@@ -94,9 +114,9 @@ def insert_government(c, source, path, conform, has_id):
                {db.case('cls', OA_CLASS, "CASE WHEN cls LIKE '%\\_link' ESCAPE '\\' THEN 'Ramp' ELSE 'Local' END")},
                CASE ow WHEN 'yes' THEN 'FT' WHEN 'reverse' THEN 'TF' WHEN 'no' THEN 'B' END,
                nullif(round(kph / 1.609344), 0)::INTEGER,
-               geom
-        FROM f
-        WHERE ST_GeometryType(geom) IN ('LINESTRING', 'MULTILINESTRING') AND NOT ST_IsEmpty(geom)""")
+               geom, {", ".join(ncols)}
+        FROM _gov""")
+    c.execute("DROP TABLE _gov")
 
 
 def load_government(c, job, jurisdiction, work_dir):
@@ -106,6 +126,8 @@ def load_government(c, job, jurisdiction, work_dir):
         if entry.get("protocol") != "ESRI":
             raise SystemExit(f"{s.key}: protocol {entry.get('protocol')!r} isn't supported yet (ESRI only)")
         conform = entry.get("conform", {})
+        if not conform.get("id") and s.id_field:  # the registry names the ID where the OpenAddresses entry doesn't
+            conform = {**conform, "id": s.id_field}
         info = arcgis.layer_info(entry["data"])
         fields = {f["name"] for f in info.get("fields", [])}
         id_field = conform.get("id") if isinstance(conform.get("id"), str) else None

@@ -25,8 +25,11 @@ import sys
 
 from . import (
     boundaries,
+    coverage,
     db,
+    fieldmap,
     ids,
+    layers,
     lineage,
     matcher,
     nena,
@@ -53,6 +56,8 @@ LIVE_LOADERS = {
     "overture_segment": overture.load_overture_segment,
     # upstream counts (upstream.py): national_seg, the national road layer to compare government roads with
     "national_roads": centerlines.load_national_reference,
+    # PSAP, police, fire and EMS boundaries, provisioning, distance and location markers (layers.py)
+    "nena_layers": layers.load_sources,
 }
 
 
@@ -77,21 +82,74 @@ def prepare(c):
             SELECT *, parsed_street_key(ps) AS skey FROM (SELECT *, parse_street(street) AS ps FROM {t})""")
 
 
-def assemble_ssap(c, job, jurisdiction, updated):
+SSAP = "SiteStructureAddressPoint"
+# How the pipeline fills a SiteStructureAddressPoint field no Source maps (the coverage report's `derived`)
+SSAP_DERIVED = {
+    "discrpagid": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+    "dateupdate": "build time, where the Source maps no edit date",
+    "nguid": "Address UID under the Package's domain (ADR 0002)",
+    "country": "the job", "a1": "the job", "a2": "the Package (A2Polygon)",
+    "a3": "the municipality the point falls in (A3Polygon)",
+    "add_number": "OpenAddresses number", "addnum_suf": "OpenAddresses number",
+    **{p: "OpenAddresses street, parsed (street.py)" for p in ("st_predir", "st_pretyp", "st_name", "st_postyp",
+                                                               "st_posdir")},
+    "unit": "OpenAddresses unit", "unitpretyp": "OpenAddresses unit, split", "unitvalue": "OpenAddresses unit, split",
+    "post_comm": "OpenAddresses city", "post_code": "OpenAddresses postcode",
+    "placement": "'Unknown' where the Source states no method",
+    "longitude": "the point", "latitude": "the point",
+}
+
+
+def assemble_ssap(c, job, jurisdiction, updated, table="ssap", native=True):
+    """The SiteStructureAddressPoint layer: every NENA field of the job's country, from the Source's own field
+    where its registry `nena` table maps one (fieldmap.py), else from the OpenAddresses fields and the parse.
+    native=False builds the same layer from the OpenAddresses fields alone (the coverage report's `before`)."""
     source = jurisdiction.sources_for("addresses")[0]
-    c.execute(f"""CREATE OR REPLACE TABLE ssap AS
+    country = job.country
+    ncols = fieldmap.column_names(SSAP, country)
+    rec_n = ", ".join(f"a.{n}" if native else f"NULL::{t} AS {n}" for n, t in
+                      zip(ncols, _types(SSAP, country)))
+    gap_n = ", ".join(f"NULL::{t} AS {n}" for n, t in zip(ncols, _types(SSAP, country)))
+    parsed = {"st_predir": "nena_dir_word(y.ps.predir)", "st_pretyp": "nena_pretype_word(y.pre_raw)",
+              "st_name": "nena_st_name(y.ps.name, y.pre_raw)", "st_postyp": "y.postyp",
+              "st_posdir": "nena_dir_word(y.ps.posdir)"}
+    own_unit = "y.n_unitpretyp IS NOT NULL OR y.n_unitvalue IS NOT NULL"
+    value = {
+        "discrpagid": "d.domain",
+        "dateupdate": f"coalesce(y.n_dateupdate, '{updated}')",
+        "nguid": "build_nguid('SSAP', y.uid, d.domain)",
+        "country": f"'{job.country}'", "a1": f"'{job.code}'", "a2": "p.name",
+        "a3": "NULL::VARCHAR",  # set from the municipality boundaries (boundaries.assign_a3)
+        "add_number": "coalesce(y.n_add_number, try_cast(nullif(regexp_extract(y.number, '^[0-9]+'), '') AS INTEGER))",
+        # '30B': the Source's number field keeps the suffix, and NENA's AddNum_Suf takes it where none is mapped
+        "addnum_suf": "coalesce(y.n_addnum_suf, nullif(trim(regexp_replace(y.number, '^[0-9]+', '')), ''))",
+        # CLDXF-CA keeps one Unit; CLDXF-US splits it into UnitPreTyp + UnitValue ('Apartment' + '4B')
+        "unit": "coalesce(y.n_unit, y.unit)",
+        "unitpretyp": f"CASE WHEN {own_unit} THEN y.n_unitpretyp ELSE nena_unit_type(coalesce(y.n_unit, y.unit)) END",
+        "unitvalue": f"CASE WHEN {own_unit} THEN y.n_unitvalue ELSE nena_unit_value(coalesce(y.n_unit, y.unit)) END",
+        "post_comm": "coalesce(y.n_post_comm, upper(y.city))",
+        "post_code": "coalesce(y.n_post_code, y.postcode)",
+        "placement": "coalesce(y.n_placement, 'Unknown')",
+        "longitude": "round(ST_X(y.geom), 7)", "latitude": "round(ST_Y(y.geom), 7)",
+    }
+    street = dict(zip(fieldmap.STREET_PARTS, fieldmap.native_street("y", parsed)))
+    out = []
+    for f in nena.layer_fields(SSAP, country):
+        n = f["name"]
+        out.append(street[n] if n in street else f"{value.get(n, 'y.n_' + n)} AS {n}")
+    c.execute(f"""CREATE OR REPLACE TABLE {table} AS
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
                    a.source_id, '{source.license_status}' AS source_license, 'agency_record' AS link_method,
                    m.distance_m AS match_distance_m, m.street_key_match, a.site_type AS source_site_type,
-                   a.number, a.ps, a.unit, a.city, a.postcode, a.geom, a.geoid
+                   a.number, a.ps, a.unit, a.city, a.postcode, a.geom, a.geoid, {rec_n}
             FROM agency_addr a LEFT JOIN address_match m USING (address_uid)),
         gap AS (
             SELECT u.address_uid AS uid, o.gers_id, 'gap_fill_candidate' AS status, 'overture' AS source,
                    o.source_record_id AS source_id, o.source_license, u.link_method,
                    NULL::DOUBLE AS match_distance_m, NULL::BOOLEAN AS street_key_match,
                    NULL::VARCHAR AS source_site_type,
-                   o.number, o.ps, o.unit, o.postal_city AS city, o.postcode, o.geom, o.geoid
+                   o.number, o.ps, o.unit, o.postal_city AS city, o.postcode, o.geom, o.geoid, {gap_n}
             FROM overture_addr o JOIN overture_uid u USING (gers_id)
             WHERE o.gers_id NOT IN (SELECT gers_id FROM address_match)
               -- two Overture IDs linked to one UID: keep one row per UID
@@ -99,29 +157,46 @@ def assemble_ssap(c, job, jurisdiction, updated):
         x AS (
             SELECT *, nena_type_word(ps.type) AS postyp FROM (SELECT * FROM rec UNION ALL SELECT * FROM gap)
             WHERE uid NOT IN (SELECT uid FROM rec) OR status = 'record'),
-        y AS (SELECT *, nena_pretype_raw(ps.name, postyp) AS pre_raw FROM x)
+        y AS (SELECT *, nena_pretype_raw(ps.name, postyp) AS pre_raw, {fieldmap.npre_raw_sql('x')} FROM x)
         SELECT y.uid, y.gers_id, y.status, y.source, y.source_id, y.source_license, y.link_method,
                y.match_distance_m, y.street_key_match, y.source_site_type,
-               d.domain AS discrpagid,
-               '{updated}' AS dateupdate,
-               build_nguid('SSAP', y.uid, d.domain) AS nguid,
-               '{job.country}' AS country,
-               '{job.code}' AS a1,
-               p.name AS a2,
-               NULL::VARCHAR AS a3,  -- set from the municipality boundaries (boundaries.assign_a3)
-               try_cast(nullif(regexp_extract(y.number, '^[0-9]+'), '') AS INTEGER) AS add_number,
-               nullif(trim(regexp_replace(y.number, '^[0-9]+', '')), '') AS addnum_suf,
-               nena_dir_word(y.ps.predir) AS st_predir,
-               nena_pretype_word(y.pre_raw) AS st_pretyp,
-               nena_st_name(y.ps.name, y.pre_raw) AS st_name,
-               y.postyp AS st_postyp,
-               nena_dir_word(y.ps.posdir) AS st_posdir,
-               y.unit,
-               upper(y.city) AS post_comm,
-               y.postcode AS post_code,
-               'Unknown' AS placement,  -- no source in the pilot states a placement method yet
+               {", ".join(out)},
                y.geoid, y.geom
         FROM y JOIN package_domain d USING (geoid) JOIN package_area p USING (geoid)""")
+
+
+def _types(layer, country):
+    return [fieldmap.SQL_TYPE.get(f["type"], "VARCHAR") for f in fieldmap.fields(layer, country).values()]
+
+
+def coverage_spec(c, job, jurisdiction):
+    """{NENA layer: section() arguments}: every layer of the standard, with the table it was built into (None:
+    not built), the Source fields mapped to it and how the pipeline fills the rest."""
+    k = registry.country(job)
+    boundary = {f: k.a2_source for f in ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2")}
+    built = {SSAP: ("ssap", SSAP_DERIVED), roads.RCL: ("rcl", roads.RCL_DERIVED),
+             "A2Polygon": ("a2_polygon", boundary), "A3Polygon": ("a3_polygon", {**boundary, "a3": k.a3_source})}
+    for key, table in layers.TABLE.items():
+        d = layers.derived(key)
+        if key == "provisioning":
+            d = {**d, "geometry": "the Package area where no provisioning Source covers it"}
+        built[layers.nena_layer(key)] = (table, d)
+    out = {}
+    for layer in nena.schema()["layers"]:
+        table, derived = built.get(layer, (None, {}))
+        out[layer] = {"table": table, "sources": coverage.layer_sources(jurisdiction, layer), "derived": derived,
+                      "rejected": fieldmap.rejected(c, layer)}
+    return out
+
+
+def ssap_before(c, job, jurisdiction, updated):
+    """{field: fill} of the layer built from the OpenAddresses fields alone (A3 is the same either way)."""
+    assemble_ssap(c, job, jurisdiction, updated, "ssap_oa_only", native=False)
+    c.execute("UPDATE ssap_oa_only o SET a3 = s.a3 FROM ssap s WHERE o.uid = s.uid")
+    names = [f["name"] for f in nena.layer_fields(SSAP, job.country)]
+    _, fill = coverage.fills(c, "ssap_oa_only", names)
+    c.execute("DROP TABLE ssap_oa_only")
+    return fill
 
 
 def gate(c):
@@ -140,6 +215,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     c = c or db.connect()
     street.install(c)
     nena.install(c, job.country)
+    fieldmap.install(c, job.country)
     ids.install(c)
     boundaries.install(c)
     updated = db.now()
@@ -156,11 +232,16 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     print(f"[{job.id}] Overture address UIDs by link method: {links}")
     assemble_ssap(c, job, jur, updated)
     boundaries.assign_a3(c)
+    before = {SSAP: ssap_before(c, job, jur, updated)}
     boundaries.create_layers(c, job, updated)
     roads.build(c, job, jur, work_dir, loaders, updated)
+    before[roads.RCL] = roads.rcl_before(c, job, updated)
+    loaders["nena_layers"](c, job, jur, work_dir)
+    layers.build(c, job, jur, updated)
     national = upstream.build(c, job, jur, work_dir, loaders)
 
-    root, summaries = package.write(c, job, jur, release, out_dir, national)
+    spec = coverage_spec(c, job, jur)
+    root, summaries = package.write(c, job, jur, release, out_dir, national, spec)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
     fails = gate(c) + boundaries.gate(c) + roads.gate(c)
@@ -183,13 +264,24 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
                "upstream": upstream.job_totals(s["upstream"] for s in summaries),
                "odbl_replacement": odbl_inventory.job_totals(s["odbl_replacement"] for s in summaries),
+               "nena_coverage": {layer: coverage.section(c, layer, job.country, before=before.get(layer), **kw)
+                                 for layer, kw in spec.items()},
+               "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),
                "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
                               | roads.package_summary(s["road_centerline"]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
         json.dump(summary, f, indent=2)
-    print(json.dumps({k: v for k, v in summary.items() if k != "by_package"}, indent=2))
+    print(json.dumps({k: v for k, v in summary.items() if k not in ("by_package", "nena_coverage")}, indent=2))
+    # one line per layer and field, so a build log shows the coverage without the artifact
+    print(f"[{job.id}] NENA coverage (filled/partial/no_source, before -> after): {coverage.brief(summary['nena_coverage'])}")
+    # the built layers' statuses, field by field, for reading coverage out of a CI log (job.json has it all)
+    compact = {layer: {n: f["status"][0] + ("!" if f.get("required") else "")
+                          + ("<" + coverage.status(f["before"])[0] if "before" in f else "")
+                       for n, f in s["fields"].items()} for layer, s in summary["nena_coverage"].items() if s["built"]}
+    print(f"[{job.id}] NENA coverage by field (f filled, p partial, n no_source; ! Required; <before): "
+          + json.dumps(compact, separators=(",", ":")))
     return summary
 
 

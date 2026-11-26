@@ -7,12 +7,14 @@ OpenAddresses conform steps map fields, they don't rewrite values (openaddresses
 fixes belong in our parse (street.py), upstream PRs are for wrong field mappings or filters.
 
 Table agency_addr(source_key, source_id, address_uid, number, street, unit, city, postcode, site_type, id_shared,
-geom), and agency_dropped(source_key, reason, site_type, n): every point left out, counted by reason.
+geom, n_<field> ...), and agency_dropped(source_key, reason, site_type, n): every point left out, counted by reason.
+The n_ columns are the Source's own fields mapped straight to NENA fields by its registry `nena` table
+(fieldmap.py); the OpenAddresses columns feed the street match and the fields a Source doesn't map.
 """
 import json
 import os
 
-from .. import db, ids
+from .. import db, fieldmap, ids
 from . import arcgis
 
 OA_RAW = "https://raw.githubusercontent.com/openaddresses/openaddresses/master/sources/{path}.json"
@@ -77,6 +79,10 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
     from the ID plus the address so each stays distinct (`id_shared` in job.json).
     """
     ids.install(c)
+    country = fieldmap.country_of(c)
+    layer = "SiteStructureAddressPoint"
+    raw = "".join(f",\n                   {r}" for r in fieldmap.raw_columns(source, layer, country))
+    native = ", ".join(fieldmap.native_columns(source, layer, country))
     excluded = ", ".join(db.quote(t) for t in source.exclude_site_types) or "NULL"
     site_type = conform_sql(conform.get("addrtype"))
     sid = f"nullif(trim(p->>'{source.id_field}'), '')" if has_id else "NULL"
@@ -89,9 +95,9 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
                    {conform_sql(conform.get('city'))} AS city,
                    {conform_sql(conform.get('postcode'))} AS postcode,
                    upper({site_type}) AS site_type,
-                   ST_GeomFromGeoJSON(g) AS geom
+                   ST_GeomFromGeoJSON(g) AS geom{raw}
             FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})""")
-    c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS SELECT *,
+    c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS SELECT *, {native},
             CASE WHEN ST_GeometryType(geom) <> 'POINT' THEN 'not_point'
                  WHEN street IS NULL THEN 'no_street'
                  WHEN site_type IN ({excluded}) THEN 'excluded_site_type' END AS drop_reason,
@@ -109,8 +115,9 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
                     WHEN source_id IS NOT NULL THEN agency_uid('{source.key}', source_id || '|' || addr_key)
                     ELSE agency_uid('{source.key}', addr_key) END AS address_uid,
                source_id IS NOT NULL AND keys_per_id > 1 AS id_shared,
-               number, street, unit, city, postcode, site_type, geom
+               number, street, unit, city, postcode, site_type, geom, {", ".join(fieldmap.column_names(layer, country))}
         FROM k""")
+    fieldmap.record(c, "agency_raw", source, layer, country, "drop_reason IS NULL")
     dupes = c.execute("SELECT count(*) - count(DISTINCT address_uid) FROM agency_addr").fetchall()[0][0]
     c.execute(f"""CREATE OR REPLACE TABLE agency_dropped AS
         SELECT '{source.key}' AS source_key, drop_reason AS reason, site_type, count(*) AS n

@@ -46,7 +46,7 @@ def test_vermont_boundaries(tmp_path, conn):
 
     with open(os.path.join(out, f"release={RELEASE}", "us-vt", "50001", "manifest.json")) as f:
         m = json.load(f)
-    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
+    assert m["nena"]["layers"][:4] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
     assert m["boundaries"]["A3Polygon"]["features"] == 1
     assert m["boundaries"]["A3Polygon"]["record_community_agrees_with_a3"] == 1.0
     assert m["boundaries"]["A2Polygon"]["license"] == "public domain"

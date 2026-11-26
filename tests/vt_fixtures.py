@@ -3,6 +3,7 @@ addresses written to a local parquet in Overture's schema, so the whole job runs
 import json
 import os
 
+from open_ng911 import layers
 from open_ng911.sources import centerlines, openaddresses, overture, tiger
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -71,8 +72,36 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
         overture.create_overture_addr(c, path)
 
     return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr,
-            "overture_addr": overture_addr,
+            "overture_addr": overture_addr, "nena_layers": zone_loader(tmp_path, ESZ),
             **road_loaders(tmp_path)}
+
+
+# Emergency service zones in the E911 Board's fields: (properties, bbox). Both Addison zones have the same fire
+# department and PSAP, so they merge into one polygon; their police differ. Bennington's zone has no EMS name, so it
+# feeds no EMS polygon. No provisioning Source: every Package gets its own area.
+ESZ = [
+    ({"PSAP_DisplayName": "Williston PSAP", "LAW_DisplayName": "Middlebury PD", "FIRE_DisplayName": "Middlebury FD",
+      "EMS_DisplayName": "Middlebury Rescue", "UPDATEDATE": 1700000000000}, (-73.2, 44.0, -73.1, 44.2)),
+    ({"PSAP_DisplayName": "Williston PSAP", "LAW_DisplayName": "VSP New Haven", "FIRE_DisplayName": "Middlebury FD",
+      "EMS_DisplayName": "Middlebury Rescue", "UPDATEDATE": 1700000000000}, (-73.1, 44.0, -73.0, 44.2)),
+    ({"PSAP_DisplayName": "Rutland PSAP", "LAW_DisplayName": "Bennington PD", "FIRE_DisplayName": "Bennington FD",
+      "EMS_DisplayName": None, "UPDATEDATE": -2209161600000}, (-73.2, 42.8, -73.0, 43.0)),  # 1899-12-30: placeholder
+]
+
+
+def zone_loader(tmp_path, zones):
+    """layers.load_sources without the network: every Source of the other NENA layers reads the same zones."""
+    def load(c, job, jur, work):
+        path = tmp_path / "zones.ndjson"
+        with open(path, "w") as f:
+            for props, (x0, y0, x1, y1) in zones:
+                ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+                f.write(json.dumps({"p": props, "g": json.dumps({"type": "Polygon", "coordinates": [ring]})}) + "\n")
+        layers.create_tables(c)
+        for s in jur.sources:
+            if s.layer in layers.TABLE:
+                layers.insert_source(c, s, str(path), False)
+    return load
 
 
 # Overture road segments (GERS ID, subtype, name, class, WKT). Only their IDs, and counts, may reach a Package.

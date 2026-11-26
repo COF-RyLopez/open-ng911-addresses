@@ -4,7 +4,7 @@ way Overture writes Canadian ones (spelled-out types, accents), so the whole job
 import json
 import os
 
-from vt_fixtures import write_segment_parquet
+from vt_fixtures import write_segment_parquet, zone_loader
 
 from open_ng911.sources import centerlines, openaddresses, overture, statcan
 
@@ -26,6 +26,10 @@ OVERTURE = [
     ("c3", "12", "Rue de l'Église", -63.91003, 46.51, "s3"),    # PEI writes it without the accent
     ("c4", "88", "Grafton Street", -63.12, 46.23, "s4"),        # no Record: gap-fill candidate
 ]
+
+# Emergency service zones in the province's fields: one in Queens only, so Prince gets no service polygons
+ESZ = [({"PSAP": "Charlottetown PSAP", "POLICE": "Charlottetown Police", "FIRE": "Charlottetown Fire",
+         "EMS": "Island EMS"}, (-63.3, 46.15, -63.05, 46.35))]
 
 
 def _q(v):
@@ -73,8 +77,8 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
         write_segment_parquet(c, [("p1", "road", "Queens Road", "secondary", "LINESTRING (-63.135 46.24, -63.125 46.24)")], path)
         overture.create_overture_segment(c, path)
 
-    # PEI has no centerlines Source yet and TIGER doesn't cover Canada: every Package has an empty RoadCenterline
-    return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr,
+    # The fixture has no PEI road centrelines and TIGER doesn't cover Canada: every Package has an empty RoadCenterline
+    return {"nena_layers": zone_loader(tmp_path, ESZ), "package_area": package_area, "municipality": municipality, "agency_addr": agency_addr,
             "overture_addr": overture_addr, "gov_roads": lambda c, job, jur, work: None,
             "tiger_roads": centerlines.load_tiger, "overture_segment": overture_segment,
             "national_roads": centerlines.load_national_reference}

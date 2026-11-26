@@ -30,3 +30,163 @@ attribution = "North Dakota GIS Hub"
 nad = "not_started"
 overture = "not_started"
 esri_community_maps = "not_applicable"
+
+# NENA fields straight from the layer's own fields (fieldmap.py): the GIS Hub publishes NENA's own schema. Fill
+# checked 2026-11-26 on all 438,365 points: St_Name, ESN, MSAGComm, Post_Comm, Post_Code, Placement, DateUpdate on
+# every point; St_PosTyp 415,613; St_PosDir 285,725; Effective 147,888; Place_Type 139,328 (mostly 'Unknown');
+# Unit 79,390 ('Apartment 3', '#4': split into UnitPreTyp + UnitValue); St_PreDir 28,848; St_PreTyp 19,334. Its
+# DiscrpAgID (the county or city domain) and Site_NGUID stay theirs: our DiscrpAgID waits for opt-in (ADR 0004),
+# and Site_NGUID is the id_field above. Inc_Muni is the municipality, which A3 carries.
+[source.nena]
+dateupdate = "DateUpdate"
+effective = "Effective"
+expire = "Expire"
+a4 = "Uninc_Comm"
+a5 = "Nbrhd_Comm"
+addnum_pre = "AddNum_Pre"
+add_number = "Add_Number"
+addnum_suf = "AddNum_Suf"
+st_premod = "St_PreMod"
+st_predir = "St_PreDir"
+st_pretyp = "St_PreTyp"
+st_presep = "St_PreSep"
+st_name = "St_Name"
+st_postyp = "St_PosTyp"
+st_posdir = "St_PosDir"
+st_posmod = "St_PosMod"
+lst_predir = "LSt_PreDir"
+lst_name = "LSt_Name"
+lst_typ = "LSt_Type"
+lst_posdir = "LSt_PosDir"
+esn = "ESN"
+msagcomm = "MSAGComm"
+post_comm = "Post_Comm"
+post_code = "Post_Code"
+postcodeex = "Post_Code4"
+site = "LandmkName"
+structure = "Building"
+floor = "Floor"
+unit = "Unit"
+room = "Room"
+seat = "Seat"
+addtl_loc = "Addtl_Loc"
+distmarker = "Mile_Post"
+place_type = "Place_Type"
+placement = "Placement"
+elevation = "Elev"
+
+# Road centerlines: the GIS Hub's NG9-1-1 road centerlines (DBO_Roads_NG911, 176,669 segments, NENA's own schema).
+# OpenAddresses' us/nd/statewide lists no centerlines, so the entry is written here in its schema to propose
+# upstream. Only a disclaimer is published: unknown (tracker: us-nd-ng911-layers).
+[[source]]
+key = "us-nd-gishub-rcl"
+agency = "North Dakota GIS Hub (NG9-1-1 Road Centerlines), compiled from local addressing authorities"
+layer = "centerlines"
+covers = "*"
+openaddresses = "us/nd/statewide"
+oa_layer = "state"
+license_status = "unknown"
+license_url = "https://gishubdata-ndgov.hub.arcgis.com/"
+attribution = "North Dakota GIS Hub"
+
+[source.oa_entry]
+name = "state"
+website = "https://gishubdata-ndgov.hub.arcgis.com/"
+data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUBRoadsNG911/FeatureServer/0"
+attribution = "North Dakota GIS Hub"
+protocol = "ESRI"
+
+[source.oa_entry.conform]
+format = "geojson"
+id = "RCL_NGUID"
+name = "FULL_NAME"
+addr_from_left = "FromAddr_L"
+addr_to_left = "ToAddr_L"
+addr_from_right = "FromAddr_R"
+addr_to_right = "ToAddr_R"
+zip_left = "PostCode_L"
+zip_right = "PostCode_R"
+oneway = { function = "map", field = "OneWay", mapping = { FT = "yes", TF = "reverse", B = "no" } }
+speed = { function = "mph_to_kph", field = "SpeedLimit" }
+classification = { function = "map", field = "RoadClass", else = "residential", mapping = { "Primary" = "motorway", "Secondary" = "primary", "Local" = "residential", "Ramp" = "motorway_link", "Service Drive" = "service", "Vehicular Trail" = "track", "Walkway/Pedestrian Trail" = "footway", "Stairway" = "steps" } }
+
+# The NENA fields themselves, so nothing is lost through the OpenAddresses words (RoadClass 'Service Drive').
+[source.nena]
+dateupdate = "DateUpdate"
+effective = "Effective"
+expire = "Expire"
+adnumpre_l = "AdNumPre_L"
+adnumpre_r = "AdNumPre_R"
+parity_l = "Parity_L"
+parity_r = "Parity_R"
+st_premod = "St_PreMod"
+st_predir = "St_PreDir"
+st_pretyp = "St_PreTyp"
+st_presep = "St_PreSep"
+st_name = "St_Name"
+st_postyp = "St_PosTyp"
+st_posdir = "St_PosDir"
+st_posmod = "St_PosMod"
+lst_predir = "LSt_PreDir"
+lst_name = "LSt_Name"
+lst_typ = "LSt_Type"
+lst_posdir = "LSt_PosDir"
+esn_l = "ESN_L"
+esn_r = "ESN_R"
+msagcomm_l = "MSAGComm_L"
+msagcomm_r = "MSAGComm_R"
+a3_l = "IncMuni_L"
+a3_r = "IncMuni_R"
+a4_l = "UnincCom_L"
+a4_r = "UnincCom_R"
+a5_l = "NbrhdCom_L"
+a5_r = "NbrhdCom_R"
+postcomm_l = "PostComm_L"
+postcomm_r = "PostComm_R"
+roadclass = "RoadClass"
+oneway = "OneWay"
+speedlimit = "SpeedLimit"
+valid_l = "Valid_L"
+valid_r = "Valid_R"
+
+# Service boundaries: the GIS Hub's fire and law enforcement boundaries, compiled by the local and tribal 9-1-1
+# coordinators in NENA's fields (ES_NGUID, DsplayName on every feature; ServiceURN 84% of fire areas; Agency_ID and
+# ServiceURI on a few). No PSAP layer was found on the Hub (2026-11-26), and its EMS layer is the Health Department's
+# four regions, not response areas. Disclaimer only: unknown (tracker: us-nd-ng911-layers).
+[[source]]
+key = "us-nd-gishub-fire"
+agency = "North Dakota GIS Hub (fire boundaries, from local and tribal 9-1-1 coordinators)"
+layer = "fire"
+covers = "*"
+id_field = "ES_NGUID"
+endpoint = { data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUB_Fire_Boundary/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://gishubdata-ndgov.hub.arcgis.com/"
+attribution = "North Dakota GIS Hub"
+nena = { dateupdate = "DateUpdate", effective = "Effective", expire = "Expire", agency_id = "Agency_ID", serviceuri = "ServiceURI", serviceurn = "ServiceURN", servicenum = "ServiceNum", avcard_uri = "AVcard_URI", dsplayname = "DsplayName" }
+
+[[source]]
+key = "us-nd-gishub-law"
+agency = "North Dakota GIS Hub (law enforcement boundaries, from local and tribal 9-1-1 coordinators)"
+layer = "police"
+covers = "*"
+id_field = "ES_NGUID"
+endpoint = { data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUB_Law_Enforcement_Boundary/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://gishubdata-ndgov.hub.arcgis.com/"
+attribution = "North Dakota GIS Hub"
+nena = { dateupdate = "DateUpdate", effective = "Effective", expire = "Expire", agency_id = "Agency_ID", serviceuri = "ServiceURI", serviceurn = "ServiceURN", servicenum = "ServiceNum", avcard_uri = "AVcard_URI", dsplayname = "DsplayName" }
+
+# Distance markers: the GIS Hub's road mile markers (NDDOT reference points, 9,767). Miles; whether each is a
+# posted sign isn't stated, so DM_Ind stays empty rather than guessed.
+[[source]]
+key = "us-nd-gishub-mile-markers"
+agency = "North Dakota GIS Hub (road mile markers, NDDOT reference points)"
+layer = "distance_markers"
+covers = "*"
+id_field = "EVENTID"
+endpoint = { data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUB_Road_Mile_Markers/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://gishubdata-ndgov.hub.arcgis.com/"
+attribution = "North Dakota GIS Hub, NDDOT"
+nena = { dm_value = "REF_PT_NUM", dm_rte = { function = "join", fields = ["RTE_SIN", "HWY"], separator = "-" }, dm_unit = { value = "miles" }, dm_label = "HWY_DIR", dateupdate = "LAST_EDITED_DATE" }

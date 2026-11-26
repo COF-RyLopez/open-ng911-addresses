@@ -1,13 +1,18 @@
 """
-Write docs/standards/nena-sta-006.3-layers.md from NENA's own machine-readable schema.
+Write docs/standards/nena-sta-006.3-layers.md and src/open_ng911/nena/nena_sta006_3_fields.json from NENA's own
+machine-readable schema.
 
     python scripts/nena_layer_reference.py [--schema <flatfile_schema_v3.yaml>]
+
+The JSON is what the build reads: every layer's fields (lower-cased, as the Packages write them), which ones each
+country drops, and the coded domains the field maps check values against (fieldmap.py, coverage.py).
 
 The schema is NENA's NG911GISDataModel flat-file template (Apache-2.0), pinned to the commit the vendored
 domains come from. The requirement level of each layer is from NENA-STA-006.3-2026 section 4 (the YAML doesn't
 carry it). Field names and requirement flags are facts of the schema; descriptions are not copied.
 """
 import argparse
+import json
 import os
 import urllib.request
 
@@ -17,6 +22,7 @@ COMMIT = "30a42bfdf0eb316bb1266087f5f1a39e1c77e22d"
 SCHEMA_URL = (f"https://raw.githubusercontent.com/NENA911/NG911GISDataModel/{COMMIT}/"
               "flatfile_templates/schema/v3.0/flatfile_schema_v3.yaml")
 OUT = os.path.join(os.path.dirname(__file__), "..", "docs", "standards", "nena-sta-006.3-layers.md")
+FIELDS_OUT = os.path.join(os.path.dirname(__file__), "..", "src", "open_ng911", "nena", "nena_sta006_3_fields.json")
 
 # STA-006.3 section 4 headings ("4.1.1 Road Centerlines—REQUIRED" ...)
 LEVEL = {"RoadCenterLine": "Required", "SiteStructureAddressPoint": "Required",
@@ -33,6 +39,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--schema")
     ap.add_argument("--out", default=OUT)
+    ap.add_argument("--fields-out", default=FIELDS_OUT)
     a = ap.parse_args()
     if a.schema:
         with open(a.schema) as f:
@@ -80,6 +87,28 @@ def main():
                         if k not in {fc["name"] for fc in d["feature_classes"]}), ""]
     with open(a.out, "w") as f:
         f.write("\n".join(lines))
+    write_fields(d, indicator, a.fields_out)
+
+
+def write_fields(d, indicator, path):
+    """The machine-readable half: field names, types, requirement flags and coded domain values (facts of the
+    schema, no descriptions)."""
+    layers = {}
+    for fc in d["feature_classes"]:
+        rm = fc.get("country_specific_field_removals") or {}
+        layers[fc["name"]] = {
+            "indicator": indicator.get(fc["name"], ""), "level": LEVEL.get(fc["name"], ""),
+            "geometry": fc["geometry_type"].lower(),
+            "removed": {k: [f.lower() for f in v] for k, v in rm.items()},
+            "fields": [{"name": f["field_name"].lower(), "nena": f["field_name"], "type": f["field_type"],
+                        "length": f.get("field_length"), "required": bool(f["field_is_required"]),
+                        "domain": f.get("field_domain") or None} for f in fc["fields"]]}
+    domains = {x["domain_name"]: list(x["values"]) for x in d["domains"]
+               if x.get("domain_type") == "CODED" and x.get("values")}
+    with open(path, "w") as f:
+        json.dump({"standard": "NENA-STA-006.3-2026", "source": SCHEMA_URL, "layers": layers, "domains": domains},
+                  f, indent=1)
+        f.write("\n")
 
 
 if __name__ == "__main__":

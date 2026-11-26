@@ -3,6 +3,7 @@ that DuckDB reads in one go: one {"p": properties, "g": geometry as GeoJSON text
 
 Government endpoints flake (AGENTS.md): each page is retried with backoff before the job fails.
 """
+import http.client
 import json
 import time
 import urllib.error
@@ -39,7 +40,7 @@ def _get_json(url, tries=4):
             if "error" in d:
                 raise OSError(f"ArcGIS error: {d['error']}")
             return d
-        except (OSError, json.JSONDecodeError) as e:
+        except (OSError, json.JSONDecodeError, http.client.HTTPException) as e:  # IncompleteRead: a cut response
             if i == tries - 1:
                 raise
             wait = 5 * 2 ** i
@@ -51,11 +52,12 @@ def layer_info(layer_url):
     return _get_json(f"{layer_url}?f=json")
 
 
-def fetch(layer_url, out_path, where="1=1", out_fields="*", workers=4, extra=None):
+def fetch(layer_url, out_path, where="1=1", out_fields="*", workers=4, extra=None, page=None):
     """Every feature matching `where`, in WGS84, to out_path. Returns (features written, features in the layer):
-    features without a geometry are skipped."""
+    features without a geometry are skipped. `page` caps the features per request (a layer of very detailed
+    polygons fails a full page on the server)."""
     info = layer_info(layer_url)
-    page = min(int(info.get("maxRecordCount") or 1000), 2000)
+    page = min(int(info.get("maxRecordCount") or 1000), 2000, page or 2000)
     base = {"where": where, "outFields": out_fields, "outSR": "4326", "f": "geojson", **(extra or {})}
     q = f"{layer_url}/query?"
     total = _get_json(q + urllib.parse.urlencode({"where": where, "returnCountOnly": "true", "f": "json"}))["count"]
