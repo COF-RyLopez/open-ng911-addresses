@@ -27,8 +27,11 @@ oa_layer = "state"
 # The layer's own stable ID. OpenAddresses maps no id for this source, so it is named here. If the field is
 # missing from the service the build warns and mints UIDs instead (see ids.py).
 id_field = "ESITEID"
-# E911 sites include hydrants and public phones: keep the site types that are addresses. Empty keeps all.
-exclude_site_types = ["HYDRANT", "PUBLIC PHONE", "PAY PHONE"]   # values to confirm against the live layer
+# Nothing is excluded. Public telephones, utility poles with phones, call boxes and communication boxes carry a
+# civic address in the E911 layer and are valid SiteStructureAddressPoints (NENA-STA-006.3 SSAP is any
+# addressed site, and a fixed phone's location is what the LVF validates). Their SITETYPE rides along as
+# source_site_type so an agency can tell them apart. Use this list only for points that aren't addressed sites.
+exclude_site_types = []
 # open | share-alike | unknown. "unknown" keeps the source out of anything published openly (plan, Licensing).
 license_status = "unknown"
 license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"

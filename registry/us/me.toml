@@ -1,0 +1,38 @@
+# Jurisdiction registry: Maine (job us-me)
+#
+# Who the Packages are for, which Source agencies' layers go into them, and where each agency stands.
+# Statuses here change by hand, and only after the agency confirms (ADR 0004, 0005).
+
+job = "us-me"
+packages = "county"        # one Package per county (TIGER), 16 in Maine
+
+# 911 authorities: the Recipients. Maine's Emergency Services Communication Bureau (Public Utilities
+# Commission) runs E9-1-1 statewide, so one authority covers every Package.
+[[authority]]
+key = "me-escb"
+name = "Maine Emergency Services Communication Bureau"
+covers = "*"
+opted_in = false
+domain = ""                # set only after someone confirms from an address on this domain (ADR 0004)
+
+[[source]]
+key = "us-me-e911-addresses"
+agency = "Maine Emergency Services Communication Bureau (Maine E911 Addresses)"
+layer = "addresses"
+covers = "*"
+openaddresses = "us/me/statewide"    # sources/us/me/statewide.json
+oa_layer = "state"
+# SITE_UID: filled on every point (801,786 of 801,786, checked 2026-11-26).
+id_field = "SITE_UID"
+# PLACE_TYPE (Residential, Single Family, Commercial, Tower, Vacant Lot...) has no equipment-only values, and
+# the OpenAddresses conform maps no addrtype for this source, so nothing is excluded.
+exclude_site_types = []
+# Published terms: "Access: Public. Use: No restrictions and user accepts risk.", attribution to the Bureau.
+license_status = "open"
+license_url = "https://maine.hub.arcgis.com/datasets/27e5daf37f1f4e5c8231d6e3989835c4_0/about"
+attribution = "Maine Emergency Services Communication Bureau"
+
+[source.sharing]
+nad = "not_started"
+overture = "not_started"
+esri_community_maps = "not_applicable"

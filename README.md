@@ -3,7 +3,7 @@
 Open-data NENA NG9-1-1 address datasets for the 911 authorities of the US and Canada, built mostly from each
 area's own government sources and handed back NENA-ready to the agencies that opt in.
 
-**Status: Phase 1 scaffold.** One state (Vermont) runs end to end in CI. The plan behind it, with its 25 settled
+**Status: Phase 1 scaffold.** Four pilot states (Vermont, Maine, Utah, North Dakota) run end to end in CI. The plan behind it, with its 25 settled
 decisions, is the "NG911 Address Pipeline: US + Canada Infrastructure Plan"; the terms are in
 [GLOSSARY.md](GLOSSARY.md) and the decisions in [docs/adr](docs/adr). The California prototype is
 [ng911-pipeline](https://github.com/COF-RyLopez/ng911-pipeline).
@@ -57,7 +57,8 @@ OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <p
 
 - Boundary adapters for A3/A4 (TIGER places and county subdivisions; StatCan census subdivisions), and the
   StatCan census-division Package areas for the pilot province.
-- Two or three more pilot states of different shapes, several address sources per job, parcels for Placement.
+- Several address sources per job, parcels for Placement, and pilot states whose statewide source is a
+  file download rather than an ArcGIS service.
 - Phase 2: changelog-driven reruns, `exact_rematch` / `near_rematch` in the ledger, the churn table.
 
 ## Licensing

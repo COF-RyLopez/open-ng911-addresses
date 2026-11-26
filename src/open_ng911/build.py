@@ -39,8 +39,18 @@ def prepare(c):
     """Parsed streets, keys and Package GEOIDs on both address tables."""
     c.execute("""CREATE OR REPLACE TABLE agency_addr AS
         SELECT a.* EXCLUDE (geoid), p.geoid FROM (SELECT *, NULL::VARCHAR AS geoid FROM agency_addr) a
-        JOIN package_area p ON ST_Intersects(p.geom, a.geom)
+        LEFT JOIN package_area p ON ST_Intersects(p.geom, a.geom)
         QUALIFY row_number() OVER (PARTITION BY a.address_uid ORDER BY p.geoid) = 1""")
+    # a point just outside every Package (a shoreline or border address off the generalised TIGER outline) goes
+    # to the nearest Package within about 1 km; one farther out (bad coordinates, across the line) is counted
+    c.execute("""UPDATE agency_addr a SET geoid = n.geoid FROM (
+            SELECT a.address_uid, p.geoid FROM agency_addr a JOIN package_area p
+              ON a.geoid IS NULL AND ST_DWithin(p.geom, a.geom, 0.01)
+            QUALIFY row_number() OVER (PARTITION BY a.address_uid ORDER BY ST_Distance(p.geom, a.geom), p.geoid) = 1) n
+        WHERE a.address_uid = n.address_uid""")
+    c.execute("""INSERT INTO agency_dropped SELECT source_key, 'outside_packages', site_type, count(*)
+                 FROM agency_addr WHERE geoid IS NULL GROUP BY ALL""")
+    c.execute("DELETE FROM agency_addr WHERE geoid IS NULL")
     for t in ("agency_addr", "overture_addr"):
         c.execute(f"""CREATE OR REPLACE TABLE {t} AS
             SELECT *, parsed_street_key(ps) AS skey FROM (SELECT *, parse_street(street) AS ps FROM {t})""")
@@ -52,13 +62,14 @@ def assemble_ssap(c, job, jurisdiction, updated):
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
                    a.source_id, '{source.license_status}' AS source_license, 'agency_record' AS link_method,
-                   m.distance_m AS match_distance_m, m.street_key_match,
+                   m.distance_m AS match_distance_m, m.street_key_match, a.site_type AS source_site_type,
                    a.number, a.ps, a.unit, a.city, a.postcode, a.geom, a.geoid
             FROM agency_addr a LEFT JOIN address_match m USING (address_uid)),
         gap AS (
             SELECT u.address_uid AS uid, o.gers_id, 'gap_fill_candidate' AS status, 'overture' AS source,
                    o.source_record_id AS source_id, o.source_license, u.link_method,
                    NULL::DOUBLE AS match_distance_m, NULL::BOOLEAN AS street_key_match,
+                   NULL::VARCHAR AS source_site_type,
                    o.number, o.ps, o.unit, o.postal_city AS city, o.postcode, o.geom, o.geoid
             FROM overture_addr o JOIN overture_uid u USING (gers_id)
             WHERE o.gers_id NOT IN (SELECT gers_id FROM address_match)
@@ -69,7 +80,7 @@ def assemble_ssap(c, job, jurisdiction, updated):
             WHERE uid NOT IN (SELECT uid FROM rec) OR status = 'record'),
         y AS (SELECT *, nena_pretype_raw(ps.name, postyp) AS pre_raw FROM x)
         SELECT y.uid, y.gers_id, y.status, y.source, y.source_id, y.source_license, y.link_method,
-               y.match_distance_m, y.street_key_match,
+               y.match_distance_m, y.street_key_match, y.source_site_type,
                d.domain AS discrpagid,
                '{updated}' AS dateupdate,
                build_nguid('SSAP', y.uid, d.domain) AS nguid,
@@ -143,6 +154,15 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "rows": sum(s["rows"] for s in summaries), "records": sum(s["records"] for s in summaries),
                "records_with_gers_id": sum(s["records_with_gers_id"] for s in summaries),
                "gap_fill_candidates": sum(s["gap_fill_candidates"] for s in summaries),
+               "agency_points_excluded": {t: n for _, t, n in c.execute(
+                   "SELECT * FROM agency_excluded ORDER BY n DESC").fetchall()},
+               "agency_points_dropped": dict(c.execute(
+                   "SELECT reason, sum(n)::BIGINT FROM agency_dropped GROUP BY 1 ORDER BY 2 DESC").fetchall()),
+               "agency_points_dropped_by_site_type": {f"{r}: {t}": n for r, t, n in c.execute(
+                   "SELECT reason, site_type, n FROM agency_dropped WHERE site_type IS NOT NULL "
+                   "ORDER BY n DESC LIMIT 25").fetchall()},
+               "agency_points_id_shared": c.execute(
+                   "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
                "overture_link_methods": links,
                "road_segments": sum(r["rows"] for r in road_stats.values()),
                "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),

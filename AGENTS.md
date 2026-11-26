@@ -27,6 +27,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 
 ## Rules
 
+- **Keep every addressed site.** A NENA SSAP is any addressed site: public phones, call boxes, towers and
+  un-numbered sites on a named road all stay. A point is dropped only for a reason `openaddresses.create_agency_addr`
+  names (no geometry, not a point, no street, a true duplicate, outside every Package, or the registry's
+  `exclude_site_types`), and every drop is counted in job.json `agency_points_dropped`.
 - **Records win** (ADR 0001): an agency point is a Record; Overture fills in only as `gap_fill_candidate`.
 - **NGUIDs come from the Address UID, never a GERS ID** (ADR 0002). Changing `ids.NAMESPACE` or the UID
   recipe changes every published NGUID: don't.

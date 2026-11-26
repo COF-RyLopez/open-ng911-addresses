@@ -34,7 +34,8 @@ def layer_info(layer_url):
 
 
 def fetch(layer_url, out_path, where="1=1", out_fields="*", workers=4, extra=None):
-    """Every feature matching `where`, in WGS84, to out_path. Returns the feature count."""
+    """Every feature matching `where`, in WGS84, to out_path. Returns (features written, features in the layer):
+    features without a geometry are skipped."""
     info = layer_info(layer_url)
     page = min(int(info.get("maxRecordCount") or 1000), 2000)
     base = {"where": where, "outFields": out_fields, "outSR": "4326", "f": "geojson", **(extra or {})}
@@ -55,4 +56,4 @@ def fetch(layer_url, out_path, where="1=1", out_fields="*", workers=4, extra=Non
                     out.write(json.dumps({"p": f.get("properties") or {}, "g": json.dumps(f["geometry"])}) + "\n")
                     n += 1
     print(f"  [arcgis] {n:,} of {total:,} features from {layer_url}")
-    return n
+    return n, total
