@@ -32,3 +32,23 @@ def create_overture_addr(c, parquet):
 
 def load_overture_addr(c, jurisdiction, work_dir):
     create_overture_addr(c, overture_release.addresses_glob())
+
+
+def create_overture_segment(c, parquet):
+    """overture_segment(gers_id, geom): Overture road segments over the job's Packages, read only to attach their
+    GERS IDs to government geometry (roads.py). Their geometry and names are ODbL (OpenStreetMap): nothing from
+    this table but the ID goes into a Package, and the table isn't written anywhere."""
+    xmin, ymin, xmax, ymax = c.execute(
+        "SELECT min(ST_XMin(geom)), min(ST_YMin(geom)), max(ST_XMax(geom)), max(ST_YMax(geom)) FROM package_area"
+    ).fetchall()[0]
+    c.execute(f"""CREATE OR REPLACE TABLE overture_segment AS
+        SELECT id AS gers_id, geometry AS geom
+        FROM read_parquet('{parquet}', hive_partitioning = 1)
+        WHERE subtype = 'road'
+          AND bbox.xmax >= {xmin} AND bbox.xmin <= {xmax} AND bbox.ymax >= {ymin} AND bbox.ymin <= {ymax}""")
+    print(f"  [overture] {c.execute('SELECT count(*) FROM overture_segment').fetchall()[0][0]:,} road segments "
+          "(GERS IDs only)")
+
+
+def load_overture_segment(c, jurisdiction, work_dir):
+    create_overture_segment(c, overture_release.segments_glob())
