@@ -183,6 +183,9 @@ def load_tiger(c, job, jurisdiction, work_dir):
     counties = [g for g, in c.execute("SELECT geoid FROM road_fallback ORDER BY 1").fetchall()]
     if not counties:
         return
+    if job.country != "US":  # TIGER is US only; a Canadian fallback (NRN / Road Network File) isn't wired yet
+        print(f"  [tiger] no road fallback for {job.country}: {len(counties)} Package(s) without government roads")
+        return
     for vintage in tiger_vintages():
         z = os.path.join(work_dir, f"tl_{vintage}_{counties[0]}_addrfeat.zip")
         if _download(TIGER_ADDRFEAT.format(year=vintage, county=counties[0]), z):

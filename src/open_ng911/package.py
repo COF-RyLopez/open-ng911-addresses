@@ -10,11 +10,12 @@ layer, and the OSM-derived Review layer is built only for opted-in Packages (ADR
         a2_polygon.parquet                     A2Polygon: the county / census division, NENA fields + source_code
         a3_polygon.parquet                     A3Polygon: its municipalities clipped to it, NENA fields + source_code
         manifest.json                          counts, field fill, sources and their licenses, opt-in state
+        domains.json                           the value domains the layers use: NENA's, and CLDXF-CA's in Canada
 """
 import json
 import os
 
-from . import boundaries, ids
+from . import boundaries, ids, nena
 from .nena import SSAP_REQUIRED
 
 SSAP_FIELDS = ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2", "a3", "add_number", "addnum_suf",
@@ -45,6 +46,11 @@ def write(c, job, jurisdiction, release, out_dir):
                 "license_status": s.license_status, "license_url": s.license_url, "attribution": s.attribution}
                for s in jurisdiction.sources]
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in SSAP_FIELDS)
+    # NENA-STA-006.3's domains, with Canada's beside them in a Canadian Package (ADR 0006)
+    domains = {"NENA-STA-006.3": nena.domains()}
+    if job.country == "CA":
+        domains["CLDXF-CA"] = nena.cldxf_ca()["domains"]
+    values = "CLDXF-CA" if job.country == "CA" else "NENA-STA-006.3"
     for geoid, name, domain, opted, authority in c.execute(
             "SELECT geoid, name, domain, opted_in, authority FROM package_area JOIN package_domain USING (geoid) ORDER BY 1").fetchall():
         d = os.path.join(root, geoid)
@@ -62,7 +68,7 @@ def write(c, job, jurisdiction, release, out_dir):
         counts = {k: int(stats.pop(k)) for k in ("records", "records_with_gers_id", "gap_fill_candidates")}
         manifest = {
             "package": package_key(job, geoid), "name": name, "job": job.id, "overture_release": release,
-            "nena": {"standard": "NENA-STA-006.3-2026", "layers": ["SiteStructureAddressPoint", *bounds],
+            "nena": {"standard": "NENA-STA-006.3-2026", "values": values, "layers": ["SiteStructureAddressPoint", *bounds],
                      "mandatory_fields": list(SSAP_REQUIRED)},
             "recipient": authority, "opted_in": opted, "nguid_domain": domain,
             "distribution": ("handed to the opted-in 911 authority" if opted else
@@ -77,5 +83,7 @@ def write(c, job, jurisdiction, release, out_dir):
         }
         with open(os.path.join(d, "manifest.json"), "w") as f:
             json.dump(manifest, f, indent=2)
+        with open(os.path.join(d, "domains.json"), "w", encoding="utf-8") as f:
+            json.dump(domains, f, indent=1, ensure_ascii=False)
         summaries.append(manifest)
     return root, summaries

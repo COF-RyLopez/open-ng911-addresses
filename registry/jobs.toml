@@ -433,7 +433,7 @@ country = "CA"
 code = "PE"
 fips = "11"
 name = "Prince Edward Island"
-enabled = false
+enabled = true
 
 [[job]]
 id = "ca-ns"

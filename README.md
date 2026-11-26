@@ -3,7 +3,7 @@
 Open-data NENA NG9-1-1 address datasets for the 911 authorities of the US and Canada, built mostly from each
 area's own government sources and handed back NENA-ready to the agencies that opt in.
 
-**Status: Phase 1 scaffold.** Four pilot states (Vermont, Maine, Utah, North Dakota) run end to end in CI. The plan behind it, with its 25 settled
+**Status: Phase 1 scaffold.** Four pilot states (Vermont, Maine, Utah, North Dakota) and Prince Edward Island run end to end in CI. The plan behind it, with its 25 settled
 decisions, is the "NG911 Address Pipeline: US + Canada Infrastructure Plan"; the terms are in
 [GLOSSARY.md](GLOSSARY.md) and the decisions in [docs/adr](docs/adr). The California prototype is
 [ng911-pipeline](https://github.com/COF-RyLopez/ng911-pipeline).
@@ -14,7 +14,7 @@ One DuckDB job per state or province (`registry/jobs.toml`, 65 jobs), each writi
 or census division:
 
 1. Resolve the Overture release (`$OVERTURE_RELEASE`, else the newest on STAC or S3).
-2. Read the Package areas (Census TIGER counties; StatCan census divisions for Canada, to come), their
+2. Read the Package areas (Census TIGER counties; StatCan census divisions for Canada), their
    municipalities (TIGER towns or incorporated places; StatCan census subdivisions), the Source
    agency's own address points through the [OpenAddresses](https://github.com/openaddresses/openaddresses)
    source registry, and Overture's addresses.
@@ -42,6 +42,7 @@ data/output/release=<overture release>/<job>/
     <geoid>/road_centerline.parquet                GeoParquet: NENA RCL fields + uid, gers_id, road_source
     <geoid>/road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
     <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date
+    <geoid>/domains.json         the value domains used: NENA-STA-006.3, plus CLDXF-CA in a Canadian Package
 ```
 
 ## Run it
@@ -50,6 +51,7 @@ data/output/release=<overture release>/<job>/
 uv pip install -e ".[dev]"
 pytest -q -m "not live"                     # offline, on fixtures
 python -m open_ng911.build --job us-vt      # live: TIGERweb, Vermont's E911 service, Overture on S3
+python -m open_ng911.build --job ca-pe      # live: StatCan boundaries, PEI civic addresses, Overture on S3
 OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <previous address_lineage.parquet>
 ```
 
@@ -60,8 +62,8 @@ OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <p
 
 ## What's next (Phase 1)
 
-- The StatCan census-division Package areas and census-subdivision A3 for the pilot province; A4
-  (unincorporated communities) once there's an open source that isn't the statistical CDPs.
+- A4 (unincorporated communities) once there's an open source that isn't the statistical CDPs.
+- More provinces: Nova Scotia (NSCAF, open) and New Brunswick (GeoNB, open, bilingual) are the next candidates.
 - Several address sources per job, parcels for Placement, and pilot states whose statewide source is a
   file download rather than an ArcGIS service.
 - Phase 2: changelog-driven reruns, `exact_rematch` / `near_rematch` in the ledger, the churn table.
