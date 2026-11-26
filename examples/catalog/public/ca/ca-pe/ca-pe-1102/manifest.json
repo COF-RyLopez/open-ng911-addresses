@@ -147,6 +147,21 @@
       "note": "GERS IDs only; no Overture geometry or names (ODbL) are in this Package"
     }
   },
+  "address_ranges": {
+    "max_distance_m": 150.0,
+    "records_checked": 2,
+    "in_range": 0,
+    "wrong_side": 0,
+    "outside_range": 0,
+    "wrong_parity": 0,
+    "no_range": 0,
+    "no_matching_road": 2,
+    "segment_sides_with_derived_range": {
+      "left": 0,
+      "right": 0
+    },
+    "note": "Records against the road ranges on their side of the same street; derived ranges are in the derived_* columns, never in the agency's FromAddr/ToAddr"
+  },
   "nena_layers": {
     "PsapPolygon": {
       "features": 1,

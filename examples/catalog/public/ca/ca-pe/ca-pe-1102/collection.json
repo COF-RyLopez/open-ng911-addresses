@@ -11,7 +11,7 @@
   "title": "Queens, Prince Edward Island: NG9-1-1 Package (unclaimed)",
   "description": "The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 1 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1102.unclaimed.invalid until the authority opts in. Left out because a source's licence isn't open yet: PsapPolygon, PolicePolygon, FirePolygon, EmsPolygon (ng911:withheld_layers says which source).",
   "license": "other",
-  "updated": "2026-11-26T21:07:15Z",
+  "updated": "2026-11-26T21:20:29Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -81,8 +81,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T21:07:15Z",
-          "2026-11-26T21:07:15Z"
+          "2026-11-26T21:20:29Z",
+          "2026-11-26T21:20:29Z"
         ]
       ]
     }
@@ -207,8 +207,8 @@
       ],
       "title": "Package manifest",
       "description": "Counts, NENA field coverage, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 47572,
-      "file:checksum": "122062f5d05e2e4485345ac5807e0c9d0a7f1524e3cc0f475bf7f3c2b28c8b3bff7f"
+      "file:size": 48033,
+      "file:checksum": "1220476f3978fae16e58c06a17011b2a68876ecf19c91aa2d419a3a7acb92999be09"
     },
     "domains": {
       "href": "./domains.json",
@@ -241,7 +241,7 @@
       "title": "Vector tiles",
       "description": "PMTiles of a2_polygon, a3_polygon, site_structure_address_point for web maps, made with manby.",
       "file:size": 6254,
-      "file:checksum": "122049c540c06ceabd8edd977924b38e89fae6a34f61c913eb6d59c50bf04d84c84d"
+      "file:checksum": "1220407fbfbf8d63227544398fc5273d0be0313fd75e3697a369086247b88ec3604e"
     },
     "style-default": {
       "href": "./styles/default.json",

@@ -43,7 +43,7 @@
   "properties": {
     "title": "Queens: SiteStructureAddressPoint",
     "description": "Every addressed site the Source agency publishes (Records), plus Overture addresses no Record matched (Gap-fill candidates, status = 'gap_fill_candidate').",
-    "datetime": "2026-11-26T21:07:15Z",
+    "datetime": "2026-11-26T21:20:29Z",
     "ng911:layer": "SiteStructureAddressPoint",
     "table:row_count": 3,
     "table:primary_geometry": "geom",
@@ -380,7 +380,7 @@
       "title": "SiteStructureAddressPoint GeoParquet",
       "description": "Every addressed site the Source agency publishes (Records), plus Overture addresses no Record matched (Gap-fill candidates, status = 'gap_fill_candidate').",
       "file:size": 9003,
-      "file:checksum": "122077680a886753e3809dd61e0292365ee68afe4cea75b7fecfee8ce0b7da835000"
+      "file:checksum": "1220a57b65fa40693092deacd5e0a163a249efd621a63cea55a757c9b3b9469b5ae0"
     }
   }
 }
