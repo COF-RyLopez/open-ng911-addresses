@@ -19,9 +19,12 @@ import io
 import json
 import os
 import re
+import sys
 import tarfile
-import tomllib
 import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import oa_upstream  # scripts/oa_upstream.py
 
 OA_TARBALL = "https://github.com/openaddresses/openaddresses/archive/refs/heads/master.tar.gz"
 LAYERS = ("addresses", "centerlines", "parcels", "buildings")
@@ -113,37 +116,16 @@ def write_county_gaps(counties_csv, rows, out):
 
 
 def write_oa_proposals(oa_dir, registry_dir, out):
-    """Every registry source written as an `oa_entry` (OpenAddresses' schema), and whether OA lists it yet."""
-    rows = []
-    for country in ("us", "ca"):
-        d = os.path.join(registry_dir, country)
-        if not os.path.isdir(d):
-            continue
-        for f in sorted(os.listdir(d)):
-            if not f.endswith(".toml"):
-                continue
-            with open(os.path.join(d, f), "rb") as fh:
-                reg = tomllib.load(fh)
-            for src in reg.get("source", []):
-                entry = src.get("oa_entry")
-                if not entry:
-                    continue
-                target = src.get("openaddresses") or ""
-                listed = False
-                path = os.path.join(oa_dir, "sources", target + ".json")
-                if target and os.path.exists(path):
-                    with open(path) as fh:
-                        layers = json.load(fh).get("layers", {})
-                    listed = any(e.get("data") == entry.get("data") for e in layers.get(src.get("layer"), []))
-                rows.append({"job": reg.get("job"), "source_key": src.get("key"), "layer": src.get("layer"),
-                             "oa_source": target, "oa_layer": entry.get("name", ""), "data": entry.get("data", ""),
-                             "website": entry.get("website", ""), "license_status": src.get("license_status"),
-                             "status": "listed" if listed else "to_propose",
-                             "note": "" if src.get("license_status") == "open" else
-                             "OpenAddresses accepts it without a licence; the licence ask is tracked separately"})
+    """Every registry source written as an `oa_entry` (OpenAddresses' schema) and its upstream status
+    (oa_upstream.py: listed, new or fix)."""
+    rows = oa_upstream.proposals(oa_dir, registry_dir)
+    for r in rows:
+        r["note"] = "" if r["license_status"] == "open" else \
+            "OpenAddresses accepts it without a licence; the licence ask is tracked separately"
+    fields = ["job", "source_key", "layer", "oa_source", "oa_layer", "data", "website", "license_status", "status",
+              "note"]
     with open(out, "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=["job", "source_key", "layer", "oa_source", "oa_layer", "data", "website",
-                                           "license_status", "status", "note"])
+        w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
     return rows
@@ -196,7 +178,7 @@ def main():
             w.writerow([country, region, layer, k["sources"], k["statewide"], len(k["counties"]), k["open"],
                         k["share-alike"], k["restricted"], k["presumed"], k["stated-unreviewed"], k["unstated"]])
     props = write_oa_proposals(oa_dir, a.registry, os.path.join(a.out, "oa_proposals.csv"))
-    print(f"oa_entry proposals: {sum(p['status'] == 'to_propose' for p in props)} to propose, "
+    print(f"oa_entry proposals: {sum(p['status'] in ('new', 'fix') for p in props)} to propose, "
           f"{sum(p['status'] == 'listed' for p in props)} already listed")
     if a.counties:
         write_county_gaps(a.counties, rows, os.path.join(a.out, "county_gaps.csv"))

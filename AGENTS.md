@@ -32,6 +32,8 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
 - `upstream.py` where government roads and Overture / TIGER disagree; `odbl_inventory.py` which government
   sources could stand in for Overture's ODbL themes (docs/standards/upstream-path.md).
+- `oa_sync.py` the OpenAddresses pin: which jobs a pin bump rebuilds; `scripts/oa_upstream.py` drafts OpenAddresses
+  pull requests from the registry's `oa_entry` blocks.
 - `catalog.py` the Portolan/STAC catalog over a release's Packages (`python -m open_ng911.catalog`): reads the
   manifests and layer files the jobs wrote, decides public or withheld per Package (ADR 0011), writes
   `data/catalog/public/` and `report.json`. It never changes a Package; layer files are hard-linked in. Vector
@@ -84,6 +86,15 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   and AGENTS.md); keep that label prominent and never put a real agency domain on it.
 - **Layer files go through `db.write_geoparquet`** (GeoParquet 2.0, Hilbert order, row groups under 150k) so
   Portolan accepts them as they are; `portolan check` runs in the offline tests when portolan-cli is installed.
+- **Every new or fixed source goes back to OpenAddresses** (docs/openaddresses-upstream.md). A layer OpenAddresses
+  doesn't list, or lists wrongly, goes in the registry as an `oa_entry` written exactly as it should read upstream:
+  OpenAddresses' documented keys and classification words only, `else` on every `map`, field names checked against
+  the layer's `?f=json`. Anything NENA needs that their words can't say goes in `[source.nena]`, not the entry.
+  `scripts/oa_upstream.py` drafts the pull request and `npm test` in their checkout must pass; a person reviews it
+  and opens it from their own fork, never in an agency's name. Our reader ignores an entry's `filter` on purpose:
+  the registry's `exclude` drops the same features and counts them.
+- **OpenAddresses is read at a pinned commit** (`registry/openaddresses.toml`). The weekly sync (oa-sync.yml,
+  `oa_sync.py`) moves it in a pull request, and CI then rebuilds only the jobs that read a changed source file.
 - **Licenses**: a source with `license_status = "unknown"` never goes into anything public, including CI
   artifacts (CI uploads only `job.json` and manifests).
 - **Fix open data on our side**: OpenAddresses conform maps fields, it doesn't rewrite values; value fixes go

@@ -145,9 +145,11 @@ data = "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VC
 license = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
 attribution = "VT Enhanced 911 Board, VCGI"
 protocol = "ESRI"
+note = "E911 Board road centerlines. Ferries (AOTCLASS 65), proposed roads (80-89), discontinued roads (96) and features that are not roads (98) are filtered out."
 
 [source.oa_entry.conform]
 format = "geojson"
+filter = "AOTCLASS NOT IN (65, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 96, 98)"
 id = "SEGMENTID"
 name = ["PD", "PT", "SN", "ST", "SD"]
 addr_from_left = "LLO_A"
@@ -156,15 +158,17 @@ addr_from_right = "RLO_A"
 addr_to_right = "RHI_A"
 zip_left = "LZIP"
 zip_right = "RZIP"
-oneway = { function = "map", field = "ONEWAY", mapping = { Y = "yes", X = "reverse", N = "no" } }
+oneway = { function = "map", field = "ONEWAY", mapping = { Y = "yes", X = "reverse", N = "no" }, else = "no" }
 speed = { function = "mph_to_kph", field = "SPEEDLIMIT" }
-# AOTCLASS: 50s Interstate, 40s US highway, 30 state highway, 1/2/3 town highway classes, 7/70 legal trails,
-# 8/10 private roads and driveways; x5 are ramps
+# AOTCLASS (VCGI's AOTClass domain) in OpenAddresses' words, by each road's role in the network: Interstate
+# motorway (55 ramps motorway_link), US highway trunk, state highway primary, town highway class 1 secondary,
+# class 2 and county tertiary, class 3 residential, private roads, driveways, rest areas and military service,
+# the rest (class 4, forest highways, legal trails, unknown) unclassified. x1-x4 are one direction of a divided road.
 [source.oa_entry.conform.classification]
 function = "map"
 field = "AOTCLASS"
-else = "residential"
-mapping = { "50" = "motorway", "51" = "motorway", "52" = "motorway", "53" = "motorway", "54" = "motorway", "55" = "motorway_link", "56" = "motorway", "40" = "primary", "41" = "primary", "42" = "primary", "43" = "primary", "44" = "primary", "45" = "primary_link", "46" = "primary", "30" = "secondary", "1" = "tertiary", "11" = "tertiary", "12" = "tertiary", "13" = "tertiary", "14" = "tertiary", "15" = "tertiary_link", "16" = "tertiary", "2" = "tertiary", "7" = "track", "70" = "track", "8" = "service", "10" = "service", "97" = "service" }
+else = "unclassified"
+mapping = { "1" = "secondary", "2" = "tertiary", "3" = "residential", "8" = "service", "9" = "service", "10" = "service", "11" = "secondary", "12" = "secondary", "13" = "secondary", "14" = "secondary", "15" = "secondary", "16" = "secondary", "20" = "tertiary", "21" = "tertiary", "22" = "tertiary", "23" = "tertiary", "24" = "tertiary", "25" = "tertiary", "30" = "primary", "31" = "primary", "32" = "primary", "33" = "primary", "34" = "primary", "35" = "primary", "40" = "trunk", "41" = "trunk", "42" = "trunk", "43" = "trunk", "44" = "trunk", "45" = "trunk", "46" = "trunk", "47" = "service", "50" = "motorway", "51" = "motorway", "52" = "motorway", "53" = "motorway", "54" = "motorway", "55" = "motorway_link", "56" = "motorway", "57" = "service", "59" = "motorway", "92" = "service", "97" = "service" }
 
 # NENA fields straight from the road layer's own fields. Left/right ESN (LESN, RESN), town (LTWN, RTWN) and ZIP
 # are on every segment (2,000-segment sample, 2026-11-26); PARITYLEFT/RIGHT and SPEEDLIMIT are empty.
@@ -181,6 +185,10 @@ a3_r = "RTWN"
 postcode_l = "LZIP"
 postcode_r = "RZIP"
 dateupdate = "UPDATEDATE"
+# RoadClass and OneWay in NENA's own words from AOTCLASS and ONEWAY, so they don't pass through the coarser
+# OpenAddresses words above. AOTCLASS 71, 91, 93, 95 and 99 (class unknown) have no NENA word: left empty, counted.
+roadclass = { function = "map", field = "AOTCLASS", mapping = { "1" = "Local", "2" = "Local", "3" = "Local", "4" = "Local", "5" = "Local", "6" = "Local", "7" = "Vehicular Trail", "8" = "Private", "9" = "Private", "10" = "Private", "11" = "Local", "12" = "Local", "13" = "Local", "14" = "Local", "15" = "Ramp", "16" = "Local", "20" = "Local", "21" = "Local", "22" = "Local", "23" = "Local", "24" = "Local", "25" = "Ramp", "30" = "Secondary", "31" = "Secondary", "32" = "Secondary", "33" = "Secondary", "34" = "Secondary", "35" = "Ramp", "40" = "Secondary", "41" = "Secondary", "42" = "Secondary", "43" = "Secondary", "44" = "Secondary", "45" = "Ramp", "46" = "Secondary", "47" = "Other", "50" = "Primary", "51" = "Primary", "52" = "Primary", "53" = "Primary", "54" = "Primary", "55" = "Ramp", "56" = "Primary", "57" = "Other", "59" = "Primary", "70" = "Vehicular Trail", "92" = "Other", "97" = "Private" } }
+oneway = { function = "map", field = "ONEWAY", mapping = { Y = "FT", X = "TF", N = "B" } }
 
 # Service boundaries from the E911 Board's Emergency Service Zones (VCGI EmergencyE911_ESZ, 479 zones). Each zone
 # names its PSAP and its fire, law and EMS agency, so the zones merged by each name give the four layers (layers.py

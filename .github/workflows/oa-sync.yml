@@ -1,0 +1,44 @@
+name: OpenAddresses sync
+
+# Weekly: move the OpenAddresses pin (registry/openaddresses.toml) to their newest commit and open a pull
+# request that names the changed sources and the jobs that read them. CI on that pull request rebuilds only
+# those jobs (oa_sync.py plan); merging it is what puts OpenAddresses' new and fixed sources into our Packages.
+on:
+  schedule:
+    - cron: "17 6 * * 1"  # Mondays, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write  # to start CI on the sync branch (pull requests opened with GITHUB_TOKEN don't start it)
+
+jobs:
+  bump:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: git clone -q --bare --filter=blob:none https://github.com/openaddresses/openaddresses.git /tmp/oa.git
+      - run: PYTHONPATH=src python -m open_ng911.oa_sync bump --oa /tmp/oa.git --summary /tmp/oa-sync.md
+      # The registry's own `oa_entry` blocks OpenAddresses now lists unchanged can be dropped (oa_upstream.py)
+      - run: |
+          git -C /tmp/oa.git worktree add -q /tmp/oa "$(sed -n 's/^commit = "\(.*\)"/\1/p' registry/openaddresses.toml)"
+          { echo; echo '**Our oa_entry blocks, against the new pin** (`listed` ones can be dropped from the registry):'; echo '```';
+            python scripts/oa_upstream.py --oa /tmp/oa --out /tmp/oa-upstream; echo '```'; } >> /tmp/oa-sync.md
+      - id: pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: oa-sync/pin
+          title: "Move the OpenAddresses pin"
+          commit-message: "Move the OpenAddresses pin"
+          body-path: /tmp/oa-sync.md
+          add-paths: registry/openaddresses.toml
+          draft: true
+      - if: steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref oa-sync/pin

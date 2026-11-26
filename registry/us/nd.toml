@@ -95,6 +95,7 @@ website = "https://gishubdata-ndgov.hub.arcgis.com/"
 data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUBRoadsNG911/FeatureServer/0"
 attribution = "North Dakota GIS Hub"
 protocol = "ESRI"
+note = "NG9-1-1 road centerlines in the NENA NG9-1-1 GIS Data Model schema, compiled by the GIS Hub from local addressing authorities."
 
 [source.oa_entry.conform]
 format = "geojson"
@@ -106,9 +107,10 @@ addr_from_right = "FromAddr_R"
 addr_to_right = "ToAddr_R"
 zip_left = "PostCode_L"
 zip_right = "PostCode_R"
-oneway = { function = "map", field = "OneWay", mapping = { FT = "yes", TF = "reverse", B = "no" } }
+oneway = { function = "map", field = "OneWay", mapping = { FT = "yes", TF = "reverse", B = "no" }, else = "no" }
 speed = { function = "mph_to_kph", field = "SpeedLimit" }
-classification = { function = "map", field = "RoadClass", else = "residential", mapping = { "Primary" = "motorway", "Secondary" = "primary", "Local" = "residential", "Ramp" = "motorway_link", "Service Drive" = "service", "Vehicular Trail" = "track", "Walkway/Pedestrian Trail" = "footway", "Stairway" = "steps" } }
+# RoadClass (NENA words) in OpenAddresses' words; trails, walkways, stairways and paths are unclassified.
+classification = { function = "map", field = "RoadClass", else = "unclassified", mapping = { "Primary" = "motorway", "Ramp" = "motorway_link", "Secondary" = "primary", "Local" = "residential", "Service Drive" = "service", "Alley" = "service", "Private" = "service", "Parking Lot" = "service" } }
 
 # The NENA fields themselves, so nothing is lost through the OpenAddresses words (RoadClass 'Service Drive').
 [source.nena]

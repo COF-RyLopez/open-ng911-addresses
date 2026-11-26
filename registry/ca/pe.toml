@@ -72,8 +72,8 @@ attribution = "Contains information licensed under the Open Government Licence -
 name = "state"
 website = "https://gis.princeedwardisland.ca/server/rest/services/road_centerline/FeatureServer"
 data = "https://gis.princeedwardisland.ca/server/rest/services/road_centerline/FeatureServer/0"
-attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
 protocol = "ESRI"
+note = "Provincial road centreline. Names only: the layer publishes no address ranges or segment ID."
 
 [source.oa_entry.conform]
 format = "geojson"
