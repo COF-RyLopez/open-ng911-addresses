@@ -13,6 +13,7 @@ this repo see the same text.
 | [help-docs.md](help-docs.md) | Supporting documents: SSAP development, data stewardship, NSGIC validations, registries |
 | [gap-review.md](gap-review.md) | What the pipeline is missing against the standard, ranked, and where the data could come from |
 | [government-layers.md](government-layers.md) | The layers to look for on government endpoints, per NENA layer |
+| [upstream-path.md](upstream-path.md) | Where local data could update state, federal and Overture layers (the move off ODbL) |
 
 ## The documents and their licenses
 

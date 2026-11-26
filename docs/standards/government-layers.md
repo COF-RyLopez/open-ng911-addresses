@@ -37,3 +37,5 @@ Notes:
   what we hand back), and use the aggregate only where no direct source exists.
 - A layer we find but can't use (no licence, share-alike, restricted) still goes in the tracker, so the agency can
   be asked.
+- For every source, also note how its edit date compares with TIGER / NRN / Overture: local data that is newer is
+  the evidence for the upstream path ([upstream-path.md](upstream-path.md)).
