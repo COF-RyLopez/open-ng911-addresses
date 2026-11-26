@@ -11,7 +11,7 @@
   "title": "Queens, Prince Edward Island: NG9-1-1 Package (unclaimed)",
   "description": "The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 1 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1102.unclaimed.invalid until the authority opts in. Left out because a source's licence isn't open yet: PsapPolygon, PolicePolygon, FirePolygon, EmsPolygon (ng911:withheld_layers says which source).",
   "license": "other",
-  "updated": "2026-11-26T21:20:29Z",
+  "updated": "2026-11-26T21:50:15Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -81,8 +81,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T21:20:29Z",
-          "2026-11-26T21:20:29Z"
+          "2026-11-26T21:50:15Z",
+          "2026-11-26T21:50:15Z"
         ]
       ]
     }
@@ -95,6 +95,7 @@
   "ng911:nena_standard": "NENA-STA-006.3-2026",
   "ng911:value_domains": "CLDXF-CA",
   "ng911:overture_release": "2026-11-18.0",
+  "ng911:openaddresses_commit": "1d9762c36aa2a35cce4b28bd2191ee92ef3190f3",
   "ng911:records": 2,
   "ng911:gap_fill_candidates": 1,
   "ng911:record_gers_coverage": 0.5,
@@ -207,8 +208,8 @@
       ],
       "title": "Package manifest",
       "description": "Counts, NENA field coverage, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 48033,
-      "file:checksum": "1220476f3978fae16e58c06a17011b2a68876ecf19c91aa2d419a3a7acb92999be09"
+      "file:size": 48103,
+      "file:checksum": "12208cc27a1710030f10df2c9fab63ad23a80a20cd31a06c856cb1f77a3b579e9bd4"
     },
     "domains": {
       "href": "./domains.json",
@@ -241,7 +242,7 @@
       "title": "Vector tiles",
       "description": "PMTiles of a2_polygon, a3_polygon, site_structure_address_point for web maps, made with manby.",
       "file:size": 6254,
-      "file:checksum": "1220407fbfbf8d63227544398fc5273d0be0313fd75e3697a369086247b88ec3604e"
+      "file:checksum": "12206175bba54f6d6d147aca13aadf130f198cc7a35529743bdb618be841cace334f"
     },
     "style-default": {
       "href": "./styles/default.json",

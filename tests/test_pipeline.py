@@ -65,6 +65,7 @@ def test_vermont_job(tmp_path, conn):
     assert m["opted_in"] is False and m["recipient"] == "Vermont Enhanced 9-1-1 Board"
     assert m["records"] == 9 and m["records_with_gers_id"] == 3
     assert m["manifest_version"] == 2 and "field_fill" not in m
+    assert m["openaddresses_commit"] == openaddresses.pin()["commit"], "the OpenAddresses commit the sources came from"
     assert m["nena_coverage"]["SiteStructureAddressPoint"]["fields"]["nguid"]["fill"] == 1.0
     assert m["sources"][0]["license_status"] == "unknown"
 

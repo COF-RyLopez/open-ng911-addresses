@@ -4,6 +4,7 @@
   "name": "Queens",
   "job": "ca-pe",
   "overture_release": "2026-11-18.0",
+  "openaddresses_commit": "1d9762c36aa2a35cce4b28bd2191ee92ef3190f3",
   "nena": {
     "standard": "NENA-STA-006.3-2026",
     "values": "CLDXF-CA",

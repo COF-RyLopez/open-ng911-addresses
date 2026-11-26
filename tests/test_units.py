@@ -123,3 +123,13 @@ def test_every_country_has_one_row_and_its_boundary_loaders():
         k = registry.country(j)
         module = importlib.import_module(f"open_ng911.sources.{k.boundaries}")
         assert callable(module.load_package_area) and callable(module.load_municipality)
+
+
+def test_openaddresses_pin(monkeypatch):
+    from open_ng911.sources import openaddresses
+    p = openaddresses.pin()
+    assert len(p["commit"]) == 40 and p["date"]
+    assert openaddresses.source_paths("us-vt") == ["us/vt/statewide"]
+    assert openaddresses.source_paths("ca-pe") == ["ca/pe/province"]
+    monkeypatch.setenv("OPENADDRESSES_COMMIT", "abc123")
+    assert openaddresses.pin() == {"commit": "abc123", "date": None}

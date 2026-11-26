@@ -14,15 +14,35 @@ The n_ columns are the Source's own fields mapped straight to NENA fields by its
 import json
 import os
 import re
+import tomllib
 
-from .. import db, fieldmap, ids
+from .. import db, fieldmap, ids, registry
 from . import arcgis
 
-OA_RAW = "https://raw.githubusercontent.com/openaddresses/openaddresses/master/sources/{path}.json"
+OA_RAW = "https://raw.githubusercontent.com/openaddresses/openaddresses/{commit}/sources/{path}.json"
 
 
-def source_definition(path):
-    return json.loads(arcgis.get(OA_RAW.format(path=path), timeout=60, tries=1))
+def pin(registry_dir=registry.REGISTRY_DIR):
+    """The OpenAddresses commit builds read at: registry/openaddresses.toml, or OPENADDRESSES_COMMIT for one run.
+    {commit, date}; date is None for an override."""
+    if os.environ.get("OPENADDRESSES_COMMIT"):
+        return {"commit": os.environ["OPENADDRESSES_COMMIT"], "date": None}
+    with open(os.path.join(registry_dir, "openaddresses.toml"), "rb") as f:
+        p = tomllib.load(f)["openaddresses"]
+    return {"commit": p["commit"], "date": str(p["date"])}
+
+
+def source_definition(path, commit=None):
+    url = OA_RAW.format(commit=commit or pin()["commit"], path=path)
+    return json.loads(arcgis.get(url, timeout=60, tries=1))
+
+
+def source_paths(job, commit=None, registry_dir=registry.REGISTRY_DIR):
+    """The OpenAddresses sources a job reads, as paths under sources/ without .json ('us/vt/statewide'), sorted:
+    the ones its registry Sources name. A Source that is only an `oa_entry` has no path. `commit` is for
+    listing the sources at another commit, once they are discovered from the registry there."""
+    j = registry.job(job, registry_dir) if isinstance(job, str) else job
+    return sorted({s.openaddresses for s in registry.jurisdiction(j, registry_dir).sources if s.openaddresses})
 
 
 def layer_entry(definition, layer, name):
