@@ -27,8 +27,9 @@ def test_vermont_job(tmp_path, conn):
     assert s["packages"] == 2
     assert s["agency_points_excluded"] == {}
     # kept: the public phone and the un-numbered call box (addressed sites), both points sharing ID 1008;
-    # dropped: the point with no street, the exact duplicate of 1003, the point outside every Package
-    assert s["records"] == 9
+    # and the point 40 m outside Addison's edge (nearest Package);
+    # dropped: the point with no street, the exact duplicate of 1003, the point far outside every Package
+    assert s["records"] == 10
     assert s["agency_points_dropped"] == {"no_street": 1, "duplicate": 1, "outside_packages": 1}
     assert s["agency_points_id_shared"] == 2
     assert s["gap_fill_candidates"] == 2  # o3 (lost to o4 on street key) and o5; o7 is outside
@@ -39,6 +40,7 @@ def test_vermont_job(tmp_path, conn):
     assert addison["1003"]["gers_id"] == "o4", "a same-street pair beats a nearer pair on another street"
     assert addison["1004"]["gers_id"] is None
     assert addison["1005"]["source_site_type"] == "PUBLIC TELEPHONE" and addison["1005"]["status"] == "record"
+    assert addison["1009"]["status"] == "record"
     box = addison["1006"]
     assert box["add_number"] is None and box["st_pretyp"] == "Interstate" and box["st_name"] == "89"
     assert addison["1004"]["add_number"] == 30 and addison["1004"]["addnum_suf"] == "B"
@@ -61,7 +63,7 @@ def test_vermont_job(tmp_path, conn):
     with open(os.path.join(out, f"release={RELEASE}", "us-vt", "50001", "manifest.json")) as f:
         m = json.load(f)
     assert m["opted_in"] is False and m["recipient"] == "Vermont Enhanced 9-1-1 Board"
-    assert m["records"] == 8 and m["records_with_gers_id"] == 3
+    assert m["records"] == 9 and m["records_with_gers_id"] == 3
     assert m["field_fill"]["nguid"] == 1.0
     assert m["sources"][0]["license_status"] == "unknown"
 

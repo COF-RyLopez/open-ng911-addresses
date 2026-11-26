@@ -35,7 +35,13 @@ def prepare(c):
         SELECT a.* EXCLUDE (geoid), p.geoid FROM (SELECT *, NULL::VARCHAR AS geoid FROM agency_addr) a
         LEFT JOIN package_area p ON ST_Intersects(p.geom, a.geom)
         QUALIFY row_number() OVER (PARTITION BY a.address_uid ORDER BY p.geoid) = 1""")
-    # a point in no Package (off the state's TIGER counties: bad coordinates, or across the line) is counted
+    # a point just outside every Package (a shoreline or border address off the generalised TIGER outline) goes
+    # to the nearest Package within about 1 km; one farther out (bad coordinates, across the line) is counted
+    c.execute("""UPDATE agency_addr a SET geoid = n.geoid FROM (
+            SELECT a.address_uid, p.geoid FROM agency_addr a JOIN package_area p
+              ON a.geoid IS NULL AND ST_DWithin(p.geom, a.geom, 0.01)
+            QUALIFY row_number() OVER (PARTITION BY a.address_uid ORDER BY ST_Distance(p.geom, a.geom), p.geoid) = 1) n
+        WHERE a.address_uid = n.address_uid""")
     c.execute("""INSERT INTO agency_dropped SELECT source_key, 'outside_packages', site_type, count(*)
                  FROM agency_addr WHERE geoid IS NULL GROUP BY ALL""")
     c.execute("DELETE FROM agency_addr WHERE geoid IS NULL")
