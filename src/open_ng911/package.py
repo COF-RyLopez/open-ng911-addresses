@@ -1,18 +1,21 @@
 """
 Packages: one per county (in Canada, census division), each the NG9-1-1 dataset for that area (GLOSSARY.md).
 
-This module writes the SiteStructureAddressPoint layer; roads.py adds the RoadCenterline layer and its manifest
-section. Boundaries follow; Overture's ODbL themes never go into a core layer, and the OSM-derived Review layer is
-built only for opted-in Packages (ADR 0007).
+This module writes the SiteStructureAddressPoint layer and the A2 and A3 boundary layers (boundaries.py);
+roads.py adds the RoadCenterline layer and its manifest section. Overture's ODbL themes never go into a core
+layer, and the OSM-derived Review layer is built only for opted-in Packages (ADR 0007).
 
     <out>/release=<release>/<job>/<geoid>/
         site_structure_address_point.parquet   GeoParquet, NENA-STA-006.3 fields + uid, gers_id, status
+        a2_polygon.parquet                     A2Polygon: the county / census division, NENA fields + source_code
+        a3_polygon.parquet                     A3Polygon: its municipalities clipped to it, NENA fields + source_code
         manifest.json                          counts, field fill, sources and their licenses, opt-in state
+        domains.json                           the value domains the layers use: NENA's, and CLDXF-CA's in Canada
 """
 import json
 import os
 
-from . import ids
+from . import boundaries, ids, nena
 from .nena import SSAP_REQUIRED
 
 SSAP_FIELDS = ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2", "a3", "add_number", "addnum_suf",
@@ -43,12 +46,18 @@ def write(c, job, jurisdiction, release, out_dir):
                 "license_status": s.license_status, "license_url": s.license_url, "attribution": s.attribution}
                for s in jurisdiction.sources]
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in SSAP_FIELDS)
+    # NENA-STA-006.3's domains, with Canada's beside them in a Canadian Package (ADR 0006)
+    domains = {"NENA-STA-006.3": nena.domains()}
+    if job.country == "CA":
+        domains["CLDXF-CA"] = nena.cldxf_ca()["domains"]
+    values = "CLDXF-CA" if job.country == "CA" else "NENA-STA-006.3"
     for geoid, name, domain, opted, authority in c.execute(
             "SELECT geoid, name, domain, opted_in, authority FROM package_area JOIN package_domain USING (geoid) ORDER BY 1").fetchall():
         d = os.path.join(root, geoid)
         os.makedirs(d, exist_ok=True)
         c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM ssap WHERE geoid = '{geoid}' ORDER BY uid) "
                   f"TO '{os.path.join(d, 'site_structure_address_point.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
+        bounds = boundaries.write_package(c, job, geoid, d)
         res = c.execute(f"""SELECT count(*) AS rows,
                 count(*) FILTER (status = 'record') AS records,
                 count(*) FILTER (status = 'record' AND gers_id IS NOT NULL) AS records_with_gers_id,
@@ -59,7 +68,7 @@ def write(c, job, jurisdiction, release, out_dir):
         counts = {k: int(stats.pop(k)) for k in ("records", "records_with_gers_id", "gap_fill_candidates")}
         manifest = {
             "package": package_key(job, geoid), "name": name, "job": job.id, "overture_release": release,
-            "nena": {"standard": "NENA-STA-006.3-2026", "layers": ["SiteStructureAddressPoint"],
+            "nena": {"standard": "NENA-STA-006.3-2026", "values": values, "layers": ["SiteStructureAddressPoint", *bounds],
                      "mandatory_fields": list(SSAP_REQUIRED)},
             "recipient": authority, "opted_in": opted, "nguid_domain": domain,
             "distribution": ("handed to the opted-in 911 authority" if opted else
@@ -68,10 +77,13 @@ def write(c, job, jurisdiction, release, out_dir):
             "record_gers_coverage": round(counts["records_with_gers_id"] / counts["records"], 4) if counts["records"] else None,
             "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},
             "sources": sources,
+            "boundaries": bounds,
             "gap_fill_licenses": dict(c.execute(f"""SELECT coalesce(source_license, 'unstated'), count(*) FROM ssap
                 WHERE geoid = '{geoid}' AND status = 'gap_fill_candidate' GROUP BY 1 ORDER BY 2 DESC""").fetchall()),
         }
         with open(os.path.join(d, "manifest.json"), "w") as f:
             json.dump(manifest, f, indent=2)
+        with open(os.path.join(d, "domains.json"), "w", encoding="utf-8") as f:
+            json.dump(domains, f, indent=1, ensure_ascii=False)
         summaries.append(manifest)
     return root, summaries

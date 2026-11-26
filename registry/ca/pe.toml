@@ -1,0 +1,45 @@
+# Jurisdiction registry: Prince Edward Island (job ca-pe)
+#
+# Who the Packages are for, which Source agencies' layers go into them, and where each agency stands.
+# Statuses here change by hand, and only after the agency confirms (ADR 0004, 0005).
+#
+# Why PEI first: civic addressing on the Island is one provincial program, so a single open layer covers
+# every municipality (83,025 civic address points, Nov 2026) with a stable ID on every point (UNIQUE_ID, never
+# empty), under the Open Government Licence - Prince Edward Island (attribution, no share-alike). Three
+# census divisions keep the CI build small, and 9-1-1 is run province-wide, so the authority is clear.
+
+job = "ca-pe"
+packages = "census_division"   # one Package per StatCan census division: 1101 Kings, 1102 Queens, 1103 Prince
+
+# 911 authorities: the Recipients. 9-1-1 on the Island is provincial, so one authority covers every Package.
+# ADR 0006: a census division isn't itself a 911 body, so the authority is named here, per province.
+[[authority]]
+key = "pe-911"
+name = "Prince Edward Island 911 Administration (Department of Justice and Public Safety)"
+covers = "*"
+opted_in = false
+# Set only after someone confirms from an address on this domain (ADR 0004). Until then every NGUID in the
+# job uses the placeholder <package>.unclaimed.invalid.
+domain = ""
+
+# Source agencies. Each census subdivision (municipality) is the A3 unit; on the Island one provincial program
+# addresses all of them, so there is one Source agency rather than one per municipality. Provinces where
+# municipalities publish their own points get one [[source]] per municipality.
+[[source]]
+key = "ca-pe-civic-address"
+agency = "Government of Prince Edward Island, Civic Addressing"
+layer = "addresses"
+covers = "*"
+openaddresses = "ca/pe/province"     # sources/ca/pe/province.json
+oa_layer = "state"
+# The layer's own stable civic address ID (7 digits). OpenAddresses maps no id for this source.
+id_field = "UNIQUE_ID"
+license_status = "open"
+license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+
+# Sharing paths (ADR 0005): not_started | offered | in_progress | done | not_applicable
+[source.sharing]
+nad = "not_applicable"               # the NAD is US only
+overture = "not_started"             # addresses reach Overture through OpenAddresses
+esri_community_maps = "not_applicable"

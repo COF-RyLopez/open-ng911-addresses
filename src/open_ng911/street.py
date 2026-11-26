@@ -30,6 +30,8 @@ STREET_TYPES = {
     "SQUARE": "SQ", "CR": "CIR",  # Calaveras: 'HOKAN CR'
     "ALLEY": "ALY", "PLAZA": "PLZ", "LP": "LOOP",  # Placer: 'IMPRESSIONIST LP'
     "EXTENSION": "EXT", "RIDGE": "RDG", "CROSSING": "XING", "HILL": "HL", "HEIGHTS": "HTS",
+    # Canada Post abbreviations (PEI civic addresses: 'TRACEY AV', 'OLD FORGE CRT')
+    "TERR": "TER", "GARDENS": "GDNS", "GDNS": "GDNS", "CIRCUIT": "CIRCT", "CIRCT": "CIRCT", "PRIVATE": "PVT", "PVT": "PVT",
 }
 
 # Type suffixes recognised at the end of a street, abbreviated or spelled out (31% of California streets spell
@@ -42,7 +44,8 @@ ORDINALS = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "
             "ELEVENTH", "TWELFTH", "THIRTEENTH", "FOURTEENTH", "FIFTEENTH", "SIXTEENTH", "SEVENTEENTH",
             "EIGHTEENTH", "NINETEENTH", "TWENTIETH"]
 # ST FRANCIS (address) vs SAINT FRANCIS (another source), VIA MARIPOSA W vs VIA MARIPOSA WEST
-KEY_WORDS = [("SAINT", "ST"), ("MOUNT", "MT"), ("FORT", "FT"), ("NORTHEAST", "NE"), ("NORTHWEST", "NW"),
+# ROUTE 11 (Overture) vs RTE 11 (PEI), CHEMIN vs CH (Canada Post)
+KEY_WORDS = [("ROUTE", "RTE"), ("CHEMIN", "CH"), ("SAINT", "ST"), ("MOUNT", "MT"), ("FORT", "FT"), ("NORTHEAST", "NE"), ("NORTHWEST", "NW"),
              ("SOUTHEAST", "SE"), ("SOUTHWEST", "SW"), ("NORTH", "N"), ("SOUTH", "S"), ("EAST", "E"), ("WEST", "W")]
 
 
@@ -57,8 +60,9 @@ def _ordinal(n):
 
 def key_sql(expr):
     """Street name padded with spaces, with direction words abbreviated and ordinal words as numbers
-    ('N EIGHTH' -> ' N 8TH '), for whole-word matching where one source spells numbered streets out."""
-    sql = f"(' ' || upper(trim({expr})) || ' ')"
+    ('N EIGHTH' -> ' N 8TH '), for whole-word matching where one source spells numbered streets out. Accents
+    come off ('CHEMIN DE L'ÉGLISE' and 'CHEMIN DE L'EGLISE' are one street) and hyphens are spaces ('ST-PIERRE')."""
+    sql = f"(' ' || replace(upper(strip_accents(trim({expr}))), '-', ' ') || ' ')"
     for full, abbr in KEY_WORDS:
         sql = f"replace({sql}, ' {full} ', ' {abbr} ')"
     for i, w in enumerate(ORDINALS, 1):
@@ -72,9 +76,11 @@ def install(c):
     c.execute("CREATE OR REPLACE MACRO normalize_street_type(t) AS "
               + _case("rtrim(upper(trim(t)), '.')", STREET_TYPES, "rtrim(upper(trim(t)), '.')"))
     # s0: upper case, single spaces, trailing periods dropped ('SHASTA ST.'), zero-padded ordinals unpadded
-    # ('05TH ST' -> '5TH ST', San Francisco and San Diego)
+    # ('05TH ST' -> '5TH ST', San Francisco and San Diego), and a route number written after the street's name
+    # dropped ('QUEENS RD - RTE 210', PEI): the named street is the address's street
     c.execute(r"""CREATE OR REPLACE MACRO street_s0(s) AS
-        regexp_replace(regexp_replace(regexp_replace(upper(trim(s)), '\s+', ' ', 'g'), '[.]+$', ''),
+        regexp_replace(regexp_replace(regexp_replace(regexp_replace(upper(trim(s)), '\s+', ' ', 'g'),
+                       ' +- +(RTE|ROUTE|HWY|HIGHWAY) +[0-9]+[A-Z]?$', ''), '[.]+$', ''),
                        '\b0+([1-9][0-9]*(ST|ND|RD|TH))\b', '\1', 'g')""")
     # a direction after the street type ('TERRA VISTA PKWY W') is the post-directional. Only after a recognised
     # type, so a street named for its letter ('AVENUE N', Lancaster) keeps it.

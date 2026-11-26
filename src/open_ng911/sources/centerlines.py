@@ -203,6 +203,9 @@ def load_tiger(c, job, jurisdiction, work_dir):
     counties = [g for g, in c.execute("SELECT geoid FROM road_fallback ORDER BY 1").fetchall()]
     if not counties:
         return
+    if job.country != "US":  # TIGER is US only; a Canadian fallback (NRN / Road Network File) isn't wired yet
+        print(f"  [tiger] no road fallback for {job.country}: {len(counties)} Package(s) without government roads")
+        return
     vintage = _tiger_vintage(counties, work_dir)
     fetched = _now()
     _insert_counties(c, counties, vintage, work_dir, "road_seg")

@@ -1,0 +1,38 @@
+# Jurisdiction registry: Utah (job us-ut)
+#
+# Who the Packages are for, which Source agencies' layers go into them, and where each agency stands.
+# Statuses here change by hand, and only after the agency confirms (ADR 0004, 0005).
+
+job = "us-ut"
+packages = "county"        # one Package per county (TIGER), 29 in Utah
+
+# 911 authorities: the Recipients. Utah's PSAPs are local, but the Utah Communications Authority's 911 Division
+# administers 9-1-1 and NG9-1-1 GIS statewide, so it is the one Recipient until a county authority asks for
+# its own Package.
+[[authority]]
+key = "ut-uca-911"
+name = "Utah Communications Authority, 911 Division"
+covers = "*"
+opted_in = false
+domain = ""                # set only after someone confirms from an address on this domain (ADR 0004)
+
+[[source]]
+key = "us-ut-ugrc-address-points"
+agency = "Utah Geospatial Resource Center (UGRC), compiled from county address authorities"
+layer = "addresses"
+covers = "*"
+openaddresses = "us/ut/statewide"    # sources/us/ut/statewide.json
+oa_layer = "state"
+# UTAddPtID: filled on every point (1,504,366, checked 2026-11-26). OpenAddresses maps it as `id` too.
+id_field = "UTAddPtID"
+# PtType (Residential, Commercial, BASE ADDRESS, Vacant...) has no equipment-only values, and the conform maps
+# no addrtype, so nothing is excluded.
+exclude_site_types = []
+license_status = "open"
+license_url = "https://creativecommons.org/licenses/by/4.0/"
+attribution = "Utah UGRC"
+
+[source.sharing]
+nad = "not_started"
+overture = "not_started"
+esri_community_maps = "not_applicable"

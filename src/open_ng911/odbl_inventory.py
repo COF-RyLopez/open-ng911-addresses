@@ -66,9 +66,10 @@ def package_section(c, job, geoid, catalogue):
              for k, rs, lic, n in c.execute(f"""SELECT s.source_key, s.road_source, m.license_status, count(*)
                  FROM road_seg s LEFT JOIN road_source_meta m USING (source_key)
                  WHERE s.geoid = '{geoid}' GROUP BY ALL ORDER BY 1""").fetchall()]
+    a3 = c.execute(f"SELECT count(*) FROM a3_polygon WHERE geoid = '{geoid}'").fetchall()[0][0]
     division = [{"source_key": "tiger-counties" if job.country == "US" else "statcan-census-divisions",
                  "license_status": "open", "covers": True,
-                 "what": "A2 / Package area" + (", A3 where the boundary layers are built" if job.country else "")}]
+                 "what": "A2 / Package area" + (f", A3 ({a3} municipalities)" if a3 else "")}]
     read_by_theme = {"transportation": roads, "buildings": [], "divisions": division, "base_water": []}
     for theme, (oa_layer, national_by_country) in THEMES.items():
         read = read_by_theme[theme]

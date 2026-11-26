@@ -161,7 +161,7 @@ country = "US"
 code = "ME"
 fips = "23"
 name = "Maine"
-enabled = false
+enabled = true
 
 [[job]]
 id = "us-md"
@@ -281,7 +281,7 @@ country = "US"
 code = "ND"
 fips = "38"
 name = "North Dakota"
-enabled = false
+enabled = true
 
 [[job]]
 id = "us-oh"
@@ -361,7 +361,7 @@ country = "US"
 code = "UT"
 fips = "49"
 name = "Utah"
-enabled = false
+enabled = true
 
 [[job]]
 id = "us-vt"
@@ -433,7 +433,7 @@ country = "CA"
 code = "PE"
 fips = "11"
 name = "Prince Edward Island"
-enabled = false
+enabled = true
 
 [[job]]
 id = "ca-ns"

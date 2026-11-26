@@ -16,10 +16,12 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   911 authorities (opt-in, domain) and Source agencies (OpenAddresses source, ID field, license status,
   sharing-path status). Edited by hand, and statuses change only after the agency confirms (ADR 0004, 0005).
 - `src/open_ng911/build.py` one job end to end; `python -m open_ng911.build --job us-vt`.
-- `sources/` one table each: `package_area` (TIGER counties), `agency_addr` (OpenAddresses registry →
-  the agency's own endpoint), `overture_addr` (Overture addresses theme only), `road_seg` (`centerlines.py`:
-  government centerlines through the registry, TIGER ADDRFEAT as the fallback), `overture_segment` (GERS IDs
-  only, see below).
+- `sources/` one table each: `package_area` (TIGER counties; StatCan census divisions in Canada, `statcan.py`),
+  `municipality` (TIGER county subdivisions or places; StatCan census subdivisions in Canada), `agency_addr`
+  (OpenAddresses registry → the agency's own endpoint), `overture_addr` (Overture addresses theme only),
+  `road_seg` (`centerlines.py`: government centerlines through the registry, TIGER ADDRFEAT as the fallback),
+  `overture_segment` (GERS IDs only, see below).
+- `boundaries.py` the A2Polygon and A3Polygon layers and every address point's A3 (ADR 0009).
 - `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID and NGUID,
@@ -28,6 +30,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 
 ## Rules
 
+- **Keep every addressed site.** A NENA SSAP is any addressed site: public phones, call boxes, towers and
+  un-numbered sites on a named road all stay. A point is dropped only for a reason `openaddresses.create_agency_addr`
+  names (no geometry, not a point, no street, a true duplicate, outside every Package, or the registry's
+  `exclude_site_types`), and every drop is counted in job.json `agency_points_dropped`.
 - **Records win** (ADR 0001): an agency point is a Record; Overture fills in only as `gap_fill_candidate`.
 - **NGUIDs come from the Address UID, never a GERS ID** (ADR 0002). Changing `ids.NAMESPACE` or the UID
   recipe changes every published NGUID: don't.
@@ -43,7 +49,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - **Fix open data on our side**: OpenAddresses conform maps fields, it doesn't rewrite values; value fixes go
   in `street.py`.
 - NENA output is NENA-STA-006.3-2026: lower-cased field names, registry words ("Avenue", "North").
-  Canada uses the same fields with CLDXF-CA values (ADR 0006).
+  Canada uses the same fields with CLDXF-CA values (ADR 0006): `nena.install(c, "CA")` adds Canada's English and
+  French street types (`nena/cldxf_ca_domains.json`) and French pre types ('Rue', 'Chemin'), and every Canadian
+  Package's `domains.json` carries CLDXF-CA's domains beside NENA's. The CLDXF-CA lists were compiled by hand:
+  check them against the published text before an opted-in hand-off.
 
 ## Running things
 
@@ -62,3 +71,5 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - `SET geometry_always_xy = true` (done in `db.connect`). Relations have no `fetchone()`: use
   `.fetchall()[0]`. Lambdas are `lambda x: ...`. `ST_MakeValid` before unions of nested polygons.
 - No pandas: read results with `cursor.description` + `fetchall()`.
+- Macros expand inline: nest `nena_pretype_raw(parse_street(...))` in one expression and the query can take
+  minutes to bind. Compute one step per CTE or table, as `build.assemble_ssap` does.

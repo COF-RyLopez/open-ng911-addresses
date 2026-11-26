@@ -1,0 +1,5 @@
+{"p": {"UNIQUE_ID": "5753470", "STREET_NO": 427.0, "STREET_NM": "QUEENS RD - RTE 210", "APT_NO": " ", "COMM_NM": "CHARLOTTETOWN", "COUNTY": "QUN"}, "g": "{\"type\": \"Point\", \"coordinates\": [-63.13, 46.24]}"}
+{"p": {"UNIQUE_ID": "5753488", "STREET_NO": 9617.0, "STREET_NM": "RTE 11", "APT_NO": " ", "COMM_NM": "BAIE-EGMONT", "COUNTY": "QUN"}, "g": "{\"type\": \"Point\", \"coordinates\": [-63.9, 46.5]}"}
+{"p": {"UNIQUE_ID": "5753496", "STREET_NO": 12.0, "STREET_NM": "RUE DE L'EGLISE", "APT_NO": " ", "COMM_NM": "ABRAM-VILLAGE", "COUNTY": "QUN"}, "g": "{\"type\": \"Point\", \"coordinates\": [-63.91, 46.51]}"}
+{"p": {"UNIQUE_ID": "5753504", "STREET_NO": 15.0, "STREET_NM": "TRACEY AV", "APT_NO": "2", "COMM_NM": "NORTH CARLETON", "COUNTY": "QUN"}, "g": "{\"type\": \"Point\", \"coordinates\": [-63.15, 46.25]}"}
+{"p": {"UNIQUE_ID": "5753512", "STREET_NO": 50.0, "STREET_NM": "FAR SIDE RD", "APT_NO": " ", "COMM_NM": "NOWHERE", "COUNTY": "QUN"}, "g": "{\"type\": \"Point\", \"coordinates\": [-60.0, 45.0]}"}
