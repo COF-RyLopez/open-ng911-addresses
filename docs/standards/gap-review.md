@@ -20,6 +20,13 @@ ODbL or OSM content in core layers, Overture only where its licence is not ODbL.
 | LocationMarkerPoint, DistanceMarkerPoint | Recommended | No |
 | Street name / address aliases (Appendix E) | Required where they exist | No |
 
+**Update (native field maps).** The pipeline now maps each Source's own fields to NENA fields (the registry's
+`nena` tables, `src/open_ng911/fieldmap.py`) and writes every field of every layer it builds. Gap 1 is fixed (US
+Packages split units into UnitPreTyp + UnitValue), gap 2 is closed (ProvisioningPolygon from the Source, or the
+Package area), and gap 3 is closed where a Source publishes service zones (Vermont and PEI ESZs; Utah PSAP, law
+and fire; North Dakota fire and law). Every build reports per-field coverage before and after:
+[nena-coverage.md](nena-coverage.md), with the open fields in `registry/remediation/nena_field_gaps.csv`.
+
 ## Ranked gaps
 
 1. **US units use the wrong field.** We write `unit`; the US template removes `Unit` and uses

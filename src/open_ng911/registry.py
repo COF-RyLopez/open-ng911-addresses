@@ -8,7 +8,15 @@ from dataclasses import dataclass, field
 
 REGISTRY_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "registry")
 LICENSE_STATUSES = ("open", "share-alike", "unknown")
-LAYERS = ("addresses", "centerlines")  # OpenAddresses layer names
+# What a Source can be: a registry layer key -> the NENA layer it feeds. 'addresses' and 'centerlines' are
+# OpenAddresses layer names, read through its source registry (or an `oa_entry`); the others are read from the
+# Source's own `endpoint` (layers.py), since OpenAddresses doesn't catalogue them.
+NENA_LAYER = {"addresses": "SiteStructureAddressPoint", "centerlines": "RoadCenterLine",
+              "psap": "PsapPolygon", "police": "PolicePolygon", "fire": "FirePolygon", "ems": "EmsPolygon",
+              "provisioning": "ProvisioningPolygon", "distance_markers": "DistanceMarkerPoint",
+              "location_markers": "LocationMarkerPoint"}
+OA_LAYERS = ("addresses", "centerlines")
+LAYERS = tuple(NENA_LAYER)
 SHARING_STATUSES = ("not_started", "offered", "in_progress", "done", "not_applicable")
 
 
@@ -71,9 +79,9 @@ class Source:
     agency: str
     layer: str
     covers: str | list
-    openaddresses: str
-    oa_layer: str
     license_status: str
+    openaddresses: str = ""
+    oa_layer: str = ""
     id_field: str = ""
     exclude_site_types: list = field(default_factory=list)
     license_url: str = ""
@@ -84,6 +92,14 @@ class Source:
     oa_entry: dict = field(default_factory=dict)
     # Features to leave out, by the raw value of one field: {field = "AOTCLASS", values = ["98"]}
     exclude: dict = field(default_factory=dict)
+    # NENA field (lower-cased) -> the Source's own field, in the conform language (fieldmap.py)
+    nena: dict = field(default_factory=dict)
+    # Where a layer OpenAddresses doesn't catalogue is read: {data = "<ArcGIS layer URL>", protocol = "ESRI",
+    # where = "<optional filter>"}
+    endpoint: dict = field(default_factory=dict)
+    # Polygons merged into one per value of this field (a zone layer naming each zone's fire, law and EMS
+    # agency feeds the fire, police and EMS layers this way); the value is the feature's ID
+    dissolve: str = ""
 
     def covers_package(self, geoid):
         return self.covers == "*" or geoid in self.covers
@@ -136,9 +152,16 @@ def validate(r, j):
     for a in r.authorities:
         assert not (a.opted_in and not a.domain), f"{a.key}: opted in without a confirmed domain (ADR 0004)"
         assert a.opted_in or not a.domain, f"{a.key}: a domain is set only once the authority opts in (ADR 0003)"
+    from . import fieldmap
     for s in r.sources:
         assert s.license_status in LICENSE_STATUSES, f"{s.key}: license_status {s.license_status!r}"
         assert s.layer in LAYERS, f"{s.key}: layer {s.layer!r} (one of {LAYERS})"
+        if s.layer in OA_LAYERS:
+            assert s.openaddresses or s.oa_entry, f"{s.key}: an {s.layer} Source names its OpenAddresses source"
+        else:
+            assert s.endpoint.get("data"), f"{s.key}: a {s.layer} Source needs endpoint.data (OpenAddresses has none)"
+        errors = fieldmap.check(s, NENA_LAYER[s.layer], j.country)
+        assert not errors, "; ".join(errors)
         assert not s.exclude or set(s.exclude) == {"field", "values"}, f"{s.key}: exclude needs field and values"
         for path, status in s.sharing.items():
             assert status in SHARING_STATUSES, f"{s.key}: sharing.{path} = {status!r}"

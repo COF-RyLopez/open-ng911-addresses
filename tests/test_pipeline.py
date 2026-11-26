@@ -6,7 +6,7 @@ import os
 import duckdb
 from vt_fixtures import FIXTURES, OVERTURE, fixture_loaders
 
-from open_ng911 import build, ids
+from open_ng911 import build, fieldmap, ids, nena, street
 from open_ng911.sources import openaddresses
 
 RELEASE = "2026-11-18.0"
@@ -96,6 +96,9 @@ def duckdb_conn():
 
 def test_exclude_site_types_drops_and_counts(conn, vt):
     _, jur = vt
+    street.install(conn)
+    nena.install(conn)
+    fieldmap.install(conn)
     source = dataclasses.replace(jur.sources[0], exclude_site_types=["PUBLIC TELEPHONE"])
     conform = {"number": "HOUSE_NUMBER", "street": ["PD", "PT", "SN", "ST", "SD"], "addrtype": "SITETYPE"}
     openaddresses.create_agency_addr(conn, source, os.path.join(FIXTURES, "vt_agency_points.ndjson"), conform, True)
@@ -152,7 +155,7 @@ def test_road_centerlines(tmp_path, conn):
 
     with open(os.path.join(root, "50001", "manifest.json")) as f:
         m = json.load(f)
-    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
+    assert m["nena"]["layers"][:4] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
     rc = m["road_centerline"]
     assert rc["rows"] == 3 and rc["road_source"] == "government" and rc["gers_coverage"] == round(2 / 3, 4)
     (src,) = rc["sources"]

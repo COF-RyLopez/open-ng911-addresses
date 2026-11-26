@@ -43,3 +43,89 @@ attribution = "Contains information licensed under the Open Government Licence -
 nad = "not_applicable"               # the NAD is US only
 overture = "not_started"             # addresses reach Overture through OpenAddresses
 esri_community_maps = "not_applicable"
+
+# NENA fields straight from the layer's own fields (fieldmap.py). ESN is on every point (2,000-point sample,
+# 2026-11-26). STREET_NM is the whole street name ('QUEENS RD - RTE 210'), so the parse still splits it; COMM_NM is
+# the community.
+[source.nena]
+add_number = "STREET_NO"
+esn = "ESN"
+unit = "APT_NO"
+
+# Road centerlines: the Province's road centreline layer (16,917 segments, checked 2026-11-26). It has names but no
+# address ranges, so ranges stay empty (parity 'Z') until a ranged layer is found; it still gives every PEI Package a
+# government RoadCenterline where it had none (Canada has no national fallback wired yet). OpenAddresses lists no
+# centerlines for PEI, so the entry is written here in its schema. No ID field: UIDs from geometry. No licence on
+# the layer itself: unknown until confirmed under the OGL-PEI (tracker: ca-pe-ng911-layers).
+[[source]]
+key = "ca-pe-road-centreline"
+agency = "Government of Prince Edward Island (road centreline)"
+layer = "centerlines"
+covers = "*"
+openaddresses = "ca/pe/province"
+oa_layer = "state"
+license_status = "unknown"
+license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+
+[source.oa_entry]
+name = "state"
+website = "https://gis.princeedwardisland.ca/server/rest/services/road_centerline/FeatureServer"
+data = "https://gis.princeedwardisland.ca/server/rest/services/road_centerline/FeatureServer/0"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+protocol = "ESRI"
+
+[source.oa_entry.conform]
+format = "geojson"
+name = "NAME"
+
+# Service boundaries from the Province's Emergency Service Zones (134 zones), each naming its ESN, PSAP, police, fire
+# and EMS agency, merged by each name into the four layers (layers.py `dissolve`), as for Vermont. Licence as for
+# the roads (tracker: ca-pe-ng911-layers).
+[[source]]
+key = "ca-pe-esz-psap"
+agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
+layer = "psap"
+covers = "*"
+dissolve = "PSAP"
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+nena = { dsplayname = "PSAP" }
+
+[[source]]
+key = "ca-pe-esz-police"
+agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
+layer = "police"
+covers = "*"
+dissolve = "POLICE"
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+nena = { dsplayname = "POLICE" }
+
+[[source]]
+key = "ca-pe-esz-fire"
+agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
+layer = "fire"
+covers = "*"
+dissolve = "FIRE"
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+nena = { dsplayname = "FIRE" }
+
+[[source]]
+key = "ca-pe-esz-ems"
+agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
+layer = "ems"
+covers = "*"
+dissolve = "EMS"
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
+attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
+nena = { dsplayname = "EMS" }

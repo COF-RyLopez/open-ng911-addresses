@@ -12,6 +12,7 @@ this repo see the same text.
 | [cldxf-ca.md](cldxf-ca.md) | CLDXF-CA (NENA-STA-029): the Canadian rules, A1–A5 and Additional Code |
 | [help-docs.md](help-docs.md) | Supporting documents: SSAP development, data stewardship, NSGIC validations, registries |
 | [gap-review.md](gap-review.md) | What the pipeline is missing against the standard, ranked, and where the data could come from |
+| [nena-coverage.md](nena-coverage.md) | Per job and layer: the NENA fields each build fills, before and after mapping the Sources' own fields |
 | [government-layers.md](government-layers.md) | The layers to look for on government endpoints, per NENA layer |
 | [upstream-path.md](upstream-path.md) | Where local data could update state, federal and Overture layers (the move off ODbL), and the per-Package ODbL replacement inventory |
 

@@ -36,3 +36,138 @@ attribution = "Maine Emergency Services Communication Bureau"
 nad = "not_started"
 overture = "not_started"
 esri_community_maps = "not_applicable"
+
+# NENA fields straight from the layer's own fields (fieldmap.py). The Bureau publishes NENA's own schema, so most
+# fields map one to one. Fill checked 2026-11-26 on all 801,786 points: ST_NAME, ESN, MSAGCOMM, DATEUPDATE and
+# EFFECTIVE on (nearly) every point; ST_POSTTYP 787,528; PLACEMENT 467,034; PLACE_TYPE 428,750; ZIPPLUS4 146,362;
+# UNIT 104,335 ('Apt 1', split into UnitPreTyp + UnitValue: UNITPRETYP and UNITVALUE are empty); LANDMARK 15,953;
+# ST_PREDIR 26,211; BUILDING 5,250; FLOOR 5,208; LOC 4,746; A4 4,193. SITE has 4 values, so the landmark name is
+# the Site (STA-006.3 moved landmark names to Site). EXPIRE, A5, ADDNUMPRE, SUBSITE, WING, LOCMARKER are empty.
+[source.nena]
+dateupdate = "DATEUPDATE"
+effective = "EFFECTIVE"
+expire = "EXPIRE"
+a4 = "A4"
+a5 = "A5"
+addnum_pre = "ADDNUMPRE"
+add_number = "ADDRESS_NUMBER"
+addnum_suf = "ADDNUMSUF"
+st_premod = "ST_PREMOD"
+st_predir = "ST_PREDIR"
+st_pretyp = "ST_PRETYP"
+st_presep = "ST_PRESEP"
+st_name = "ST_NAME"
+st_postyp = "ST_POSTTYP"
+st_posdir = "ST_POSTDIR"
+st_posmod = "ST_POSTMOD"
+dir_travel = "DIRTRAVEL"
+esn = "ESN"
+msagcomm = "MSAGCOMM"
+post_comm = "POSTCOMM"
+post_code = "ZIPCODE"
+postcodeex = "ZIPPLUS4"
+site = "LANDMARK"
+subsite = "SUBSITE"
+structure = "BUILDING"
+floor = "FLOOR"
+floorindex = "FLOORINDEX"
+wing = "WING"
+unit = "UNIT"
+unitpretyp = "UNITPRETYP"
+unitvalue = "UNITVALUE"
+section = "SECTION"
+row = "ROW"
+room = "ROOM"
+seat = "SEAT"
+locmarker = "LOCMARKER"
+distmarker = "MILE_POST"
+addtl_loc = "LOC"
+adddatauri = "ADDDATAURI"
+elevation = "ELEVATION"
+
+# PLACEMENT -> NENA's placement methods. The misspelt rooftop values are the Bureau's; 'Other', 'Residential' and
+# the imagery vendor name have no equivalent and stay empty (the build writes 'Unknown').
+[source.nena.placement]
+function = "map"
+field = "PLACEMENT"
+else = ""
+[source.nena.placement.mapping]
+"Structure - Rooftop" = "Structure"
+"Sturcture - Rooftop" = "Structure"
+"Sturcture - Rooftopl" = "Structure"
+"Sturcture -  Rooftop" = "Structure"
+"Structure-Rooftop" = "Structure"
+"Structure" = "Structure"
+"Structure - Entrance" = "ExteriorAccess"
+"Site Placement" = "Site"
+"Parcel - Manual Placement" = "Parcel"
+"Parcel - Centroid" = "Parcel"
+"Geocoding" = "Geocoding"
+"Linear Geocode" = "Geocoding"
+"Property Access" = "PropertyAccess"
+"Unknown" = "Unknown"
+
+# PLACE_TYPE -> Place_Type (IANA Location Types), only where the meaning is clear; the rest stay empty.
+[source.nena.place_type]
+function = "map"
+field = "PLACE_TYPE"
+else = ""
+[source.nena.place_type.mapping]
+"Residential" = "residence"
+"Single Family" = "residence"
+"Apartment" = "residence"
+"Seasonal" = "residence"
+"Mobile Home" = "residence"
+"Condominium" = "residence"
+"Duplex" = "residence"
+"Multi Family" = "residence"
+"Mobile Home Park" = "residence"
+"Post Office" = "post-office"
+"Office" = "office"
+"School" = "school"
+"Church" = "place-of-worship"
+"Government - Municipal" = "government"
+"Government - State" = "government"
+"Government - County" = "government"
+"Government - Federal" = "government"
+"Lodging" = "hotel"
+"Fire Station" = "fire-station"
+"Health Care" = "hospital"
+"Hospital" = "hospital"
+"Nursing Home" = "care-facility"
+"Restaurant" = "restaurant"
+"Campground" = "campground"
+"Industrial" = "industrial"
+"Library" = "library"
+"Parking" = "parking"
+"Airport" = "airport"
+"Retail - Free Standing" = "store"
+"Retail - Strip Mall" = "store"
+"Retail - Enclosed Mall" = "shopping-area"
+"Convience Store" = "store"
+"Supermarket" = "store"
+"Pharmacy" = "store"
+"Financial Institution" = "bank"
+"Park" = "outdoors"
+"Other" = "other"
+
+# Maine's E911 road centerlines (Maine_E911_Roads_Feature) are published as "Access: RESTRICTED ... for use by
+# Maine ESCB and PSAP partners only", so they aren't read; Packages use TIGER ADDRFEAT (tracker: us-me-e911-roads).
+
+# Distance markers: MaineDOT's mile marker signs (403, last edited 2021). A sign inventory, so every marker is
+# posted (DM_Ind 'P') and in miles. Licence not stated: unknown (tracker: us-me-medot-mileposts).
+[[source]]
+key = "us-me-medot-mile-markers"
+agency = "Maine Department of Transportation (published by MaineGIS)"
+layer = "distance_markers"
+covers = "*"
+endpoint = { data = "https://services1.arcgis.com/RbMX0mRVOFNTdLzd/arcgis/rest/services/Mileposts/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = ""
+attribution = "Maine Department of Transportation"
+[source.nena]
+dm_value = "MILEPOST"
+dm_rte = "ROUTE"
+dm_unit = { value = "miles" }
+dm_ind = { value = "P" }
+dm_label = { function = "join", fields = ["ROUTE", "MILEPOST"], separator = " " }

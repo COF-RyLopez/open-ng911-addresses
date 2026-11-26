@@ -43,6 +43,83 @@ nad = "not_started"
 overture = "not_started"           # addresses reach Overture through OpenAddresses
 esri_community_maps = "not_applicable"
 
+# NENA fields straight from the layer's own fields (fieldmap.py), beside the OpenAddresses conform above. Checked
+# 2026-11-26 on all 353,161 points: HOUSE_NUMBER, SN, ESN, ZIP, SITETYPE and UPDATEDATE on every point; ST
+# 324,247; PD 16,717; SD 8,294; HOUSE_NUMBERSUFFIX 797; HOUSE_NUMBERPREFIX 676; PT none. The layer has no unit,
+# postal community or MSAG community name (TOWNNAME is the town, which A3 carries; MCODE is a town code), and no
+# placement method.
+[source.nena]
+addnum_pre = "HOUSE_NUMBERPREFIX"
+add_number = "HOUSE_NUMBER"
+addnum_suf = "HOUSE_NUMBERSUFFIX"
+st_predir = "PD"
+st_pretyp = "PT"
+st_name = "SN"
+st_postyp = "ST"
+st_posdir = "SD"
+esn = "ESN"
+post_code = "ZIP"
+dateupdate = "UPDATEDATE"
+
+# SITETYPE -> Place_Type (IANA Location Types). Only types with a clear equivalent; the rest (accessory
+# buildings, commercial, development sites ...) stay empty, and every point keeps its SITETYPE as source_site_type.
+[source.nena.place_type]
+function = "map"
+field = "SITETYPE"
+else = ""
+[source.nena.place_type.mapping]
+"SINGLE FAMILY DWELLING" = "residence"
+"MOBILE HOME" = "residence"
+"CAMP" = "residence"
+"MULTI-FAMILY DWELLING" = "residence"
+"CONDOMINIUM" = "residence"
+"OTHER RESIDENTIAL" = "residence"
+"SEASONAL HOME" = "residence"
+"RESIDENTIAL FARM" = "residence"
+"LODGING B&B / HOTEL / MOTEL / INN" = "hotel"
+"HOUSE OF WORSHIP" = "place-of-worship"
+"RETAIL FACILITY" = "store"
+"GROCERY STORE" = "store"
+"PHARMACY" = "store"
+"CAMPGROUND" = "campground"
+"OFFICE BUILDING" = "office"
+"INDUSTRIAL" = "industrial"
+"MANUFACTURING FACILITY" = "industrial"
+"SCHOOL K / 12" = "school"
+"RESTAURANT" = "restaurant"
+"GOVERNMENT" = "government"
+"STATE GOVERNMENT FACILITY" = "government"
+"US GOVERNMENT FACILITY" = "government"
+"HEALTH CLINIC" = "hospital"
+"HOSPITAL / MEDICAL CENTER" = "hospital"
+"OUTPATIENT CLINIC" = "hospital"
+"NURSING HOME / LONG TERM CARE" = "care-facility"
+"PUBLIC TELEPHONE" = "phone-box"
+"UTILITY POLE W/PHONE" = "phone-box"
+"COMMUNICATION BOX" = "utilitybox"
+"FIRE STATION" = "fire-station"
+"POST OFFICE" = "post-office"
+"LIBRARY" = "library"
+"MUSEUM" = "museum"
+"WAREHOUSE" = "warehouse"
+"BANK" = "bank"
+"CITY / TOWN HALL" = "town-hall"
+"TOWN OFFICE" = "town-hall"
+"TOWN GARAGE" = "municipal-garage"
+"PRISON / CORRECTIONAL FACILITY" = "prison"
+"BUS STATION / DISPATCH FACILITY" = "bus-station"
+"RAILROAD STATION" = "train-station"
+"SPORTS ARENA / STADIUM" = "stadium"
+"AUDITORIUM / CONCERT HALL / THEATER / OPERA HOUSE" = "theater"
+"YOUTH CAMP" = "youth-camp"
+"TRANSFER STATION" = "waste-transfer-facility"
+"PARK AND RIDE / COMMUTER LOT" = "parking"
+"TRAILHEAD" = "outdoors"
+"PICNIC AREA" = "outdoors"
+"STATE PARK" = "outdoors"
+"PUBLIC BEACH" = "outdoors"
+"OTHER" = "other"
+
 # Road centerlines: the E911 Board's own road layer. OpenAddresses' us/vt/statewide lists no centerlines yet, so
 # the layer entry is written here in OpenAddresses' schema (`oa_entry`), ready to propose upstream; once it is
 # merged there, drop `oa_entry` and the registry's entry is read instead. Every Vermont Package is covered, so
@@ -88,3 +165,71 @@ function = "map"
 field = "AOTCLASS"
 else = "residential"
 mapping = { "50" = "motorway", "51" = "motorway", "52" = "motorway", "53" = "motorway", "54" = "motorway", "55" = "motorway_link", "56" = "motorway", "40" = "primary", "41" = "primary", "42" = "primary", "43" = "primary", "44" = "primary", "45" = "primary_link", "46" = "primary", "30" = "secondary", "1" = "tertiary", "11" = "tertiary", "12" = "tertiary", "13" = "tertiary", "14" = "tertiary", "15" = "tertiary_link", "16" = "tertiary", "2" = "tertiary", "7" = "track", "70" = "track", "8" = "service", "10" = "service", "97" = "service" }
+
+# NENA fields straight from the road layer's own fields. Left/right ESN (LESN, RESN), town (LTWN, RTWN) and ZIP
+# are on every segment (2,000-segment sample, 2026-11-26); PARITYLEFT/RIGHT and SPEEDLIMIT are empty.
+[source.nena]
+st_predir = "PD"
+st_pretyp = "PT"
+st_name = "SN"
+st_postyp = "ST"
+st_posdir = "SD"
+esn_l = "LESN"
+esn_r = "RESN"
+a3_l = "LTWN"
+a3_r = "RTWN"
+postcode_l = "LZIP"
+postcode_r = "RZIP"
+dateupdate = "UPDATEDATE"
+
+# Service boundaries from the E911 Board's Emergency Service Zones (VCGI EmergencyE911_ESZ, 479 zones). Each zone
+# names its PSAP and its fire, law and EMS agency, so the zones merged by each name give the four layers (layers.py
+# `dissolve`). The names are the Board's display names; Agency_ID, ServiceURI and AVcard_URI aren't published, so
+# they stay empty for the authority to fill (ADR 0004). Same VCGI notice as the points: licence unknown.
+[[source]]
+key = "us-vt-e911-esz-psap"
+agency = "Vermont Enhanced 9-1-1 Board (published by VCGI)"
+layer = "psap"
+covers = "*"
+dissolve = "PSAP_DisplayName"
+endpoint = { data = "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Emergency_ESZ_poly_SP_v1/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+attribution = "VT Enhanced 911 Board, VCGI"
+nena = { dsplayname = "PSAP_DisplayName", dateupdate = "UPDATEDATE" }
+
+[[source]]
+key = "us-vt-e911-esz-police"
+agency = "Vermont Enhanced 9-1-1 Board (published by VCGI)"
+layer = "police"
+covers = "*"
+dissolve = "LAW_DisplayName"
+endpoint = { data = "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Emergency_ESZ_poly_SP_v1/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+attribution = "VT Enhanced 911 Board, VCGI"
+nena = { dsplayname = "LAW_DisplayName", dateupdate = "UPDATEDATE" }
+
+[[source]]
+key = "us-vt-e911-esz-fire"
+agency = "Vermont Enhanced 9-1-1 Board (published by VCGI)"
+layer = "fire"
+covers = "*"
+dissolve = "FIRE_DisplayName"
+endpoint = { data = "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Emergency_ESZ_poly_SP_v1/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+attribution = "VT Enhanced 911 Board, VCGI"
+nena = { dsplayname = "FIRE_DisplayName", dateupdate = "UPDATEDATE" }
+
+[[source]]
+key = "us-vt-e911-esz-ems"
+agency = "Vermont Enhanced 9-1-1 Board (published by VCGI)"
+layer = "ems"
+covers = "*"
+dissolve = "EMS_DisplayName"
+endpoint = { data = "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Emergency_ESZ_poly_SP_v1/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+attribution = "VT Enhanced 911 Board, VCGI"
+nena = { dsplayname = "EMS_DisplayName", dateupdate = "UPDATEDATE" }
