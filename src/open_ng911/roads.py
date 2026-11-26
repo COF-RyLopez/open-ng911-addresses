@@ -223,7 +223,6 @@ def without_range(c, where="true"):
 def write_package(c, geoid, d, release, meta):
     """road_centerline.parquet and road_gers_crosswalk.parquet in the Package folder d; returns the manifest's
     `road_centerline` section. meta: the road_source_meta rows (db.rows)."""
-    fill_sql = ", ".join(f"count({f}) AS {f}" for f in nena.RCL_FIELDS)  # the summary fields; coverage has all
     db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM rcl WHERE geoid = '{geoid}'",
                         os.path.join(d, "road_centerline.parquet"), "uid")
     c.execute(f"""COPY (SELECT g.uid, r.rcl_nguid, g.gers_id, g.overlap_m, g.rcl_share, g.segment_share,
@@ -231,16 +230,14 @@ def write_package(c, geoid, d, release, meta):
                         FROM road_gers g JOIN rcl r USING (uid) WHERE r.geoid = '{geoid}'
                         ORDER BY g.uid, g.is_primary DESC, g.gers_id)
                   TO '{os.path.join(d, 'road_gers_crosswalk.parquet')}' (FORMAT parquet)""")
-    stats = db.one(c, f"SELECT count(*) AS rows, count(gers_id) AS with_gers_id, {fill_sql} FROM rcl "
-                      f"WHERE geoid = '{geoid}'")
-    rows, with_gers = int(stats.pop("rows")), int(stats.pop("with_gers_id"))
+    stats = db.one(c, f"SELECT count(*) AS n, count(gers_id) AS with_gers_id FROM rcl WHERE geoid = '{geoid}'")
+    rows, with_gers = int(stats["n"]), int(stats["with_gers_id"])
     per_source = dict(c.execute(f"SELECT source, count(*) FROM rcl WHERE geoid = '{geoid}' GROUP BY 1").fetchall())
     return {
-        "rows": rows, "with_gers_id": with_gers, "without_range": without_range(c, f"geoid = '{geoid}'"),
+        "features": rows, "with_gers_id": with_gers, "without_range": without_range(c, f"geoid = '{geoid}'"),
         "gers_coverage": round(with_gers / rows, 4) if rows else None,
         "road_source": "government" if any(m["road_source"] == "government" and m["source_key"] in per_source
                                            for m in meta) else ("tiger" if rows else None),
-        "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},
         # every source of this Package's roads, with its license and its date (when the publisher last
         # edited it, or the TIGER vintage) and when we read it
         "sources": [{**m, "segments": per_source[m["source_key"]]} for m in meta if m["source_key"] in per_source],
@@ -251,5 +248,5 @@ def write_package(c, geoid, d, release, meta):
 
 def package_summary(section):
     """The road numbers job.json shows for one Package."""
-    return {"road_segments": section["rows"], "road_source": section["road_source"],
+    return {"road_segments": section["features"], "road_source": section["road_source"],
             "road_gers_coverage": section["gers_coverage"]}

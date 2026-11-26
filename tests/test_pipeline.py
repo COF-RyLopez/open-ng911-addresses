@@ -64,7 +64,8 @@ def test_vermont_job(tmp_path, conn):
         m = json.load(f)
     assert m["opted_in"] is False and m["recipient"] == "Vermont Enhanced 9-1-1 Board"
     assert m["records"] == 9 and m["records_with_gers_id"] == 3
-    assert m["field_fill"]["nguid"] == 1.0
+    assert m["manifest_version"] == 2 and "field_fill" not in m
+    assert m["nena_coverage"]["SiteStructureAddressPoint"]["fields"]["nguid"]["fill"] == 1.0
     assert m["sources"][0]["license_status"] == "unknown"
 
 
@@ -162,7 +163,7 @@ def test_road_centerlines(tmp_path, conn):
         m = json.load(f)
     assert m["nena"]["layers"][:4] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
     rc = m["road_centerline"]
-    assert rc["rows"] == 3 and rc["road_source"] == "government" and rc["gers_coverage"] == round(2 / 3, 4)
+    assert rc["features"] == 3 and rc["road_source"] == "government" and rc["gers_coverage"] == round(2 / 3, 4)
     (src,) = rc["sources"]
     assert (src["source_key"], src["license_status"], src["source_date"]) == ("us-vt-e911-rds", "unknown", "2026-02-19")
     with open(os.path.join(root, "50003", "manifest.json")) as f:

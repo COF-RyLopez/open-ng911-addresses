@@ -8,7 +8,7 @@ The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the S
 - [Prince: A2Polygon](./ca-pe-1103-a2-polygon/ca-pe-1103-a2-polygon.json)
 - [Prince: ProvisioningPolygon](./ca-pe-1103-provisioning-polygon/ca-pe-1103-provisioning-polygon.json)
 
-`manifest.json` holds the full numbers: field fill per NENA field, sources with dates, the GERS release, the
+`manifest.json` holds the full numbers: NENA field coverage per layer, sources with dates, the GERS release, the
 upstream counts and which government sources could stand in for Overture's ODbL themes here.
 
 ## Licence

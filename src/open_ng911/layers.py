@@ -202,7 +202,7 @@ def write_package(c, jurisdiction, geoid, d):
         by_key = {s.key: s for s in jurisdiction.sources}
         out[nena_layer(key)] = {
             "features": int(n),
-            "sources": [{"key": k, "agency": by_key[k].agency, "license_status": by_key[k].license_status,
+            "sources": [{"source_key": k, "agency": by_key[k].agency, "license_status": by_key[k].license_status,
                          "attribution": by_key[k].attribution} if k in by_key else
-                        {"key": k, "note": "the Package's own area: no provisioning Source covers it"} for k in srcs]}
+                        {"source_key": k, "license_status": "open", "note": "the Package's own area: no provisioning Source covers it"} for k in srcs]}
     return out

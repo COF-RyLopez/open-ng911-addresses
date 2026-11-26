@@ -12,7 +12,7 @@ for opted-in Packages (ADR 0007).
         a3_polygon.parquet                     A3Polygon: its municipalities clipped to it, NENA fields + source_code
         road_centerline.parquet                RoadCenterline: NENA RCL fields + uid, gers_id, road_source
         road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
-        manifest.json                          counts, field fill, sources and their licenses, opt-in state
+        manifest.json                          counts, sources and their licenses, opt-in state, NENA coverage
         domains.json                           the value domains the layers use: NENA's, and CLDXF-CA's in Canada
 """
 import json
@@ -20,6 +20,10 @@ import os
 
 from . import boundaries, coverage, db, ids, layers, nena, odbl_inventory, registry, roads, upstream
 from .nena import SSAP_REQUIRED
+
+# 2: one name per thing across sections (`source_key`, `license_status`, `features`), the SiteStructureAddressPoint
+# count as `address_points`, and no `field_fill` (every layer's field fill is in `nena_coverage`)
+MANIFEST_VERSION = 2
 
 
 def package_key(job, geoid):
@@ -44,11 +48,9 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
     spec: build.coverage_spec, for each Package's `nena_coverage`."""
     root = os.path.join(out_dir, f"release={release}", job.id)
     summaries = []
-    sources = [{"key": s.key, "agency": s.agency, "layer": s.layer, "openaddresses": s.openaddresses,
+    sources = [{"source_key": s.key, "agency": s.agency, "layer": s.layer, "openaddresses": s.openaddresses,
                 "license_status": s.license_status, "license_url": s.license_url, "attribution": s.attribution}
                for s in jurisdiction.sources]
-    ssap_fields = [f["name"] for f in nena.layer_fields("SiteStructureAddressPoint", job.country)]
-    fill_sql = ", ".join(f"count({f}) AS {f}" for f in ssap_fields)
     # NENA-STA-006.3's domains, with Canada's beside them in a Canadian Package (ADR 0006)
     road_meta = db.rows(c, "SELECT * FROM road_source_meta ORDER BY source_key")
     catalogue = odbl_inventory.catalogue()
@@ -68,12 +70,13 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
         res = c.execute(f"""SELECT count(*) AS rows,
                 count(*) FILTER (status = 'record') AS records,
                 count(*) FILTER (status = 'record' AND gers_id IS NOT NULL) AS records_with_gers_id,
-                count(*) FILTER (status = 'gap_fill_candidate') AS gap_fill_candidates, {fill_sql}
+                count(*) FILTER (status = 'gap_fill_candidate') AS gap_fill_candidates
             FROM ssap WHERE geoid = '{geoid}'""")
         stats = dict(zip([col[0] for col in res.description], res.fetchall()[0]))
-        rows = int(stats.pop("rows"))
+        points = int(stats.pop("rows"))
         counts = {k: int(stats.pop(k)) for k in ("records", "records_with_gers_id", "gap_fill_candidates")}
         manifest = {
+            "manifest_version": MANIFEST_VERSION,
             "package": package_key(job, geoid), "name": name, "job": job.id, "overture_release": release,
             "nena": {"standard": "NENA-STA-006.3-2026", "values": values,
                      "layers": ["SiteStructureAddressPoint", *bounds, "RoadCenterline",
@@ -83,9 +86,8 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
             "distribution": ("handed to the opted-in 911 authority" if opted else
                              "published openly as unclaimed when every source is open, under the placeholder domain; "
                              "handed to the 911 authority once it opts in (ADR 0003, 0011)"),
-            "rows": rows, **counts,
+            "address_points": points, **counts,
             "record_gers_coverage": round(counts["records_with_gers_id"] / counts["records"], 4) if counts["records"] else None,
-            "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},
             "sources": sources,
             "boundaries": bounds,
             "gap_fill_licenses": dict(c.execute(f"""SELECT coalesce(source_license, 'unstated'), count(*) FROM ssap

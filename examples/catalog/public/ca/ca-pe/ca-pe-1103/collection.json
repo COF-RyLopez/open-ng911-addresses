@@ -11,7 +11,7 @@
   "title": "Prince, Prince Edward Island: NG9-1-1 Package (unclaimed)",
   "description": "The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1103.unclaimed.invalid until the authority opts in.",
   "license": "other",
-  "updated": "2026-11-26T20:58:17Z",
+  "updated": "2026-11-26T21:07:15Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -73,8 +73,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T20:58:17Z",
-          "2026-11-26T20:58:17Z"
+          "2026-11-26T21:07:15Z",
+          "2026-11-26T21:07:15Z"
         ]
       ]
     }
@@ -178,9 +178,9 @@
         "metadata"
       ],
       "title": "Package manifest",
-      "description": "Counts, field fill, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 47765,
-      "file:checksum": "1220dd9b4db61d91336e92f2a93e08d314bbcfaefaaa39af1a9175a60138f2808041"
+      "description": "Counts, NENA field coverage, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
+      "file:size": 46291,
+      "file:checksum": "122006e5d74e288ecffdf3bee57db70f75adb349426011450ef02971bf4fe04a93ac"
     },
     "domains": {
       "href": "./domains.json",
@@ -212,8 +212,8 @@
       ],
       "title": "Vector tiles",
       "description": "PMTiles of a2_polygon, site_structure_address_point for web maps, made with manby.",
-      "file:size": 5624,
-      "file:checksum": "12208830d1e285d3bd55df43d7f8033bb563e4dcb1bf3bf62cff49d036556eb45e8a"
+      "file:size": 5623,
+      "file:checksum": "1220f194edbd5be5623130021205f4542e6ea1654fceb5a855c452f237e44b9b320b"
     },
     "style-default": {
       "href": "./styles/default.json",

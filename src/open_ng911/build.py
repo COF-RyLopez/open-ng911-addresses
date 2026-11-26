@@ -267,7 +267,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     fails = gate(c, job, spec)
     cov = {layer: coverage.section(c, layer, job.country, before=before.get(layer), **kw) for layer, kw in spec.items()}
     summary = {"job": job.id, "overture_release": release, "built": updated, "packages": len(summaries),
-               "rows": sum(s["rows"] for s in summaries), "records": sum(s["records"] for s in summaries),
+               "address_points": sum(s["address_points"] for s in summaries), "records": sum(s["records"] for s in summaries),
                "records_with_gers_id": sum(s["records_with_gers_id"] for s in summaries),
                "gap_fill_candidates": sum(s["gap_fill_candidates"] for s in summaries),
                "agency_points_excluded": {t: n for _, t, n in c.execute(
@@ -282,7 +282,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "agency_points_id_shared": c.execute(
                    "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
                "overture_link_methods": links, "a3": boundaries.summary(c),
-               "road_segments": sum(s["road_centerline"]["rows"] for s in summaries),
+               "road_segments": sum(s["road_centerline"]["features"] for s in summaries),
                "road_segments_with_gers_id": sum(s["road_centerline"]["with_gers_id"] for s in summaries),
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
                "upstream": upstream.job_totals(s["upstream"] for s in summaries),
@@ -292,7 +292,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "nena_required_gaps": required_gaps(cov),
                "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),
                "gate_failures": fails,
-               "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
+               "by_package": {s["package"]: {k: s[k] for k in ("name", "address_points", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
                               | roads.package_summary(s["road_centerline"]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
