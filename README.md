@@ -58,7 +58,7 @@ data/output/release=<overture release>/<job>/
     <geoid>/psap_polygon.parquet, police_polygon.parquet, fire_polygon.parquet, ems_polygon.parquet,
             provisioning_polygon.parquet, distance_marker_point.parquet, location_marker_point.parquet
                                  the other NENA layers, only where they have features
-    <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date,
+    <geoid>/manifest.json        recipient, opt-in state, sources with license status and date,
                                  upstream counts, ODbL replacement inventory, NENA field coverage
     <geoid>/domains.json         the value domains used: NENA-STA-006.3, plus CLDXF-CA in a Canadian Package
 ```

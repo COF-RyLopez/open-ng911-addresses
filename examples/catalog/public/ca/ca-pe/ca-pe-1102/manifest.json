@@ -1,4 +1,5 @@
 {
+  "manifest_version": 2,
   "package": "ca-pe-1102",
   "name": "Queens",
   "job": "ca-pe",
@@ -44,72 +45,14 @@
   "opted_in": false,
   "nguid_domain": "ca-pe-1102.unclaimed.invalid",
   "distribution": "published openly as unclaimed when every source is open, under the placeholder domain; handed to the 911 authority once it opts in (ADR 0003, 0011)",
-  "rows": 3,
+  "address_points": 3,
   "records": 2,
   "records_with_gers_id": 1,
   "gap_fill_candidates": 1,
   "record_gers_coverage": 0.5,
-  "field_fill": {
-    "discrpagid": 1.0,
-    "dateupdate": 1.0,
-    "effective": 0.0,
-    "expire": 0.0,
-    "nguid": 1.0,
-    "country": 1.0,
-    "a1": 1.0,
-    "a2": 1.0,
-    "addcode": 0.0,
-    "a3": 1.0,
-    "a4": 0.0,
-    "a5": 0.0,
-    "addnum_pre": 0.0,
-    "add_number": 1.0,
-    "addnum_suf": 0.0,
-    "addnum_cmp": 0.0,
-    "distmarker": 0.0,
-    "st_premod": 0.0,
-    "st_predir": 0.0,
-    "st_pretyp": 0.0,
-    "st_presep": 0.0,
-    "st_name": 1.0,
-    "st_postyp": 1.0,
-    "st_posdir": 0.0,
-    "st_posmod": 0.0,
-    "dir_travel": 0.0,
-    "lst_predir": 0.0,
-    "lst_name": 0.0,
-    "lst_typ": 0.0,
-    "lst_posdir": 0.0,
-    "esn": 0.0,
-    "msagcomm": 0.0,
-    "lcountyid": 0.0,
-    "post_comm": 1.0,
-    "post_code": 0.0,
-    "site": 0.0,
-    "subsite": 0.0,
-    "structure": 0.0,
-    "floor": 0.0,
-    "floorindex": 0.0,
-    "wing": 0.0,
-    "unit": 0.3333,
-    "section": 0.0,
-    "row": 0.0,
-    "room": 0.0,
-    "seat": 0.0,
-    "locmarker": 0.0,
-    "addtl_loc": 0.0,
-    "adddatauri": 0.0,
-    "place_type": 0.0,
-    "placement": 1.0,
-    "longitude": 1.0,
-    "latitude": 1.0,
-    "elevation": 0.0,
-    "altitude": 0.0,
-    "height": 0.0
-  },
   "sources": [
     {
-      "key": "ca-pe-civic-address",
+      "source_key": "ca-pe-civic-address",
       "agency": "Government of Prince Edward Island, Civic Addressing",
       "layer": "addresses",
       "openaddresses": "ca/pe/province",
@@ -118,7 +61,7 @@
       "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
     },
     {
-      "key": "ca-pe-road-centreline",
+      "source_key": "ca-pe-road-centreline",
       "agency": "Government of Prince Edward Island (road centreline)",
       "layer": "centerlines",
       "openaddresses": "ca/pe/province",
@@ -127,7 +70,7 @@
       "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
     },
     {
-      "key": "ca-pe-esz-psap",
+      "source_key": "ca-pe-esz-psap",
       "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
       "layer": "psap",
       "openaddresses": "",
@@ -136,7 +79,7 @@
       "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
     },
     {
-      "key": "ca-pe-esz-police",
+      "source_key": "ca-pe-esz-police",
       "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
       "layer": "police",
       "openaddresses": "",
@@ -145,7 +88,7 @@
       "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
     },
     {
-      "key": "ca-pe-esz-fire",
+      "source_key": "ca-pe-esz-fire",
       "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
       "layer": "fire",
       "openaddresses": "",
@@ -154,7 +97,7 @@
       "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
     },
     {
-      "key": "ca-pe-esz-ems",
+      "source_key": "ca-pe-esz-ems",
       "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
       "layer": "ems",
       "openaddresses": "",
@@ -165,13 +108,17 @@
   ],
   "boundaries": {
     "A2Polygon": {
-      "source": "Statistics Canada census divisions",
+      "agency": "Statistics Canada census divisions",
+      "source_key": "statcan-census-divisions",
+      "license_status": "open",
       "license": "Statistics Canada Open Licence",
       "license_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
       "features": 1
     },
     "A3Polygon": {
-      "source": "Statistics Canada census subdivisions",
+      "agency": "Statistics Canada census subdivisions",
+      "source_key": "statcan-census-divisions",
+      "license_status": "open",
       "license": "Statistics Canada Open Licence",
       "license_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
       "features": 1,
@@ -185,7 +132,7 @@
     "OGL-CA": 1
   },
   "road_centerline": {
-    "rows": 0,
+    "features": 0,
     "with_gers_id": 0,
     "without_range": {
       "left": 0,
@@ -193,35 +140,6 @@
     },
     "gers_coverage": null,
     "road_source": null,
-    "field_fill": {
-      "discrpagid": null,
-      "dateupdate": null,
-      "rcl_nguid": null,
-      "fromaddr_l": null,
-      "toaddr_l": null,
-      "fromaddr_r": null,
-      "toaddr_r": null,
-      "parity_l": null,
-      "parity_r": null,
-      "st_predir": null,
-      "st_pretyp": null,
-      "st_name": null,
-      "st_postyp": null,
-      "st_posdir": null,
-      "country_l": null,
-      "country_r": null,
-      "a1_l": null,
-      "a1_r": null,
-      "a2_l": null,
-      "a2_r": null,
-      "a3_l": null,
-      "a3_r": null,
-      "postcode_l": null,
-      "postcode_r": null,
-      "roadclass": null,
-      "oneway": null,
-      "speedlimit": null
-    },
     "sources": [],
     "gers_ids": {
       "overture_release": "2026-11-18.0",
@@ -234,7 +152,7 @@
       "features": 1,
       "sources": [
         {
-          "key": "ca-pe-esz-psap",
+          "source_key": "ca-pe-esz-psap",
           "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
           "license_status": "unknown",
           "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -245,7 +163,7 @@
       "features": 1,
       "sources": [
         {
-          "key": "ca-pe-esz-police",
+          "source_key": "ca-pe-esz-police",
           "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
           "license_status": "unknown",
           "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -256,7 +174,7 @@
       "features": 1,
       "sources": [
         {
-          "key": "ca-pe-esz-fire",
+          "source_key": "ca-pe-esz-fire",
           "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
           "license_status": "unknown",
           "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -267,7 +185,7 @@
       "features": 1,
       "sources": [
         {
-          "key": "ca-pe-esz-ems",
+          "source_key": "ca-pe-esz-ems",
           "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
           "license_status": "unknown",
           "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -278,7 +196,8 @@
       "features": 1,
       "sources": [
         {
-          "key": "package-area",
+          "source_key": "package-area",
+          "license_status": "open",
           "note": "the Package's own area: no provisioning Source covers it"
         }
       ]
@@ -295,7 +214,7 @@
   "nena_coverage": {
     "RoadCenterLine": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 55,
@@ -563,7 +482,7 @@
     },
     "SiteStructureAddressPoint": {
       "built": true,
-      "rows": 3,
+      "features": 3,
       "filled": 14,
       "partial": 1,
       "no_source": 41,
@@ -828,7 +747,7 @@
     },
     "SiteStructureAddressPolygon": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 49,
@@ -1038,7 +957,7 @@
     },
     "PsapPolygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 5,
       "partial": 0,
       "no_source": 6,
@@ -1106,7 +1025,7 @@
     },
     "PolicePolygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 5,
       "partial": 0,
       "no_source": 6,
@@ -1174,7 +1093,7 @@
     },
     "FirePolygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 5,
       "partial": 0,
       "no_source": 6,
@@ -1242,7 +1161,7 @@
     },
     "EmsPolygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 5,
       "partial": 0,
       "no_source": 6,
@@ -1310,7 +1229,7 @@
     },
     "ServiceBoundaryPolygon": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 11,
@@ -1371,7 +1290,7 @@
     },
     "ProvisioningPolygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 3,
       "partial": 0,
       "no_source": 2,
@@ -1406,7 +1325,7 @@
     },
     "A1Polygon": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 7,
@@ -1448,7 +1367,7 @@
     },
     "A2Polygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 6,
       "partial": 0,
       "no_source": 3,
@@ -1505,7 +1424,7 @@
     },
     "A3Polygon": {
       "built": true,
-      "rows": 1,
+      "features": 1,
       "filled": 7,
       "partial": 0,
       "no_source": 3,
@@ -1567,7 +1486,7 @@
     },
     "A4Polygon": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 11,
@@ -1626,7 +1545,7 @@
     },
     "A5Polygon": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 11,
@@ -1685,7 +1604,7 @@
     },
     "RailroadCenterLine": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 8,
@@ -1729,7 +1648,7 @@
     },
     "HydrologyLine": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 5,
@@ -1761,7 +1680,7 @@
     },
     "HydrologyPolygon": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 5,
@@ -1793,7 +1712,7 @@
     },
     "DistanceMarkerPoint": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 9,
@@ -1848,7 +1767,7 @@
     },
     "LocationMarkerPoint": {
       "built": false,
-      "rows": 0,
+      "features": 0,
       "filled": 0,
       "partial": 0,
       "no_source": 6,

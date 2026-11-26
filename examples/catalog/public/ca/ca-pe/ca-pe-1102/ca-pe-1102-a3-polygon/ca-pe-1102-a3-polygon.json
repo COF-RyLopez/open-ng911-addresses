@@ -43,7 +43,7 @@
   "properties": {
     "title": "Queens: A3Polygon",
     "description": "The municipalities in the Package, clipped to it.",
-    "datetime": "2026-11-26T20:58:17Z",
+    "datetime": "2026-11-26T21:07:15Z",
     "ng911:layer": "A3Polygon",
     "table:row_count": 1,
     "table:primary_geometry": "geom",
@@ -136,7 +136,7 @@
       "title": "A3Polygon GeoParquet",
       "description": "The municipalities in the Package, clipped to it.",
       "file:size": 2282,
-      "file:checksum": "122098221a58f1e59283a928e8a7fe9e963a77a744e6eed6c66f9cd32672ee1f9468"
+      "file:checksum": "12200dde6190b6a054e5ef3205108883b08801f5695e3b5968d8cf74de0db9196237"
     }
   }
 }

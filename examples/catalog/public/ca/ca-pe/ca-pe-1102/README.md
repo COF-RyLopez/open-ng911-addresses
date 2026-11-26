@@ -9,7 +9,7 @@ The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the S
 - [Queens: A3Polygon](./ca-pe-1102-a3-polygon/ca-pe-1102-a3-polygon.json)
 - [Queens: ProvisioningPolygon](./ca-pe-1102-provisioning-polygon/ca-pe-1102-provisioning-polygon.json)
 
-`manifest.json` holds the full numbers: field fill per NENA field, sources with dates, the GERS release, the
+`manifest.json` holds the full numbers: NENA field coverage per layer, sources with dates, the GERS release, the
 upstream counts and which government sources could stand in for Overture's ODbL themes here.
 
 ## Licence

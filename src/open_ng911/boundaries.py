@@ -131,9 +131,10 @@ def write_package(c, job, geoid, out):
           # QA: of the Records in a municipality that name their own community (VT's TOWNNAME), the share
           # whose community is the A3 the boundary gave them
           "record_community_agrees_with_a3": round(agreed / compared, 4) if compared else None}
-    lic = {"license": k.boundary_license, "license_url": k.boundary_license_url}
-    return {"A2Polygon": {"source": k.a2_source, **lic, "features": 1},
-            "A3Polygon": {"source": k.a3_source, **lic, "features": int(n_a3),
+    lic = {"source_key": k.boundary_key, "license_status": "open", "license": k.boundary_license,
+           "license_url": k.boundary_license_url}
+    return {"A2Polygon": {"agency": k.a2_source, **lic, "features": 1},
+            "A3Polygon": {"agency": k.a3_source, **lic, "features": int(n_a3),
                           **a3}}
 
 

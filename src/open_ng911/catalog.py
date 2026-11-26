@@ -148,7 +148,7 @@ def layer_reasons(m):
     roads for the Sources the Package's roads came from; every other layer for its own Sources (layers.py). The
     boundaries are Census / StatCan, open by construction (registry.COUNTRIES)."""
     def closed(sources):
-        return [f"source_license:{s.get('key') or s.get('source_key')}={s['license_status']}"
+        return [f"source_license:{s['source_key']}={s['license_status']}"
                 for s in sources if "license_status" in s and s["license_status"] != "open"]
     out = {"site_structure_address_point":
            closed(s for s in m["sources"] if s["layer"] == "addresses")
@@ -321,7 +321,7 @@ def visual(c, d, name, layers, title):
 def license_links(m):
     seen, links = set(), []
     for title, url in ([(s["agency"], s["license_url"]) for s in m["sources"] + m["road_centerline"]["sources"]]
-                       + [(b["source"], b["license_url"]) for b in m["boundaries"].values()]):
+                       + [(b["agency"], b["license_url"]) for b in m["boundaries"].values()]):
         if url and url not in seen:
             seen.add(url)
             links.append({"rel": "license", "href": url, "type": "text/html", "title": f"Licence: {title}"})
@@ -405,7 +405,7 @@ def write_package(c, m, job, built, src_dir, coll_dir):
     title = f"{m['name']}, {job.name}: NG9-1-1 Package" + ("" if m["opted_in"] else " (unclaimed)")
     desc = (f"The NENA NG9-1-1 GIS dataset for {m['name']} ({job.name}), built from the Source agencies' own "
             f"layers and reshaped to {m['nena']['standard']}: {m['records']:,} Records and "
-            f"{m['gap_fill_candidates']:,} Gap-fill candidates, {rcl['rows']:,} road segments. Recipient: "
+            f"{m['gap_fill_candidates']:,} Gap-fill candidates, {rcl['features']:,} road segments. Recipient: "
             f"{m['recipient'] or 'no 911 authority in the registry yet'}."
             + ("" if m["opted_in"] else
                f" Unclaimed: built from open government sources, not issued or checked by "
@@ -428,14 +428,14 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         "ng911:nena_standard": m["nena"]["standard"], "ng911:value_domains": m["nena"]["values"],
         "ng911:overture_release": m["overture_release"], "ng911:records": m["records"],
         "ng911:gap_fill_candidates": m["gap_fill_candidates"], "ng911:record_gers_coverage": m["record_gers_coverage"],
-        "ng911:road_segments": rcl["rows"], "ng911:road_gers_coverage": rcl["gers_coverage"],
+        "ng911:road_segments": rcl["features"], "ng911:road_gers_coverage": rcl["gers_coverage"],
         "ng911:road_source": rcl["road_source"] if "road_centerline" not in held else None,
         "ng911:withheld_layers": held,
         "links": nav(3) + [{"rel": "item", "href": f"./{i}/{i}.json", "type": "application/geo+json", "title": t}
                            for i, t in items] + vis_links + license_links(m) + via_links(m) + doc_links(),
         "assets": {
             "manifest": asset(os.path.join(coll_dir, "manifest.json"), "./manifest.json", ["metadata"],
-                              "Package manifest", "Counts, field fill, every source with its licence and date, "
+                              "Package manifest", "Counts, NENA field coverage, every source with its licence and date, "
                               "opt-in state, upstream counts and the ODbL replacement inventory.", "application/json"),
             "domains": asset(os.path.join(coll_dir, "domains.json"), "./domains.json", ["metadata"],
                              "Value domains", f"The value domains the layers use ({m['nena']['values']}).",
@@ -454,7 +454,7 @@ def write_package(c, m, job, built, src_dir, coll_dir):
 def package_readme(m, coll, items):
     srcs = "\n".join(f"- {s['agency']} ({s['layer']}): licence {s['license_status']}, {s['license_url']}"
                      for s in m["sources"])
-    bnd = "\n".join(f"- {k}: {b['source']} ({b['license']}), {b['license_url']}" for k, b in m["boundaries"].items())
+    bnd = "\n".join(f"- {k}: {b['agency']} ({b['license']}), {b['license_url']}" for k, b in m["boundaries"].items())
     gap = ", ".join(f"{k} ({v:,})" for k, v in m["gap_fill_licenses"].items()) or "none"
     layers = "\n".join(f"- [{t}](./{i}/{i}.json)" for i, t in items)
     return f"""
@@ -466,7 +466,7 @@ def package_readme(m, coll, items):
 
 {layers}
 
-`manifest.json` holds the full numbers: field fill per NENA field, sources with dates, the GERS release, the
+`manifest.json` holds the full numbers: NENA field coverage per layer, sources with dates, the GERS release, the
 upstream counts and which government sources could stand in for Overture's ODbL themes here.
 
 ## Licence
@@ -573,7 +573,7 @@ def build(release, out_dir="data/output", catalog_dir="data/catalog", registry_d
                 report["withheld"].append({"package": m["package"], "reasons": reasons})
             cards.append((m["package"], m["name"], m["job"], job.country, m["recipient"], m["opted_in"], not reasons,
                           reasons, m["overture_release"], m["records"], m["gap_fill_candidates"],
-                          m["record_gers_coverage"], m["road_centerline"]["rows"],
+                          m["record_gers_coverage"], m["road_centerline"]["features"],
                           m["road_centerline"]["gers_coverage"], m["road_centerline"]["road_source"], href,
                           os.path.join(src, "a2_polygon.parquet")))
     write_tree(c, pub, release, tree, cards, jobs, max(built) if built else db.now())

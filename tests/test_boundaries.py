@@ -50,7 +50,7 @@ def test_vermont_boundaries(tmp_path, conn):
     assert m["boundaries"]["A3Polygon"]["features"] == 1
     assert m["boundaries"]["A3Polygon"]["record_community_agrees_with_a3"] == 1.0
     assert m["boundaries"]["A2Polygon"]["license"] == "public domain"
-    assert m["field_fill"]["a3"] == 1.0
+    assert m["nena_coverage"]["SiteStructureAddressPoint"]["fields"]["a3"]["fill"] == 1.0
 
 
 def test_no_municipalities_leaves_a3_empty(conn):

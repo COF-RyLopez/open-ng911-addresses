@@ -60,7 +60,7 @@ def section(c, layer, country, table, where="true", sources=None, derived=None, 
         if n in required:
             f["required"] = True
         fields[n] = f
-    out = {"built": rows > 0, "rows": rows,
+    out = {"built": rows > 0, "features": rows,
            **{s: sum(1 for f in fields.values() if f["status"] == s) for s in STATUSES}}
     if before is not None:
         out["before"] = {s: sum(1 for n in names if status(before.get(n, 0.0)) == s) for s in STATUSES}

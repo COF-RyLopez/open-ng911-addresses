@@ -94,7 +94,7 @@ def test_zones_merge_into_service_layers(vt_build):
 
     m = manifest(out, "us-vt", "50001")
     assert "FirePolygon" in m["nena"]["layers"]
-    assert m["nena_layers"]["FirePolygon"]["sources"][0]["key"] == "us-vt-e911-esz-fire"
+    assert m["nena_layers"]["FirePolygon"]["sources"][0]["source_key"] == "us-vt-e911-esz-fire"
     assert m["nena_coverage"]["FirePolygon"]["fields"]["dsplayname"]["status"] == "filled"
 
 
@@ -104,7 +104,7 @@ def test_provisioning_falls_back_to_the_package_area(vt_build):
         (p,) = read(out, "us-vt", geoid, "provisioning_polygon")
         assert p["source"] == "package-area" and p["source_id"] == geoid
         assert p["nguid"].startswith("urn:emergency:uid:gis:Provisioning:")
-    assert s["nena_coverage"]["ProvisioningPolygon"]["rows"] == 2
+    assert s["nena_coverage"]["ProvisioningPolygon"]["features"] == 2
 
 
 def test_pei_zones_only_where_they_reach(tmp_path, conn):
