@@ -5,7 +5,7 @@ description = "Open-data NENA NG9-1-1 address packages for the 911 authorities o
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["duckdb>=2.0", "pyarrow>=17"]
+dependencies = ["duckdb>=2.0", "pyarrow>=17", "numpy>=2"]  # numpy: DuckDB Python UDFs (ids.install)
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
