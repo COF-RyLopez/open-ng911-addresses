@@ -31,7 +31,7 @@ MAX_ANGLE = 30.0     # degrees between the two shared stretches: more is a road 
 
 
 def _sources_covering(jurisdiction):
-    return {s.key: s for s in jurisdiction.sources if s.layer == "centerlines"}
+    return {s.key: s for s in jurisdiction.sources_for("centerlines")}
 
 
 def install(c):
@@ -169,15 +169,7 @@ def build(c, job, jurisdiction, work_dir, loaders, updated):
 
 
 def gate(c):
-    fails = []
-    for f in nena.RCL_REQUIRED:
-        missing = c.execute(f"SELECT count(*) FROM rcl WHERE {f} IS NULL").fetchall()[0][0]
-        if missing:
-            fails.append(f"rcl {f}: {missing:,} rows empty")
-    dup = c.execute("SELECT count(*) - count(DISTINCT rcl_nguid) FROM rcl").fetchall()[0][0]
-    if dup:
-        fails.append(f"rcl_nguid: {dup:,} duplicates")
-    return fails
+    return db.gate(c, "rcl", nena.RCL_REQUIRED, "rcl_nguid", "rcl ", nguid_label="")
 
 
 def write(c, job, root, release):

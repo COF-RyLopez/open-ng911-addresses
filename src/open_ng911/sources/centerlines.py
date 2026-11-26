@@ -21,7 +21,7 @@ import datetime
 import os
 import zipfile
 
-from .. import db, ids
+from .. import db, ids, registry
 from . import arcgis, openaddresses
 
 ROAD_SEG_COLUMNS = ("source_key VARCHAR, road_source VARCHAR, source_id VARCHAR, uid VARCHAR, street VARCHAR, "
@@ -101,7 +101,7 @@ def insert_government(c, source, path, conform, has_id):
 
 def load_government(c, job, jurisdiction, work_dir):
     """Every `centerlines` Source in the job's registry, from its endpoint."""
-    for s in (s for s in jurisdiction.sources if s.layer == "centerlines"):
+    for s in jurisdiction.sources_for("centerlines"):
         entry = openaddresses.entry_for(s)
         if entry.get("protocol") != "ESRI":
             raise SystemExit(f"{s.key}: protocol {entry.get('protocol')!r} isn't supported yet (ESRI only)")
@@ -184,7 +184,7 @@ def load_tiger(c, job, jurisdiction, work_dir):
     counties = [g for g, in c.execute("SELECT geoid FROM road_fallback ORDER BY 1").fetchall()]
     if not counties:
         return
-    if job.country != "US":  # TIGER is US only; a Canadian fallback (NRN / Road Network File) isn't wired yet
+    if not registry.country(job).tiger_roads:  # a Canadian fallback (NRN / Road Network File) isn't wired yet
         print(f"  [tiger] no road fallback for {job.country}: {len(counties)} Package(s) without government roads")
         return
     vintage = _tiger_vintage(counties, work_dir)
@@ -208,7 +208,7 @@ def load_national_reference(c, job, jurisdiction, work_dir):
     agency's network and the national one differ (upstream.py). US: TIGER ADDRFEAT. Canada: none yet (the National
     Road Network loader is still to come). Returns the layer's name and date, or None when there isn't one."""
     create_national_table(c)
-    if job.country != "US":
+    if not registry.country(job).tiger_roads:
         return None
     counties = [g for g, in c.execute("SELECT DISTINCT geoid FROM road_seg WHERE road_source = 'government' "
                                       "ORDER BY 1").fetchall()]

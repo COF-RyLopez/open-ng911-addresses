@@ -49,9 +49,9 @@ def one(c, sql):
     return rows(c, sql)[0]
 
 
-def gate(c, table, required, nguid, label):
+def gate(c, table, required, nguid, label="", nguid_label=None):
     """NENA mandatory fields filled on every row of a layer, and one NGUID per row; returns the failures as
-    '<label><field>: N rows empty' and '<label><nguid>: N duplicates'."""
+    '<label><field>: N rows empty' and '<nguid_label or label><nguid>: N duplicates'."""
     fails = []
     for f in required:
         missing = c.execute(f"SELECT count(*) FROM {table} WHERE {f} IS NULL").fetchall()[0][0]
@@ -59,5 +59,5 @@ def gate(c, table, required, nguid, label):
             fails.append(f"{label}{f}: {missing:,} rows empty")
     dup = c.execute(f"SELECT count(*) - count(DISTINCT {nguid}) FROM {table}").fetchall()[0][0]
     if dup:
-        fails.append(f"{label}{nguid}: {dup:,} duplicates")
+        fails.append(f"{label if nguid_label is None else nguid_label}{nguid}: {dup:,} duplicates")
     return fails

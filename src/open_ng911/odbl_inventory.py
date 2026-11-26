@@ -20,6 +20,8 @@ decide, and only open-licensed sources count (ADR 0004).
 import csv
 import os
 
+from . import registry
+
 OA_SOURCES = os.path.join(os.path.dirname(__file__), "..", "..", "registry", "remediation", "oa_sources.csv")
 
 # Overture theme -> (OpenAddresses layer that could replace it, national open layer by country)
@@ -67,7 +69,7 @@ def package_section(c, job, geoid, catalogue):
                  FROM road_seg s LEFT JOIN road_source_meta m USING (source_key)
                  WHERE s.geoid = '{geoid}' GROUP BY ALL ORDER BY 1""").fetchall()]
     a3 = c.execute(f"SELECT count(*) FROM a3_polygon WHERE geoid = '{geoid}'").fetchall()[0][0]
-    division = [{"source_key": "tiger-counties" if job.country == "US" else "statcan-census-divisions",
+    division = [{"source_key": registry.country(job).boundary_key,
                  "license_status": "open", "covers": True,
                  "what": "A2 / Package area" + (f", A3 ({a3} municipalities)" if a3 else "")}]
     read_by_theme = {"transportation": roads, "buildings": [], "divisions": division, "base_water": []}

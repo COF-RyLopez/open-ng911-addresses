@@ -19,7 +19,6 @@ Steps:
      NENA mandatory field isn't filled on every row.
 """
 import argparse
-import datetime
 import json
 import os
 import sys
@@ -39,19 +38,20 @@ from . import (
     street,
     upstream,
 )
-from .sources import centerlines, openaddresses, overture, statcan, tiger
+from .sources import centerlines, openaddresses, overture
 
+# Every loader is loader(c, job, jurisdiction, work_dir) and creates or fills one table; tests swap in fixtures.
 LIVE_LOADERS = {
-    # counties from TIGER in the US, census divisions from StatCan in Canada (ADR 0006)
-    "package_area": lambda c, job, jur, work: (statcan if job.country == "CA" else tiger).load_package_area(c, job, work),
-    "municipality": lambda c, job, jur, work: boundaries.load_municipality(c, job, work),
-    "agency_addr": lambda c, job, jur, work: openaddresses.load_agency_addr(c, jur, work),
-    "overture_addr": lambda c, job, jur, work: overture.load_overture_addr(c, jur, work),
-    # RoadCenterline (roads.py)
+    # the country's boundaries (registry.COUNTRIES): TIGER in the US, StatCan in Canada (ADR 0006)
+    "package_area": boundaries.load_package_area,
+    "municipality": boundaries.load_municipality,
+    "agency_addr": openaddresses.load_agency_addr,
+    "overture_addr": overture.load_overture_addr,
+    # RoadCenterline (roads.py): road_seg from the government sources, then TIGER where a Package has none
     "gov_roads": centerlines.load_government,
     "tiger_roads": centerlines.load_tiger,
-    "overture_segment": lambda c, job, jur, work: overture.load_overture_segment(c, jur, work),
-    # upstream counts (upstream.py): the national road layer to compare government roads with
+    "overture_segment": overture.load_overture_segment,
+    # upstream counts (upstream.py): national_seg, the national road layer to compare government roads with
     "national_roads": centerlines.load_national_reference,
 }
 
@@ -78,7 +78,7 @@ def prepare(c):
 
 
 def assemble_ssap(c, job, jurisdiction, updated):
-    source = next(s for s in jurisdiction.sources if s.layer == "addresses")
+    source = jurisdiction.sources_for("addresses")[0]
     c.execute(f"""CREATE OR REPLACE TABLE ssap AS
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
@@ -126,15 +126,7 @@ def assemble_ssap(c, job, jurisdiction, updated):
 
 def gate(c):
     """NENA mandatory fields filled on every row; returns the failures."""
-    fails = []
-    for f in nena.SSAP_REQUIRED:
-        missing = c.execute(f"SELECT count(*) FROM ssap WHERE {f} IS NULL").fetchall()[0][0]
-        if missing:
-            fails.append(f"{f}: {missing:,} rows empty")
-    dup = c.execute("SELECT count(*) - count(DISTINCT nguid) FROM ssap").fetchall()[0][0]
-    if dup:
-        fails.append(f"nguid: {dup:,} duplicates")
-    return fails
+    return db.gate(c, "ssap", nena.SSAP_REQUIRED, "nguid")
 
 
 def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry_dir=registry.REGISTRY_DIR,
@@ -150,7 +142,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     nena.install(c, job.country)
     ids.install(c)
     boundaries.install(c)
-    updated = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    updated = db.now()
 
     print(f"[{job.id}] {job.name}, Overture {release}")
     for table in ("package_area", "municipality", "agency_addr", "overture_addr"):  # overture_addr reads package_area's extent

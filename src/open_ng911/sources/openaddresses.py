@@ -134,8 +134,8 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
     print(f"  [openaddresses] {source.key}: {c.execute('SELECT count(*) FROM agency_addr').fetchall()[0][0]:,} address points")
 
 
-def load_agency_addr(c, jurisdiction, work_dir):
-    sources = [s for s in jurisdiction.sources if s.layer == "addresses"]
+def load_agency_addr(c, job, jurisdiction, work_dir):
+    sources = jurisdiction.sources_for("addresses")
     assert len(sources) == 1, "Phase 1 scaffold reads one address source per job"  # several: union per package
     s = sources[0]
     entry = entry_for(s)

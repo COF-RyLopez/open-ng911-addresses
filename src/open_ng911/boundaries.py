@@ -23,7 +23,7 @@ import uuid
 
 import duckdb
 
-from . import ids
+from . import db, ids, registry
 
 UNINCORPORATED = "Unincorporated"
 SNAP_DEG = 0.00005  # about 5 m
@@ -31,37 +31,27 @@ SNAP_DEG = 0.00005  # about 5 m
 # address in the Package falls in it
 SLIVER_SHARE = 0.001
 
-# Where each country's boundaries come from: (module in sources/, A2 source, A3 source, license, license URL)
-SOURCES = {
-    "US": ("tiger", "Census TIGER counties", "Census TIGER county subdivisions or incorporated places",
-           "public domain", "https://www.census.gov/data/developers/about/terms-of-service.html"),
-    "CA": ("statcan", "Statistics Canada census divisions", "Statistics Canada census subdivisions",
-           "Statistics Canada Open Licence", "https://www.statcan.gc.ca/en/terms-conditions/open-licence"),
-}
-
-A2_FIELDS = ("discrpagid", "dateupdate", "effective", "expire", "nguid", "country", "a1", "a2")
-A3_FIELDS = (*A2_FIELDS, "a3")
 REQUIRED = {"A2Polygon": ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2"),
             "A3Polygon": ("discrpagid", "dateupdate", "nguid", "country", "a1", "a3")}
 
 
 def boundary_uid(source, code):
-    """'tiger-a3', '5000710675' -> uuid5(NS, 'boundary:tiger-a3:5000710675')"""
+    """'us-a3', '5000710675' -> uuid5(NS, 'boundary:us-a3:5000710675')"""
     return str(uuid.uuid5(ids.NAMESPACE, f"boundary:{source}:{code}"))
 
 
-def load_municipality(c, job, work_dir):
-    """The country's municipality loader. A Canadian job before statcan.load_municipality exists gets an
-    empty table, and so no A3 (left empty, never guessed)."""
-    module = SOURCES[job.country][0]
-    try:
-        loader = importlib.import_module(f".sources.{module}", __package__).load_municipality
-    except (ImportError, AttributeError):
-        print(f"[{job.id}] no municipality boundaries for {job.country} yet: A3 left empty")
-        c.execute("""CREATE OR REPLACE TABLE municipality
-                     (geoid VARCHAR, name VARCHAR, kind VARCHAR, incorporated BOOLEAN, geom GEOMETRY)""")
-        return
-    loader(c, job, work_dir)
+def _source(job):
+    return importlib.import_module(f".sources.{registry.country(job).boundaries}", __package__)
+
+
+def load_package_area(c, job, jurisdiction, work_dir):
+    """package_area: TIGER counties in the US, StatCan census divisions in Canada (registry.COUNTRIES)."""
+    _source(job).load_package_area(c, job, work_dir)
+
+
+def load_municipality(c, job, jurisdiction, work_dir):
+    """municipality, the A3 units: TIGER county subdivisions or places, StatCan census subdivisions."""
+    _source(job).load_municipality(c, job, work_dir)
 
 
 def _has_municipalities(c):
@@ -127,16 +117,8 @@ def install(c):
 
 def gate(c):
     """NENA mandatory boundary fields filled on every row, and one NGUID per boundary."""
-    fails = []
-    for table, layer in (("a2_polygon", "A2Polygon"), ("a3_polygon", "A3Polygon")):
-        for f in REQUIRED[layer]:
-            missing = c.execute(f"SELECT count(*) FROM {table} WHERE {f} IS NULL").fetchall()[0][0]
-            if missing:
-                fails.append(f"{layer}.{f}: {missing:,} rows empty")
-        dup = c.execute(f"SELECT count(*) - count(DISTINCT nguid) FROM {table}").fetchall()[0][0]
-        if dup:
-            fails.append(f"{layer}.nguid: {dup:,} duplicates")
-    return fails
+    return [f for table, layer in (("a2_polygon", "A2Polygon"), ("a3_polygon", "A3Polygon"))
+            for f in db.gate(c, table, REQUIRED[layer], "nguid", f"{layer}.")]
 
 
 def write_package(c, job, geoid, out):
@@ -144,7 +126,7 @@ def write_package(c, job, geoid, out):
     for table in ("a2_polygon", "a3_polygon"):
         c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM {table} WHERE geoid = '{geoid}' ORDER BY source_code) "
                   f"TO '{out}/{table}.parquet' (FORMAT parquet, COMPRESSION zstd)")
-    _, a2_source, a3_source, lic, lic_url = SOURCES[job.country]
+    k = registry.country(job)
     n_a3 = c.execute(f"SELECT count(*) FROM a3_polygon WHERE geoid = '{geoid}'").fetchall()[0][0]
     res = c.execute(f"""SELECT
             count(*) FILTER (a3 IS NOT NULL AND a3 <> '{UNINCORPORATED}'),
@@ -159,8 +141,9 @@ def write_package(c, job, geoid, out):
           # QA: of the Records in a municipality that name their own community (VT's TOWNNAME), the share
           # whose community is the A3 the boundary gave them
           "record_community_agrees_with_a3": round(agreed / compared, 4) if compared else None}
-    return {"A2Polygon": {"source": a2_source, "license": lic, "license_url": lic_url, "features": 1},
-            "A3Polygon": {"source": a3_source, "license": lic, "license_url": lic_url, "features": int(n_a3),
+    lic = {"license": k.boundary_license, "license_url": k.boundary_license_url}
+    return {"A2Polygon": {"source": k.a2_source, **lic, "features": 1},
+            "A3Polygon": {"source": k.a3_source, **lic, "features": int(n_a3),
                           **a3}}
 
 

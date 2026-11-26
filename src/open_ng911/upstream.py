@@ -135,7 +135,7 @@ def write(c, job, jurisdiction, root, release, national):
     import os
 
     from . import package
-    licences = {s.key: s.license_status for s in jurisdiction.sources if s.layer == "centerlines"}
+    licences = {s.key: s.license_status for s in jurisdiction.sources_for("centerlines")}
     out = {}
     for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
         keys = [k for k, in c.execute(f"SELECT DISTINCT source_key FROM road_seg WHERE road_source = 'government' "

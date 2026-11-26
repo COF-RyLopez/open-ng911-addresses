@@ -15,7 +15,7 @@ layer, and the OSM-derived Review layer is built only for opted-in Packages (ADR
 import json
 import os
 
-from . import boundaries, ids, nena
+from . import boundaries, ids, nena, registry
 from .nena import SSAP_REQUIRED
 
 SSAP_FIELDS = ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2", "a3", "add_number", "addnum_suf",
@@ -47,10 +47,10 @@ def write(c, job, jurisdiction, release, out_dir):
                for s in jurisdiction.sources]
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in SSAP_FIELDS)
     # NENA-STA-006.3's domains, with Canada's beside them in a Canadian Package (ADR 0006)
+    values = registry.country(job).values
     domains = {"NENA-STA-006.3": nena.domains()}
-    if job.country == "CA":
+    if values == "CLDXF-CA":
         domains["CLDXF-CA"] = nena.cldxf_ca()["domains"]
-    values = "CLDXF-CA" if job.country == "CA" else "NENA-STA-006.3"
     for geoid, name, domain, opted, authority in c.execute(
             "SELECT geoid, name, domain, opted_in, authority FROM package_area JOIN package_domain USING (geoid) ORDER BY 1").fetchall():
         d = os.path.join(root, geoid)
