@@ -29,10 +29,16 @@ and field mapping. What we find goes back to them, and what they change comes ba
 2. **Draft it:** `python scripts/oa_upstream.py --oa <openaddresses checkout> --apply` writes each `new` or
    `fix` entry into the checkout and a pull request draft to `build/oa-upstream/<path>.md`. Then run
    `npm ci && npm test` in the checkout.
-3. **A person opens it** from their own fork of openaddresses/openaddresses, one pull request per source file,
-   after reviewing the draft. The draft says the opener isn't affiliated with the publisher; nobody opens one in
+3. **Check it against their contribution guide** (CONTRIBUTING.md, AGENTS.md and DEVELOPMENT.md in their repo):
+   the endpoint isn't already in `sources/`; the file is `sources/{country}/{region}/{source}.json` (a
+   statewide layer goes in the existing statewide file); four-space indents, no blank lines or trailing
+   whitespace, newline at the end; only the changed layer differs; `npm test` passes. Their PR CI runs
+   `batch-machine` on each changed layer and comments with the result: read it, and fix the entry here first
+   if it fails.
+4. **A person opens it** from their own fork of openaddresses/openaddresses, one pull request per source file,
+   after reviewing the draft, branched from upstream `master`. The draft says the opener isn't affiliated with the publisher; nobody opens one in
    an agency's name, and agents don't open them unprompted (ADR 0004).
-4. **Once it merges**, the next pin bump lists the entry as `listed`. Drop the `oa_entry` (keep `openaddresses`
+5. **Once it merges**, the next pin bump lists the entry as `listed`. Drop the `oa_entry` (keep `openaddresses`
    and `oa_layer`): from then on OpenAddresses maintains it and their fixes reach us through the pin.
 
 `registry/remediation/oa_proposals.csv` (from `scripts/license_remediation.py`) lists every `oa_entry` with
