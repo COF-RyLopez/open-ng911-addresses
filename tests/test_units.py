@@ -133,3 +133,34 @@ def test_openaddresses_pin(monkeypatch):
     assert openaddresses.source_paths("ca-pe") == ["ca/pe/province"]
     monkeypatch.setenv("OPENADDRESSES_COMMIT", "abc123")
     assert openaddresses.pin() == {"commit": "abc123", "date": None}
+
+
+def test_discover_openaddresses_sources():
+    """A state's address sources from OpenAddresses' registry: the statewide one where it exists, else counties
+    before cities; a path the registry names is left to the registry, and licences map to our statuses."""
+    from open_ng911 import registry
+    from open_ng911.sources import openaddresses
+
+    def layer(name, lic=None, ident="ID"):
+        return {"name": name, "data": "https://x/FeatureServer/0", "protocol": "ESRI", "license": lic,
+                "attribution": f"{name} agency", "conform": {"number": "N", "street": "S", "id": ident}}
+
+    defs = {
+        "us/zz/alpha": {"coverage": {"US Census": {"geoid": "99001", "name": "Alpha County"}},
+                        "layers": {"addresses": [layer("county", "https://creativecommons.org/licenses/by/4.0/")]}},
+        "us/zz/city_of_beta": {"coverage": {"city": "Beta"}, "layers": {"addresses": [layer("city")]}},
+        "us/zz/gamma": {"coverage": {"US Census": {"geoid": "99005"}},
+                        "layers": {"addresses": [layer("county", {"text": "ODbL"})]}},
+        "us/zz/named": {"coverage": {}, "layers": {"addresses": [layer("county")]}},
+    }
+    job = registry.Job(id="us-zz", country="US", code="ZZ", fips="99", name="Z", enabled=False)
+    named = registry.Source(key="mine", agency="A", layer="addresses", covers="*", license_status="open",
+                            openaddresses="us/zz/named", oa_layer="county")
+    jur = registry.Jurisdiction(job="us-zz", packages="county", authorities=[], sources=[named], discover=["addresses"])
+    found = openaddresses.discover(job, jur, paths=[*defs, "us/zy/other"], definition=defs.__getitem__)
+    assert [s.openaddresses for s in found] == ["us/zz/alpha", "us/zz/gamma", "us/zz/city_of_beta"]
+    assert [s.license_status for s in found] == ["open", "share-alike", "unknown"]
+    assert found[0].key == "oa-us-zz-alpha-county" and found[0].id_field == "ID"
+    whole = {**defs, "us/zz/statewide": {"coverage": {}, "layers": {"addresses": [layer("state")]}}}
+    found = openaddresses.discover(job, jur, paths=list(whole), definition=whole.__getitem__)
+    assert [s.openaddresses for s in found] == ["us/zz/statewide"]

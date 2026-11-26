@@ -111,6 +111,9 @@ class Jurisdiction:
     packages: str
     authorities: list
     sources: list
+    # OpenAddresses layers whose sources are found in OpenAddresses' registry for the state at the pin, besides
+    # the Sources listed here (openaddresses.discover): ["addresses"]
+    discover: list = field(default_factory=list)
 
     def authority_for(self, geoid):
         return next((a for a in self.authorities if a.covers_package(geoid)), None)
@@ -140,7 +143,7 @@ def jurisdiction(j, registry_dir=REGISTRY_DIR):
         d = tomllib.load(f)
     r = Jurisdiction(job=d["job"], packages=d["packages"],
                      authorities=[Authority(**a) for a in d.get("authority", [])],
-                     sources=[Source(**s) for s in d.get("source", [])])
+                     sources=[Source(**s) for s in d.get("source", [])], discover=d.get("discover", []))
     validate(r, j)
     return r
 
@@ -153,6 +156,7 @@ def validate(r, j):
         assert not (a.opted_in and not a.domain), f"{a.key}: opted in without a confirmed domain (ADR 0004)"
         assert a.opted_in or not a.domain, f"{a.key}: a domain is set only once the authority opts in (ADR 0003)"
     from . import fieldmap
+    assert set(r.discover) <= {"addresses"}, f"{j.id}: discover is for OpenAddresses address sources only"
     for s in r.sources:
         assert s.license_status in LICENSE_STATUSES, f"{s.key}: license_status {s.license_status!r}"
         assert s.layer in LAYERS, f"{s.key}: layer {s.layer!r} (one of {LAYERS})"

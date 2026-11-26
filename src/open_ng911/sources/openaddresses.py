@@ -37,12 +37,81 @@ def source_definition(path, commit=None):
     return json.loads(arcgis.get(url, timeout=60, tries=1))
 
 
+OA_TREE = "https://api.github.com/repos/openaddresses/openaddresses/git/trees/{commit}?recursive=1"
+# OpenAddresses licence text or URL -> our licence status: open (attribution at most), share-alike, else unknown
+OPEN_LICENCES = ("cc0", "publicdomain", "public domain", "pddl", "creativecommons.org/licenses/by/", "cc-by", "cc by",
+                 "cc-by-4.0", "odc-by", "open government licence", "open government license", "ogl")
+SHARE_ALIKE = ("odbl", "by-sa", "share-alike", "sharealike")
+
+
 def source_paths(job, commit=None, registry_dir=registry.REGISTRY_DIR):
-    """The OpenAddresses sources a job reads, as paths under sources/ without .json ('us/vt/statewide'), sorted:
-    the ones its registry Sources name. A Source that is only an `oa_entry` has no path. `commit` is for
-    listing the sources at another commit, once they are discovered from the registry there."""
+    """The OpenAddresses sources a job reads at a commit (the pin by default), as paths under sources/ without
+    .json ('us/vt/statewide'), sorted: those its registry Sources name and those discover() finds."""
     j = registry.job(job, registry_dir) if isinstance(job, str) else job
-    return sorted({s.openaddresses for s in registry.jurisdiction(j, registry_dir).sources if s.openaddresses})
+    jur = registry.jurisdiction(j, registry_dir)
+    found = discover(j, jur, commit) if jur.discover else []
+    return sorted({s.openaddresses for s in jur.sources + found if s.openaddresses})
+
+
+def tree(commit=None):
+    """Every source path in OpenAddresses' registry at a commit (one GitHub API call; GITHUB_TOKEN if set)."""
+    import urllib.request
+    url = OA_TREE.format(commit=commit or pin()["commit"])
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": arcgis.USER_AGENT}
+    if os.environ.get("GITHUB_TOKEN"):
+        headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=120) as r:
+        t = json.loads(r.read())
+    assert not t.get("truncated"), "OpenAddresses' tree came back truncated"
+    return [e["path"][len("sources/"):-len(".json")] for e in t["tree"]
+            if e["type"] == "blob" and e["path"].startswith("sources/") and e["path"].endswith(".json")]
+
+
+def licence_status(layer):
+    """Our licence status of an OpenAddresses layer from its `license` (text, URL or {text, url}): most state none,
+    and those stay unknown (kept out of public artifacts)."""
+    lic = layer.get("license")
+    if isinstance(lic, dict):
+        lic = " ".join(str(v) for v in lic.values())
+    lic = str(lic or "").lower()
+    if any(w in lic for w in SHARE_ALIKE):
+        return "share-alike"
+    return "open" if any(w in lic for w in OPEN_LICENCES) else "unknown"
+
+
+def discover(job, jur, commit=None, paths=None, definition=None):
+    """Address Sources for the OpenAddresses address sources of the job's state at a commit (the pin), after the
+    registry's own: the statewide (or province) source where there is one, else every county source and then the
+    city and other ones (an earlier Source wins a site two publish, combine()). A path a registry Source already
+    names is left to it: the registry is the overlay on OpenAddresses. paths and definition are for tests."""
+    prefix = f"{job.country.lower()}/{job.code.lower()}/"
+    paths = sorted(p for p in (paths if paths is not None else tree(commit)) if p.startswith(prefix))
+    definition = definition or (lambda p: source_definition(p, commit))
+    named = {s.openaddresses for s in jur.sources if s.openaddresses}
+    whole = [p for p in paths if p.rsplit("/", 1)[1] in ("statewide", "province")]
+    defs = {p: definition(p) for p in (whole or paths) if p not in named}
+    if whole and any(p in named for p in whole):
+        return []
+
+    def county_first(p):
+        cov = defs[p].get("coverage", {})
+        return (0 if ("county" in cov or "US Census" in cov) and "city" not in cov else 1, p)
+
+    found = []
+    for p in sorted(defs, key=county_first):
+        cov = defs[p].get("coverage", {})
+        for layer in defs[p].get("layers", {}).get("addresses", []):
+            ident = layer.get("conform", {}).get("id")
+            lic = layer.get("license")
+            found.append(registry.Source(
+                key=f"oa-{p.replace('/', '-')}-{layer.get('name', 'addresses')}", layer="addresses", covers="*",
+                agency=layer.get("attribution") or cov.get("US Census", {}).get("name") or cov.get("city")
+                or cov.get("county") or p,
+                license_status=licence_status(layer), openaddresses=p, oa_layer=layer.get("name", ""),
+                id_field=ident if isinstance(ident, str) else "",
+                license_url=lic if isinstance(lic, str) and lic.startswith("http") else "",
+                attribution=layer.get("attribution", "")))
+    return found
 
 
 def layer_entry(definition, layer, name):
