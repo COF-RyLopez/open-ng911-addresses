@@ -1,6 +1,6 @@
 name: Story map data
 
-# Rebuilds story/data/<job>.json (counts, outlines, and points only for open-licensed sources; see
+# Rebuilds story/pilots/<job>.json (counts, outlines, and points only for open-licensed sources; see
 # story/extract.py) from fresh builds, and commits them to the branch it ran on. Run it by hand
 # (Actions > Story map data > Run workflow) or by pushing a change to the extractor on a claude/ branch.
 on:
@@ -29,12 +29,12 @@ jobs:
           python-version: "3.12"
       - run: uv pip install --system -e .
       - run: python -m open_ng911.build --job ${{ matrix.job }} --out data/output
-      - run: python story/extract.py --out data/output --job ${{ matrix.job }} --dest story/data
+      - run: python story/extract.py --out data/output --job ${{ matrix.job }} --dest story/pilots
       # Only the extract is uploaded: the extractor leaves out points from any source whose licence isn't open.
       - uses: actions/upload-artifact@v4
         with:
           name: story-${{ matrix.job }}
-          path: story/data/${{ matrix.job }}.json
+          path: story/pilots/${{ matrix.job }}.json
 
   commit:
     name: Commit story data
@@ -46,11 +46,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: story-*
-          path: story/data
+          path: story/pilots
           merge-multiple: true
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898+github-actions[bot]@users.noreply.github.com"
-          git add story/data
+          git add story/pilots
           git diff --cached --quiet || git commit -m "Story map data from builds of ${GITHUB_SHA::7}"
           git push

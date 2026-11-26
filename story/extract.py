@@ -1,7 +1,7 @@
 """
-Story map data: a small JSON file per build job, read by story/index.html.
+Story map data: a small JSON file per build job, read by story/index.html (written to story/pilots/; data/ is gitignored).
 
-    python story/extract.py --out data/output --job ca-pe [--dest story/data]
+    python story/extract.py --out data/output --job ca-pe [--dest story/pilots]
 
 What goes in, and why it is safe to publish:
   - every Package's counts and field fill, copied from its manifest.json (already public in CI summaries)
@@ -25,17 +25,23 @@ SAMPLE_FIELDS = ("uid", "nguid", "gers_id", "status", "source_id", "discrpagid",
                  "st_posdir", "unit", "post_comm", "post_code", "placement", "source_license")
 
 
+def _round(c):
+    return [round(c[0], 4), round(c[1], 4)] if isinstance(c[0], (int, float)) else [_round(x) for x in c]
+
+
 def geojson(c, path, props, tolerance):
     """A layer's polygons as GeoJSON features, simplified and rounded to 4 decimals (~10 m)."""
     out = []
     sel = ", ".join(props)
     kind = c.execute(f"DESCRIBE SELECT geom FROM read_parquet('{path}')").fetchall()[0][1]
     geom = "ST_GeomFromWKB(geom)" if kind == "BLOB" else "geom"  # an empty layer has no GEOMETRY type
-    for row in c.execute(f"""SELECT {sel}, ST_AsGeoJSON(ST_ReducePrecision(
-            ST_SimplifyPreserveTopology({geom}, {tolerance}), 0.0001)) FROM read_parquet('{path}')""").fetchall():
+    for row in c.execute(f"""SELECT {sel}, ST_AsGeoJSON(ST_SimplifyPreserveTopology({geom}, {tolerance}))
+            FROM read_parquet('{path}')""").fetchall():
         *vals, g = row
         if g:
-            out.append({"type": "Feature", "properties": dict(zip(props, vals)), "geometry": json.loads(g)})
+            g = json.loads(g)
+            g["coordinates"] = _round(g["coordinates"])
+            out.append({"type": "Feature", "properties": dict(zip(props, vals)), "geometry": g})
     return out
 
 
@@ -92,7 +98,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data/output")
     ap.add_argument("--job", required=True)
-    ap.add_argument("--dest", default=os.path.join(os.path.dirname(__file__), "data"))
+    ap.add_argument("--dest", default=os.path.join(os.path.dirname(__file__), "pilots"))
     a = ap.parse_args()
     roots = sorted(glob.glob(os.path.join(a.out, "release=*", a.job)))
     if not roots:
@@ -112,11 +118,11 @@ def main():
         packages.append(manifest_subset(m))
         geoid = os.path.basename(d)
         if os.path.exists(os.path.join(d, "a2_polygon.parquet")):
-            for ft in geojson(c, os.path.join(d, "a2_polygon.parquet"), ("a2", "source_code"), 0.002):
+            for ft in geojson(c, os.path.join(d, "a2_polygon.parquet"), ("a2", "source_code"), 0.003):
                 ft["properties"]["geoid"] = geoid
                 a2.append(ft)
         if os.path.exists(os.path.join(d, "a3_polygon.parquet")):
-            for ft in geojson(c, os.path.join(d, "a3_polygon.parquet"), ("a3", "source_code"), 0.001):
+            for ft in geojson(c, os.path.join(d, "a3_polygon.parquet"), ("a3", "source_code"), 0.0015):
                 ft["properties"]["geoid"] = geoid
                 a3.append(ft)
         sources = m["sources"]
