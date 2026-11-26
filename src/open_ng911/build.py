@@ -12,7 +12,8 @@ Steps:
      as Gap-fill candidates (ADR 0001), with NGUIDs built from the Address UID (ADR 0002).
   6. Build the RoadCenterline layer: government centerlines, TIGER where a Package has none, Overture GERS
      IDs attached (roads.py).
-  7. Count where the government roads and Overture / the national road layer disagree (upstream.py).
+  7. Count where the government roads and Overture / the national road layer disagree (upstream.py), and list
+     which government sources could stand in for Overture's ODbL themes in each Package (odbl_inventory.py).
   8. Write one Package per county or census division, the ledger and a job summary; fail the job if a
      NENA mandatory field isn't filled on every row.
 """
@@ -22,7 +23,20 @@ import json
 import os
 import sys
 
-from . import db, ids, lineage, matcher, nena, overture_release, package, registry, roads, street, upstream
+from . import (
+    db,
+    ids,
+    lineage,
+    matcher,
+    nena,
+    odbl_inventory,
+    overture_release,
+    package,
+    registry,
+    roads,
+    street,
+    upstream,
+)
 from .sources import centerlines, openaddresses, overture, tiger
 
 LIVE_LOADERS = {
@@ -141,6 +155,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     root, summaries = package.write(c, job, jur, release, out_dir)
     road_stats = roads.write(c, job, root, release)
     up = upstream.write(c, job, jur, root, release, national)
+    odbl = odbl_inventory.write(c, job, root)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
     fails = gate(c) + roads.gate(c)
@@ -153,6 +168,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
                "upstream": upstream.job_totals(up.values()),
+               "odbl_replacement": odbl_inventory.job_totals(odbl.values()),
                "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}

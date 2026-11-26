@@ -46,9 +46,36 @@ Endpoints the national registries don't list yet go upstream too: see "Proposing
   agency's own date is in `road_centerline.sources`.
 - `upstream_eligible`: every government road source in the Package has an open licence.
 
+## The ODbL replacement inventory (`odbl_replacement` in every manifest, totals in job.json)
+
+Direction (Ryan, 2026-11-26): as jobs find government sources, record which of Overture's ODbL datasets each one
+could replace. For every Package and each ODbL theme:
+
+| Theme | Government sources we look for | National open fallback |
+|---|---|---|
+| `transportation` | the agency's E911 / county centerlines (OA `centerlines` layer) | US: TIGER/Line ADDRFEAT (public domain); CA: NRCan/StatCan NRN (OGL-Canada, loader to come) |
+| `buildings` | county / state footprints (OA `buildings` layer) | none open (Microsoft footprints are ODbL) |
+| `divisions` | the boundary layers we build Packages from | US: TIGER boundaries; CA: StatCan boundary files |
+| `base_water` | none read yet | US: USGS NHD / 3DHP; CA: NRCan National Hydro Network (loaders to come) |
+
+Each theme records `read` (sources this build used, with licence status), `catalogued` (layers the OpenAddresses
+catalogue lists for that county or the whole state, with our first-read licence class, from
+`registry/remediation/oa_sources.csv`), `national`, and a `status`:
+
+- `government_open`: an open government source was read and covers the Package.
+- `government_unclear`: one was read but its licence isn't open yet (a remediation request is the next step).
+- `candidate`: nothing read, but a catalogued or national open source exists.
+- `none`: nothing known.
+
+job.json counts Packages per theme and status, so the Overture pitch can say "in N Packages an open government
+source already covers transportation". It is an inventory, not a claim: whether a source replaces Overture's data
+is for the agency and Overture, only open-licensed sources count, and a person proposes it (ADR 0004).
+
 ## Next steps
 
 1. A Canadian national layer (NRN) loader, so `national` is measured for provinces.
 2. A per-job `upstream.json`: open-licensed segments and addresses that Overture or the national layer lacks,
    with counts only in public artifacts.
-3. A one-page Overture pitch from the Vermont and PEI numbers.
+3. Loaders for building footprints and USGS / NRCan hydrography, so `buildings` and `base_water` can reach
+   `government_open`.
+4. A one-page Overture pitch from the Vermont and PEI numbers and the inventory totals.

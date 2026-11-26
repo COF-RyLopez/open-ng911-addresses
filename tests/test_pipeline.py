@@ -186,3 +186,22 @@ def test_upstream_counts(tmp_path, conn):
     assert s["upstream"]["overture"]["segments"] == 5 and s["upstream"]["national"]["not_in_national"] == 2
     # counts only: no names anywhere in the section
     assert "Seminary" not in json.dumps(up)
+
+
+def test_odbl_replacement_inventory(tmp_path, conn):
+    """Which government sources could replace Overture's ODbL themes, per Package."""
+    out = str(tmp_path / "out")
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    root = os.path.join(out, f"release={RELEASE}", "us-vt")
+    with open(os.path.join(root, "50001", "manifest.json")) as f:
+        addison = json.load(f)["odbl_replacement"]
+    with open(os.path.join(root, "50003", "manifest.json")) as f:
+        benn = json.load(f)["odbl_replacement"]
+    # Addison reads the E911 roads, whose licence isn't open yet; Bennington falls back to TIGER (public domain)
+    assert addison["transportation"]["status"] == "government_unclear"
+    assert addison["transportation"]["read"][0]["license_status"] != "open"
+    assert benn["transportation"]["status"] == "government_open"
+    assert addison["divisions"]["status"] == "government_open"
+    # nothing read for water; the national layer is a candidate
+    assert addison["base_water"]["status"] == "candidate" and "USGS" in addison["base_water"]["national"]
+    assert s["odbl_replacement"]["divisions"] == {"government_open": len(s["by_package"])}
