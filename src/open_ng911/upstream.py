@@ -95,7 +95,12 @@ def build(c, job, jurisdiction, work_dir, loaders):
     return national
 
 
-def package_section(c, geoid, national, release, eligible):
+def package_section(c, jurisdiction, geoid, national, release):
+    """The `upstream` section of one Package's manifest."""
+    licences = {s.key: s.license_status for s in jurisdiction.sources_for("centerlines")}
+    keys = [k for k, in c.execute(f"SELECT DISTINCT source_key FROM road_seg WHERE road_source = 'government' "
+                                  f"AND geoid = '{geoid}'").fetchall()]
+    eligible = bool(keys) and all(licences.get(k) == "open" for k in keys)
     o = db.one(c, f"""SELECT count(*) AS segments,
             count(*) FILTER (name_check = 'no_link') AS not_in_overture,
             count(*) FILTER (name_check = 'agrees') AS name_agrees,
@@ -127,29 +132,6 @@ def package_section(c, geoid, national, release, eligible):
     section["note"] = ("Counts only. Overture names and classes (ODbL) are compared in memory and not written. "
                        "Only an open-licensed source can go upstream, and a person proposes it (ADR 0004).")
     return section
-
-
-def write(c, job, jurisdiction, root, release, national):
-    """The `upstream` section of every Package's manifest; returns them by Package key."""
-    import json
-    import os
-
-    from . import package
-    licences = {s.key: s.license_status for s in jurisdiction.sources_for("centerlines")}
-    out = {}
-    for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
-        keys = [k for k, in c.execute(f"SELECT DISTINCT source_key FROM road_seg WHERE road_source = 'government' "
-                                      f"AND geoid = '{geoid}'").fetchall()]
-        eligible = bool(keys) and all(licences.get(k) == "open" for k in keys)
-        section = package_section(c, geoid, national, release, eligible)
-        mpath = os.path.join(root, geoid, "manifest.json")
-        with open(mpath) as f:
-            manifest = json.load(f)
-        manifest["upstream"] = section
-        with open(mpath, "w") as f:
-            json.dump(manifest, f, indent=2)
-        out[package.package_key(job, geoid)] = section
-    return out
 
 
 def job_totals(sections):

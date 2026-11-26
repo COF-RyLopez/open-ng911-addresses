@@ -15,7 +15,7 @@ layer, and the OSM-derived Review layer is built only for opted-in Packages (ADR
 import json
 import os
 
-from . import boundaries, ids, nena, registry
+from . import boundaries, db, ids, nena, odbl_inventory, registry, roads, upstream
 from .nena import SSAP_REQUIRED
 
 SSAP_FIELDS = ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2", "a3", "add_number", "addnum_suf",
@@ -39,7 +39,9 @@ def create_domains(c, job, jurisdiction):
     c.executemany("INSERT INTO package_domain VALUES (?, ?, ?, ?)", rows)
 
 
-def write(c, job, jurisdiction, release, out_dir):
+def write(c, job, jurisdiction, release, out_dir, national):
+    """Every Package's layer files and its manifest.json, written once with every layer's section; returns the
+    job folder and the manifests. national: the national road layer upstream.build compared with, or None."""
     root = os.path.join(out_dir, f"release={release}", job.id)
     summaries = []
     sources = [{"key": s.key, "agency": s.agency, "layer": s.layer, "openaddresses": s.openaddresses,
@@ -47,6 +49,8 @@ def write(c, job, jurisdiction, release, out_dir):
                for s in jurisdiction.sources]
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in SSAP_FIELDS)
     # NENA-STA-006.3's domains, with Canada's beside them in a Canadian Package (ADR 0006)
+    road_meta = db.rows(c, "SELECT * FROM road_source_meta ORDER BY source_key")
+    catalogue = odbl_inventory.catalogue()
     values = registry.country(job).values
     domains = {"NENA-STA-006.3": nena.domains()}
     if values == "CLDXF-CA":
@@ -58,6 +62,7 @@ def write(c, job, jurisdiction, release, out_dir):
         c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM ssap WHERE geoid = '{geoid}' ORDER BY uid) "
                   f"TO '{os.path.join(d, 'site_structure_address_point.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
         bounds = boundaries.write_package(c, job, geoid, d)
+        road = roads.write_package(c, geoid, d, release, road_meta)
         res = c.execute(f"""SELECT count(*) AS rows,
                 count(*) FILTER (status = 'record') AS records,
                 count(*) FILTER (status = 'record' AND gers_id IS NOT NULL) AS records_with_gers_id,
@@ -68,8 +73,8 @@ def write(c, job, jurisdiction, release, out_dir):
         counts = {k: int(stats.pop(k)) for k in ("records", "records_with_gers_id", "gap_fill_candidates")}
         manifest = {
             "package": package_key(job, geoid), "name": name, "job": job.id, "overture_release": release,
-            "nena": {"standard": "NENA-STA-006.3-2026", "values": values, "layers": ["SiteStructureAddressPoint", *bounds],
-                     "mandatory_fields": list(SSAP_REQUIRED)},
+            "nena": {"standard": "NENA-STA-006.3-2026", "values": values, "layers": ["SiteStructureAddressPoint", *bounds, "RoadCenterline"],
+                     "mandatory_fields": list(SSAP_REQUIRED), "rcl_mandatory_fields": list(nena.RCL_REQUIRED)},
             "recipient": authority, "opted_in": opted, "nguid_domain": domain,
             "distribution": ("handed to the opted-in 911 authority" if opted else
                              "built for the public scorecard only; not handed out until the 911 authority opts in (ADR 0003)"),
@@ -80,6 +85,9 @@ def write(c, job, jurisdiction, release, out_dir):
             "boundaries": bounds,
             "gap_fill_licenses": dict(c.execute(f"""SELECT coalesce(source_license, 'unstated'), count(*) FROM ssap
                 WHERE geoid = '{geoid}' AND status = 'gap_fill_candidate' GROUP BY 1 ORDER BY 2 DESC""").fetchall()),
+            "road_centerline": road,
+            "upstream": upstream.package_section(c, jurisdiction, geoid, national, release),
+            "odbl_replacement": odbl_inventory.manifest_section(c, job, geoid, catalogue),
         }
         with open(os.path.join(d, "manifest.json"), "w") as f:
             json.dump(manifest, f, indent=2)

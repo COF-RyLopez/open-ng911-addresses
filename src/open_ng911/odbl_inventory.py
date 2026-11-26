@@ -36,7 +36,7 @@ THEMES = {
 }
 
 
-def _catalogue(path=OA_SOURCES):
+def catalogue(path=OA_SOURCES):
     if not os.path.exists(path):
         return []
     with open(path, newline="") as f:
@@ -83,26 +83,11 @@ def package_section(c, job, geoid, catalogue):
     return out
 
 
-def write(c, job, root):
-    """The `odbl_replacement` section of every Package's manifest; returns them by Package key."""
-    import json
-
-    from . import package
-    catalogue = _catalogue()
-    out = {}
-    for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
-        section = package_section(c, job, geoid, catalogue)
-        mpath = os.path.join(root, geoid, "manifest.json")
-        with open(mpath) as f:
-            manifest = json.load(f)
-        manifest["odbl_replacement"] = {
-            **section,
+def manifest_section(c, job, geoid, catalogue):
+    """The `odbl_replacement` section of one Package's manifest. catalogue: catalogue() once per job."""
+    return {**package_section(c, job, geoid, catalogue),
             "note": "Which government sources could stand in for Overture's ODbL themes here. An inventory, not a "
                     "claim; only open-licensed sources count, and a person proposes them (ADR 0004)."}
-        with open(mpath, "w") as f:
-            json.dump(manifest, f, indent=2)
-        out[package.package_key(job, geoid)] = section
-    return out
 
 
 def job_totals(sections):
@@ -110,6 +95,8 @@ def job_totals(sections):
     tot = {}
     for s in sections:
         for theme, v in s.items():
+            if theme == "note":
+                continue
             tot.setdefault(theme, {})
             tot[theme][v["status"]] = tot[theme].get(v["status"], 0) + 1
     return tot

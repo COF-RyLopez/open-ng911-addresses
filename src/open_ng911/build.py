@@ -160,10 +160,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     roads.build(c, job, jur, work_dir, loaders, updated)
     national = upstream.build(c, job, jur, work_dir, loaders)
 
-    root, summaries = package.write(c, job, jur, release, out_dir)
-    road_stats = roads.write(c, job, root, release)
-    up = upstream.write(c, job, jur, root, release, national)
-    odbl = odbl_inventory.write(c, job, root)
+    root, summaries = package.write(c, job, jur, release, out_dir, national)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
     fails = gate(c) + boundaries.gate(c) + roads.gate(c)
@@ -181,15 +178,15 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "agency_points_id_shared": c.execute(
                    "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
                "overture_link_methods": links, "a3": boundaries.summary(c),
-               "road_segments": sum(r["rows"] for r in road_stats.values()),
-               "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),
+               "road_segments": sum(s["road_centerline"]["rows"] for s in summaries),
+               "road_segments_with_gers_id": sum(s["road_centerline"]["with_gers_id"] for s in summaries),
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
-               "upstream": upstream.job_totals(up.values()),
-               "odbl_replacement": odbl_inventory.job_totals(odbl.values()),
+               "upstream": upstream.job_totals(s["upstream"] for s in summaries),
+               "odbl_replacement": odbl_inventory.job_totals(s["odbl_replacement"] for s in summaries),
                "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
-                              | roads.package_summary(road_stats[s["package"]]) for s in summaries}}
+                              | roads.package_summary(s["road_centerline"]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
         json.dump(summary, f, indent=2)
     print(json.dumps({k: v for k, v in summary.items() if k != "by_package"}, indent=2))
