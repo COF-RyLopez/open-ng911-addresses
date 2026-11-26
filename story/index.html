@@ -33,7 +33,7 @@ body { background: var(--ground); color: var(--fg); font-family: var(--body); fo
 button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--gers); outline-offset: 2px; }
 
-.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
 header.top {
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
   padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -251,7 +251,7 @@ const LAYERS = [
 function layerStatus(D) {
   const r = D.job.road_segments || 0;
   return {
-    SSAP: ["filled", "in every Package"], RCL: r ? ["filled", fmt(r) + " segments"] : ["gap", "no road source yet"],
+    SSAP: ["filled", "in every Package"], RCL: r ? ["filled", ((D.job.road_sources || {}).government ? "agency, " : "TIGER, ") + fmt(r)] : ["gap", "no road source yet"],
     A1: ["gap", "next: trivial"], A2: ["filled", D.packages.length + " polygons"], A3: ["filled", fmt(D.job.a3?.a3_polygons) + " polygons"],
     Prov: ["gap", "next: Package area"], PSAP: ["agency", "authority supplies"], A45: ["gap", "no source yet"],
     SSAPoly: ["gap", "planned"], Marks: ["gap", "planned"], RrHyd: ["gap", "planned"],
@@ -276,7 +276,7 @@ function decodePoints(P) {
   let x = 0, y = 0;
   for (let i = 0; i < P.dx.length; i++) {
     x += P.dx[i]; y += P.dy[i];
-    feats[i] = { type: "Feature", id: i, geometry: { type: "Point", coordinates: [x / 1e5, y / 1e5] }, properties: { k: P.kind[i], x: x / 1e5 } };
+    feats[i] = { type: "Feature", id: i, geometry: { type: "Point", coordinates: [x / 1e5, y / 1e5] }, properties: { k: P.kind[i] } };
   }
   return { type: "FeatureCollection", features: feats };
 }
@@ -285,6 +285,7 @@ function prepare(D) {
   D.rclFill = weightedFill(D, p => p.roads?.field_fill, p => p.roads?.rows);
   D.bbox = bboxOf(D.a2);
   D.openPoints = !!D.points;
+  D.licOpen = D.sources.filter(s => s.layer === "addresses").every(s => s.license_status === "open");
   if (D.points) {
     D.pointsGeo = decodePoints(D.points);
     D.a2Order = D.points.a2s;
@@ -307,6 +308,7 @@ function chapters(D, P) {
   const roads = j.road_segments || 0, roadsG = j.road_segments_with_gers_id || 0;
   const addrSrc = D.sources.filter(s => s.layer === "addresses");
   const roadSrc = D.sources.filter(s => s.layer === "centerlines");
+  const govRoads = (j.road_sources || {}).government > 0;
   const lic = s => s.license_status === "open" ? "open licence" : s.license_status === "unknown" ? "licence not stated yet" : s.license_status;
   const dropped = Object.values(j.agency_points_dropped || {}).reduce((a, b) => a + b, 0);
   const choro = (label, fn, color) => ({ label, fn, color });
@@ -335,6 +337,7 @@ function chapters(D, P) {
       title: "Every addressed site, as a NENA address point",
       body: [`Each agency point becomes a Record in the SiteStructureAddressPoint layer, with NENA field names and registry words ("Avenue", "North"). Phones, call boxes and un-numbered sites stay in: ${dropped ? fmt(dropped) + " points dropped, each for a counted reason" : "no point was dropped"}.`,
         D.openPoints ? `Every point on the map is a real Record from the ${esc(addrSrc[0]?.agency || "")}, published under its open licence.` :
+          D.licOpen ? `${P.name}'s points are openly licensed, but ${fmt(recs)} is more than this page embeds, so the shading shows real Record counts per ${unit}.` :
           `The agency's points stay off this public map until the agency states a licence. The shading shows real Record counts per ${unit}.`],
       stats: [[fmt(recs), "Records"], [fmt(j.agency_points_dropped ? recs + dropped : recs), "agency points read"], [pct(recs, recs + dropped), "kept"]],
       legend: D.openPoints ? [["Record", C.ssap]] : null,
@@ -354,20 +357,25 @@ function chapters(D, P) {
       legend: D.openPoints ? [["gap-fill candidate", C.gap], ["Record", C.ssap]] : null,
       map: { a2: "outline", points: "gap", choro: D.openPoints ? null : choro("Gap-fill candidates", p => p.gap_fill_candidates, C.gap) } },
     { key: "rcl", step: "RCL", tag: "RoadCenterLine", tagc: "#cfd8da", lit: ["RCL"], fields: "rcl",
-      title: roads ? "Government road centerlines, with GERS IDs attached" : "Road centerlines: the open gap",
-      body: roads ? [`The RoadCenterLine layer is the agency's own road geometry (${roadSrc.map(s => esc(s.agency)).join(", ") || "TIGER ADDRFEAT where no agency layer exists"}), not OSM. Each segment gets the GERS ID of the Overture segment it overlaps (20 m, 30°), but no Overture geometry or names (ADR 0010).`,
-        `Road geometry stays off this map until the source's licence is clear. The shading shows real segment counts.`] :
-        [`Canada has no national road fallback in the pipeline yet, so the ${P.name} Packages ship an empty RoadCenterLine. The next loader is the National Road Network (NRCan / StatCan, Open Government Licence – Canada).`],
-      stats: roads ? [[fmt(roads), "road segments"], [pct(roadsG, roads), "with a GERS ID", C.gers], [fmt(roads - roadsG), "without one"]] : [["0", "road segments"], ["NRN", "next loader"]],
+      title: !roads ? "Road centerlines: the open gap" : govRoads ? "Government road centerlines, with GERS IDs attached" : "TIGER road centerlines until a state layer is read",
+      body: !roads ? [`Canada has no national road fallback in the pipeline yet, so the ${P.name} Packages ship an empty RoadCenterLine. The next loader is the National Road Network (NRCan / StatCan, Open Government Licence – Canada).`] :
+        govRoads ? [`The RoadCenterLine layer is the agency's own road geometry (${roadSrc.map(s => esc(s.agency)).join(", ")}), not OSM. Each segment gets the GERS ID of the Overture segment it overlaps (20 m, 30°), but no Overture geometry or names (ADR 0010).`,
+          `Road geometry stays off this map until the source's licence is clear. The shading shows real segment counts.`] :
+        [`No state road layer is in the registry for ${P.name} yet, so every Package falls back to Census TIGER ADDRFEAT (public domain): named, address-ranged segments. Each gets the GERS ID of the Overture segment it overlaps, but no Overture geometry or names (ADR 0010).`,
+          `When the state's own NG9-1-1 centerlines are added, they replace TIGER Package by Package. The shading shows real segment counts.`],
+      stats: roads ? [[fmt(roads), "road segments"], [pct(roadsG, roads), "with a GERS ID", C.gers], [govRoads ? "agency" : "TIGER", "road source"]] : [["0", "road segments"], ["NRN", "next loader"]],
       map: { a2: "outline", choro: roads ? choro("Road segments per " + unit, p => p.roads?.rows, "#cfd8da") : null } },
     { key: "up", step: "Upstream", tag: "Upstream", tagc: C.up, lit: ["RCL"],
-      title: roads ? "Local roads the national maps are missing" : "Where local data could update national maps",
-      body: roads ? [`Local road layers are the freshest government roads there are. The pipeline counts where they disagree with TIGER and Overture, so state and federal programs, and Overture, can update from authoritative local data instead of ODbL sources.`,
+      title: govRoads ? "Local roads the national maps are missing" : "Where local data could update national maps",
+      body: govRoads ? [`Local road layers are the freshest government roads there are. The pipeline counts where they disagree with TIGER and Overture, so state and federal programs, and Overture, can update from authoritative local data instead of ODbL sources.`,
         `Counts only: Overture names and classes (ODbL) are compared in memory and never written. Only an open-licensed source goes upstream, and a person proposes it.`] :
-        [`With no road source in this pilot, the upstream counts start once the NRN loader lands. Address-side leads are already here: ${fmt(gap)} gap-fill candidates for the agency, and ${fmt(recs - gers)} Records that Overture doesn't have yet.`],
-      stats: roads ? [[fmt(D.up.nat.not_in_national), "segments not in TIGER", C.up], [fmt(Math.round(D.up.nat.not_in_national_km || 0)) + " km", "of local road not in TIGER"], [fmt(D.up.ov.not_in_overture), "segments not in Overture", C.up], [fmt(D.up.ov.name_differs), "name disagreements"]] :
-        [[fmt(recs - gers), "Records not in Overture", C.up], [fmt(gap), "gap-fill leads"]],
-      map: { a2: "outline", points: D.openPoints ? "agencyonly" : null, choro: roads ? choro("km of local road not in TIGER", p => p.upstream?.national?.not_in_national_km, C.up) : null } },
+        [roads ? `The road-side comparison needs a local road layer: TIGER can't be checked against itself. Even so, ${fmt(D.up.ov.not_in_overture)} TIGER segments have no Overture match.` :
+          `With no road source in this pilot, the road counts start once the NRN loader lands.`,
+          `Address-side leads are already here: ${fmt(gap)} gap-fill candidates for the agency to review, and ${fmt(recs - gers)} agency Records that Overture doesn't have yet.`],
+      stats: govRoads ? [[fmt(D.up.nat.not_in_national), "segments not in TIGER", C.up], [fmt(Math.round(D.up.nat.not_in_national_km || 0)) + " km", "of local road not in TIGER"], [fmt(D.up.ov.not_in_overture), "segments not in Overture", C.up], [fmt(D.up.ov.name_differs), "name disagreements"]] :
+        [[fmt(recs - gers), "Records not in Overture", C.up], [fmt(gap), "gap-fill leads"], ...(roads ? [[fmt(D.up.ov.not_in_overture), "TIGER segments not in Overture"]] : [])],
+      map: { a2: "outline", points: D.openPoints ? "agencyonly" : null,
+        choro: govRoads ? choro("km of local road not in TIGER", p => p.upstream?.national?.not_in_national_km, C.up) : D.openPoints ? null : choro("Records not in Overture", p => p.records - p.records_with_gers_id, C.up) } },
     { key: "pkg", step: "Package", tag: "Delivery", tagc: C.ok, lit: ["SSAP", "RCL", "A2", "A3"],
       title: "Back to the agency, NENA-ready",
       body: [`Each ${unit} gets one Package: GeoParquet layers, a manifest of counts, field fill and source licences, and the NENA and ${P.country === "CA" ? "CLDXF-CA" : "CLDXF-US"} domains. Packages are opt-in: the authority claims its own, sets its NGUID domain, and adds the values only it holds (ESN, MSAG, service URIs).`,
@@ -393,18 +401,20 @@ function later(fn, ms) { const t = setTimeout(fn, ms); state.anim.push(t); retur
 function tween(ms, step, done) {
   const t0 = performance.now(); let live = true;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const f = now => { if (!live) return; const k = reduce ? 1 : Math.min(1, (now - t0) / ms); step(k); if (k < 1) requestAnimationFrame(f); else done && done(); };
+  const f = now => { if (!live) return; const k = reduce ? 1 : Math.max(0, Math.min(1, (now - t0) / ms)); step(k); if (k < 1) requestAnimationFrame(f); else done && done(); };
   requestAnimationFrame(f); state.anim.push({ cancel: () => (live = false) });
 }
 
 function setSources(D) {
-  for (const id of ["pts-gap", "pts", "a3-line", "a3-fill", "a2-choro", "a2-line", "a2-hi"]) if (map.getLayer(id)) map.removeLayer(id);
-  for (const id of ["a2", "a3", "pts"]) if (map.getSource(id)) map.removeSource(id);
+  for (const id of ["pts-gap", "pts", "mask", "a3-line", "a3-fill", "a2-choro", "a2-line", "a2-hi"]) if (map.getLayer(id)) map.removeLayer(id);
+  for (const id of ["a2", "a3", "pts", "mask"]) if (map.getSource(id)) map.removeSource(id);
   map.addSource("a2", { type: "geojson", data: D.a2, promoteId: "geoid" });
   map.addSource("a3", { type: "geojson", data: D.a3 });
   map.addLayer({ id: "a2-choro", type: "fill", source: "a2", paint: { "fill-color": ["interpolate", ["linear"], ["coalesce", ["feature-state", "v"], 0], 0, "#14262d", 1, C.ssap], "fill-opacity": 0 } });
   map.addLayer({ id: "a3-fill", type: "fill", source: "a3", paint: { "fill-color": C.a3, "fill-opacity": 0, "fill-opacity-transition": { duration: 600 } } });
   map.addLayer({ id: "a3-line", type: "line", source: "a3", paint: { "line-color": C.a3, "line-width": 0.7, "line-opacity": 0, "line-opacity-transition": { duration: 600 } } });
+  map.addSource("mask", { type: "geojson", data: maskGeo(180) });
+  map.addLayer({ id: "mask", type: "fill", source: "mask", paint: { "fill-color": C.ground, "fill-opacity": 1 } });
   map.addLayer({ id: "a2-line", type: "line", source: "a2", paint: { "line-color": C.a2, "line-width": 1.4, "line-opacity": 0.55 } });
   map.addLayer({ id: "a2-hi", type: "line", source: "a2", filter: ["==", ["get", "geoid"], ""], paint: { "line-color": C.fg, "line-width": 3 } });
   if (D.pointsGeo) {
@@ -415,8 +425,12 @@ function setSources(D) {
     map.addLayer({ id: "pts-gap", type: "circle", source: "pts", filter: ["==", ["get", "k"], 2], paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 1.6, 10, 2.6, 14, 5],
       "circle-color": C.gap, "circle-opacity": 0, "circle-opacity-transition": { duration: 500 } } });
+    map.moveLayer("mask", "a2-line");
   }
 }
+/* A ground-coloured polygon east of the sweep line hides points not yet "built": one tiny setData per frame,
+   instead of re-filtering every point. */
+function maskGeo(x) { return { type: "Feature", geometry: { type: "Polygon", coordinates: [[[x, -85], [180, -85], [180, 85], [x, 85], [x, -85]]] } }; }
 function fit(D, pad) {
   const w = map.getContainer().clientWidth, wide = w > 860;
   map.fitBounds([[D.bbox[0], D.bbox[1]], [D.bbox[2], D.bbox[3]]], { padding: wide ? { top: 40, bottom: 40, left: Math.min(410, w * .36), right: Math.min(360, w * .32) } : 20, duration: pad ? 900 : 0 });
@@ -444,13 +458,13 @@ function applyMap(ch, D) {
     map.setFilter("pts", ["!=", ["get", "k"], 2]);
     map.setPaintProperty("pts", "circle-color", show === "gers" || show === "agencyonly" ? ["match", ["get", "k"], 0, C.gers, C.ssap] : C.ssap);
     if (show === "agencyonly") map.setFilter("pts", ["==", ["get", "k"], 1]);
+    map.getSource("mask").setData(maskGeo(180));
     map.setPaintProperty("pts", "circle-opacity", show ? (show === "gap" ? 0.25 : 0.85) : 0.12);
     map.setPaintProperty("pts-gap", "circle-opacity", show === "gap" ? 0.95 : 0);
     if (show === "sweep") {
       const [x0, , x1] = D.bbox;
       map.setPaintProperty("pts", "circle-opacity", 0.85);
-      tween(2600, k => map.setFilter("pts", ["all", ["!=", ["get", "k"], 2], ["<=", ["get", "x"], x0 + (x1 - x0) * k]]),
-        () => map.setFilter("pts", ["!=", ["get", "k"], 2]));
+      tween(2600, k => map.getSource("mask").setData(maskGeo(k < 1 ? x0 + (x1 - x0) * k : 180)));
     }
   }
   if (m.a2 === "cycle") {

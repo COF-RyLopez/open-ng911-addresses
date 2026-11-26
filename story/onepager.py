@@ -71,8 +71,7 @@ def page(data):
         roads = j.get("road_segments") or 0
         rows.append(f"""<tr><th>{e(name)}</th><td>{fmt(j['packages'])}</td><td>{fmt(j['records'])}</td>
             <td>{pct(j['records_with_gers_id'], j['records'])}</td><td>{fmt(j['gap_fill_candidates'])}</td>
-            <td>{fmt((j.get('a3') or {}).get('a3_polygons', 0))}</td>
-            <td>{fmt(roads) if roads else '<span class="gapt">none yet</span>'}</td>
+            <td>{fmt(roads) if roads else '<span class="gapt">none yet</span>'}</td><td>{'agency' if (j.get('road_sources') or {}).get('government') else 'TIGER' if roads else '–'}</td>
             <td>{pct(j.get('road_segments_with_gers_id') or 0, roads) if roads else '–'}</td>
             <td><span class="lic {'open' if lic == 'open' else 'unk'}">{lic}</span></td></tr>""")
 
@@ -84,11 +83,11 @@ def page(data):
     for name, lvl, st in LAYERS:
         if st == "roads":
             st = "partial" if roads_any else "gap"
-            note = "US pilots: agency roads, GERS IDs; Canada: next"
+            note = "VT agency; others TIGER"
         else:
             note = {"filled": "every Package", "gap": "planned", "agency": "authority supplies"}[st]
         if name.startswith("SiteStructure") and st == "filled":
-            note = f"{filled} of {SSAP_US} US fields filled, {partial} partly"
+            note = f"{filled}/{SSAP_US} US fields, {partial} partly"
         if name.startswith("A1"):
             note = "next: cheapest gap"
         if name.startswith("Provisioning"):
@@ -104,22 +103,23 @@ def page(data):
   --ssap: #c98a12; --gers: #138f89; --gap: #c2457b; --a2: #4659b8; --up: #d4561f; --ok: #2f9a68; --part: #c98a12; }}
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; background: var(--paper); color: var(--ink); font: 9.2pt/1.38 "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; }}
-.sheet {{ width: 11in; height: 8.5in; padding: .42in .5in .36in; display: grid; grid-template-rows: auto auto 1fr auto; gap: .17in; }}
+.sheet {{ width: 11in; height: 8.5in; padding: .36in .5in .3in; display: grid; grid-template-rows: auto auto 1fr auto; gap: .14in; overflow: hidden; }}
 header {{ display: flex; justify-content: space-between; align-items: flex-end; gap: .3in; border-bottom: 2px solid var(--ink); padding-bottom: .1in; }}
 .eyebrow {{ font: 500 7.4pt/1 "IBM Plex Mono", Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }}
-h1 {{ margin: .05in 0 0; font: 800 21pt/1.05 "Archivo", "Helvetica Neue", Arial, sans-serif; letter-spacing: -.01em; }}
-.lede {{ max-width: 4.6in; color: #33474c; font-size: 9pt; }}
-.big {{ display: flex; gap: .26in; }}
+h1 {{ margin: .05in 0 0; font: 800 19pt/1.05 "Archivo", "Helvetica Neue", Arial, sans-serif; letter-spacing: -.01em; }}
+.lede {{ max-width: 5.6in; color: #33474c; font-size: 8.6pt; margin: .05in 0 0; }}
+.big {{ display: flex; gap: .26in; flex: none; }}
+.big span {{ white-space: nowrap; }}
 .big div {{ text-align: right; }}
 .big b {{ display: block; font: 800 17pt/1 "Archivo", Arial, sans-serif; font-variant-numeric: tabular-nums; }}
 .big span {{ font-size: 7.4pt; color: var(--muted); }}
 svg text {{ font-family: "IBM Plex Sans", Arial, sans-serif; }}
-.flow {{ width: 100%; height: auto; }}
-.cols {{ display: grid; grid-template-columns: 1.3fr 1fr; gap: .28in; min-height: 0; }}
+.flow {{ width: 100%; height: 1.72in; }}
+.cols {{ display: grid; grid-template-columns: 1.4fr 1fr; gap: .28in; min-height: 0; }}
 h2 {{ margin: 0 0 .06in; font: 700 10.5pt/1.2 "Archivo", Arial, sans-serif; display: flex; justify-content: space-between; align-items: baseline; }}
 h2 small {{ font: 400 7.4pt "IBM Plex Mono", monospace; color: var(--muted); }}
 table {{ border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }}
-.pilots th, .pilots td {{ padding: 3.5px 5px; border-bottom: 1px solid var(--line); text-align: right; font-size: 8.4pt; white-space: nowrap; }}
+.pilots th, .pilots td {{ padding: 3.5px 4px; border-bottom: 1px solid var(--line); text-align: right; font-size: 8.4pt; white-space: nowrap; }}
 .pilots thead th {{ font: 500 6.8pt/1.2 "IBM Plex Mono", monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; vertical-align: bottom; white-space: normal; }}
 .pilots tbody th, .pilots thead th:first-child {{ text-align: left; font-weight: 600; }}
 .pilots tfoot th, .pilots tfoot td {{ font-weight: 700; border-bottom: 0; border-top: 1.5px solid var(--ink); }}
@@ -127,20 +127,25 @@ table {{ border-collapse: collapse; width: 100%; font-variant-numeric: tabular-n
 .lic {{ font: 500 7pt "IBM Plex Mono", monospace; padding: 1px 4px; border-radius: 2px; }}
 .lic.open {{ background: #dff1e8; color: #1d6e47; }}
 .lic.unk {{ background: #f6ecd7; color: #7d5a0c; }}
-.up {{ margin-top: .14in; display: grid; grid-template-columns: repeat(4, 1fr); gap: .1in; }}
+.up {{ margin-top: .04in; display: grid; grid-template-columns: repeat(4, 1fr); gap: .1in; }}
 .up div {{ border-left: 3px solid var(--up); padding: 2px 0 2px 7px; }}
 .up b {{ display: block; font: 800 13pt/1.05 "Archivo", Arial, sans-serif; font-variant-numeric: tabular-nums; }}
 .up span {{ font-size: 7.4pt; color: var(--muted); line-height: 1.25; display: block; }}
 .upnote {{ font-size: 7.6pt; color: var(--muted); margin-top: .06in; }}
-.grid th, .grid td {{ padding: 2.6px 5px; border-bottom: 1px solid var(--line); text-align: left; font-size: 8.2pt; vertical-align: middle; }}
+.grid th, .grid td {{ padding: 1.6px 5px; border-bottom: 1px solid var(--line); text-align: left; font-size: 8.2pt; vertical-align: middle; }}
 .grid th small {{ display: block; font: 400 6.8pt "IBM Plex Mono", monospace; color: var(--muted); }}
-.grid .note {{ color: #3d5156; font-size: 7.6pt; }}
+.grid {{ table-layout: fixed; }}
+.grid .note {{ color: #3d5156; font-size: 7.4pt; }}
+.grid th {{ width: 50%; }}
+.grid td:nth-child(2) .st {{ min-width: 0; width: 100%; }}
+.grid td:nth-child(2) {{ width: 17%; }}
+.cols > section {{ min-width: 0; }}
 .st {{ display: inline-block; min-width: .62in; text-align: center; font: 500 7pt/1 "IBM Plex Mono", monospace; padding: 3px 4px; border-radius: 2px; border: 1px solid; }}
 .st.filled {{ background: var(--ok); border-color: var(--ok); color: #fff; }}
 .st.partial {{ background: #f6ecd7; border-color: var(--part); color: #7d5a0c; }}
 .st.gap {{ border-color: #b8c4c7; color: var(--muted); }}
 .st.agency {{ border-style: dashed; border-color: var(--a2); color: var(--a2); }}
-footer {{ display: flex; justify-content: space-between; gap: .3in; font-size: 7pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: .06in; }}
+footer {{ display: flex; align-items: flex-start; justify-content: space-between; gap: .3in; font-size: 7pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: .06in; }}
 </style></head><body><div class="sheet">
 <header>
   <div><div class="eyebrow">open-ng911-addresses · Phase 1 · Overture {e(release)}</div>
@@ -156,10 +161,10 @@ footer {{ display: flex; justify-content: space-between; gap: .3in; font-size: 7
 <div class="cols">
   <section>
     <h2>Five pilots, built end to end <small>real build counts</small></h2>
-    <table class="pilots"><thead><tr><th>Pilot</th><th>Packages</th><th>Records</th><th>with GERS ID</th><th>Gap-fill leads</th><th>A3 polygons</th><th>Road segments</th><th>Roads with GERS ID</th><th>Address licence</th></tr></thead>
+    <table class="pilots"><thead><tr><th>Pilot</th><th>Packages</th><th>Records</th><th>with GERS ID</th><th>Gap-fill leads</th><th>Road segments</th><th>Road source</th><th>Roads with GERS ID</th><th>Address licence</th></tr></thead>
     <tbody>{''.join(rows)}</tbody>
-    <tfoot><tr><th>All five</th><td>{fmt(tot['packages'])}</td><td>{fmt(tot['records'])}</td><td>{pct(tot['records_with_gers_id'], tot['records'])}</td><td>{fmt(tot['gap_fill_candidates'])}</td><td>{fmt(a3)}</td><td>{fmt(tot['road_segments'])}</td><td></td><td></td></tr></tfoot></table>
-    <h2 style="margin-top:.16in">Upstream: what Vermont's local roads add <small>VT E911 centerlines vs TIGER and Overture</small></h2>
+    <tfoot><tr><th>All five</th><td>{fmt(tot['packages'])}</td><td>{fmt(tot['records'])}</td><td>{pct(tot['records_with_gers_id'], tot['records'])}</td><td>{fmt(tot['gap_fill_candidates'])}</td><td>{fmt(tot['road_segments'])}</td><td></td><td></td><td></td></tr></tfoot></table>
+    <h2 style="margin-top:.12in">Upstream: what Vermont's local roads add <small>VT E911 roads vs TIGER, Overture</small></h2>
     <div class="up">
       <div><b>{fmt(vt_nat['not_in_national'])}</b><span>local road segments not in TIGER</span></div>
       <div><b>{fmt(round(vt_nat['not_in_national_km']))} km</b><span>of local road TIGER doesn't have</span></div>
@@ -174,7 +179,7 @@ footer {{ display: flex; justify-content: space-between; gap: .3in; font-size: 7
   </section>
 </div>
 <footer><span>Records are the agency's own points and always win; Overture fills in only as review leads. NGUIDs come from a stable Address UID and stay <i>&lt;package&gt;.unclaimed.invalid</i> until the authority opts in. No OSM geometry or names in any core layer.</span>
-<span>github.com/COF-RyLopez/open-ng911-addresses</span></footer>
+<span style="white-space:nowrap">github.com/COF-RyLopez/open-ng911-addresses</span></footer>
 </div></body></html>"""
 
 
