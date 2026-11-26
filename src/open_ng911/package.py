@@ -12,13 +12,14 @@ for opted-in Packages (ADR 0007).
         a3_polygon.parquet                     A3Polygon: its municipalities clipped to it, NENA fields + source_code
         road_centerline.parquet                RoadCenterline: NENA RCL fields + uid, gers_id, road_source
         road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
+        address_range_check.parquet            every Record against the road range on its side (ranges.py)
         manifest.json                          counts, sources and their licenses, opt-in state, NENA coverage
         domains.json                           the value domains the layers use: NENA's, and CLDXF-CA's in Canada
 """
 import json
 import os
 
-from . import boundaries, coverage, db, ids, layers, nena, odbl_inventory, registry, roads, upstream
+from . import boundaries, coverage, db, ids, layers, nena, odbl_inventory, ranges, registry, roads, upstream
 from .nena import SSAP_REQUIRED
 
 # 2: one name per thing across sections (`source_key`, `license_status`, `features`), the SiteStructureAddressPoint
@@ -67,6 +68,7 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
         bounds = boundaries.write_package(c, job, geoid, d)
         road = roads.write_package(c, geoid, d, release, road_meta)
         other = layers.write_package(c, jurisdiction, geoid, d)
+        ranges.write_package(c, geoid, d)
         res = c.execute(f"""SELECT count(*) AS rows,
                 count(*) FILTER (status = 'record') AS records,
                 count(*) FILTER (status = 'record' AND gers_id IS NOT NULL) AS records_with_gers_id,
@@ -93,6 +95,7 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
             "gap_fill_licenses": dict(c.execute(f"""SELECT coalesce(source_license, 'unstated'), count(*) FROM ssap
                 WHERE geoid = '{geoid}' AND status = 'gap_fill_candidate' GROUP BY 1 ORDER BY 2 DESC""").fetchall()),
             "road_centerline": road,
+            "address_ranges": ranges.package_section(c, geoid),
             "nena_layers": other,
             "nena_coverage": {layer: coverage.section(c, layer, job.country, where=f"geoid = '{geoid}'", **kw)
                               for layer, kw in (spec or {}).items()},
