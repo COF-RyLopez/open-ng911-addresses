@@ -40,13 +40,15 @@ def install(c):
 
 
 def assign_packages(c, jurisdiction):
-    """road_seg gains geoid; government segments outside their Source's coverage and anything outside every
-    Package is dropped, and road_fallback lists the Packages no government segment reached."""
+    """road_seg gains geoid; government segments outside their Source's coverage and anything whose midpoint is
+    outside every Package are dropped (counted, db.drop), and road_fallback lists the Packages no government
+    segment reached."""
     c.execute("""CREATE OR REPLACE TABLE road_seg AS
         SELECT s.* EXCLUDE (geoid), p.geoid
         FROM road_seg s
-        JOIN package_area p ON ST_Intersects(p.geom, road_midpoint(s.geom))
+        LEFT JOIN package_area p ON ST_Intersects(p.geom, road_midpoint(s.geom))
         QUALIFY row_number() OVER (PARTITION BY s.uid ORDER BY p.geoid) = 1""")
+    db.drop(c, "road_seg", "geoid IS NULL", RCL, "outside_packages")
     covered = []
     for key, s in _sources_covering(jurisdiction).items():
         if s.covers != "*":
@@ -54,7 +56,7 @@ def assign_packages(c, jurisdiction):
         else:
             covered.append(f"source_key = '{key}'")
     keep = " OR ".join(covered) or "false"
-    c.execute(f"DELETE FROM road_seg WHERE road_source = 'government' AND NOT ({keep})")
+    db.drop(c, "road_seg", f"road_source = 'government' AND NOT ({keep})", RCL, "outside_source_coverage")
     c.execute("""CREATE OR REPLACE TABLE road_fallback AS
         SELECT geoid FROM package_area
         WHERE geoid NOT IN (SELECT geoid FROM road_seg WHERE road_source = 'government')""")
@@ -200,7 +202,8 @@ def build(c, job, jurisdiction, work_dir, loaders, updated):
     loaders["tiger_roads"](c, job, jurisdiction, work_dir)
     assign_packages(c, jurisdiction)
     # a TIGER edge can fall in a county that has government roads (ADDRFEAT lists boundary edges in both)
-    c.execute("DELETE FROM road_seg WHERE road_source = 'tiger' AND geoid NOT IN (SELECT geoid FROM road_fallback)")
+    db.drop(c, "road_seg", "road_source = 'tiger' AND geoid NOT IN (SELECT geoid FROM road_fallback)", RCL,
+            "tiger_where_government_roads")
     loaders["overture_segment"](c, job, jurisdiction, work_dir)
     linked = crosswalk(c)
     assemble_rcl(c, job, updated)

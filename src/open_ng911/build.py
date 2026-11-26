@@ -218,6 +218,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     fieldmap.install(c, job.country)
     ids.install(c)
     boundaries.install(c)
+    db.create_dropped(c)
     updated = db.now()
 
     print(f"[{job.id}] {job.name}, Overture {release}")
@@ -256,6 +257,8 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "agency_points_dropped_by_site_type": {f"{r}: {t}": n for r, t, n in c.execute(
                    "SELECT reason, site_type, n FROM agency_dropped WHERE site_type IS NOT NULL "
                    "ORDER BY n DESC LIMIT 25").fetchall()},
+               # every other layer's left-out features: {layer: {reason: n}} (db.drop)
+               "features_dropped": db.dropped(c),
                "agency_points_id_shared": c.execute(
                    "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
                "overture_link_methods": links, "a3": boundaries.summary(c),

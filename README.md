@@ -42,7 +42,9 @@ or census division:
 
 ```
 data/output/release=<overture release>/<job>/
-    job.json                     summary: counts, link methods, gate result, per-package numbers
+    job.json                     summary: counts, link methods, gate result, per-package numbers, and every
+                                 point or feature left out, by layer and reason (agency_points_dropped,
+                                 features_dropped)
     address_lineage.parquet      the ledger: address_uid × gers_id, first/last release, link method
     <geoid>/site_structure_address_point.parquet   GeoParquet
     <geoid>/a2_polygon.parquet   A2Polygon, the county or census division

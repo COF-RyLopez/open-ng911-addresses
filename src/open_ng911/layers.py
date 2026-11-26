@@ -82,7 +82,12 @@ def insert_source(c, source, path, has_id):
         WITH f AS (
             SELECT {sid} AS source_id, ST_Force2D(ST_GeomFromGeoJSON(g)) AS geom{raw}
             FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}}))
-        SELECT *, {native} FROM f WHERE ST_GeometryType(geom) IN {kinds} AND NOT ST_IsEmpty(geom)""")
+        SELECT *, {native} FROM f""")
+    key_sql = db.quote(source.key)
+    db.drop(c, "_lf", f"geom IS NULL OR ST_GeometryType(geom) NOT IN {kinds} OR ST_IsEmpty(geom)", layer,
+            "wrong_geometry", key_sql)
+    if source.dissolve:
+        db.drop(c, "_lf", "source_id IS NULL", layer, "no_dissolve_value", key_sql)
     fieldmap.record(c, "_lf", source, layer, country)
     total = c.execute(f"SELECT count(*) FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})").fetchall()[0][0]
     if source.dissolve:
@@ -90,7 +95,7 @@ def insert_source(c, source, path, has_id):
         aggs = ", ".join(f"max({n}) AS {n}" for n in ncols)
         c.execute(f"""INSERT INTO lf_{key} SELECT '{source.key}', source_id,
                           ST_Union_Agg(ST_MakeValid(geom)), {aggs}
-                      FROM _lf WHERE source_id IS NOT NULL GROUP BY source_id""")
+                      FROM _lf GROUP BY source_id""")
     else:
         c.execute(f"""INSERT INTO lf_{key} SELECT '{source.key}',
                           -- no ID: the feature's own geometry (stable only while it is unedited)
@@ -154,6 +159,16 @@ def build(c, job, jurisdiction, updated):
             SELECT f.uid, f.source_key AS source, f.source_id, {lic_case} AS source_license, {cols}, f.geoid,
                    f.g AS geom
             FROM f JOIN package_domain d USING (geoid)""")
+        # a source feature that reached no Package (outside them all), or a point sharing its ID with another
+        db.create_dropped(c, replace=False)
+        c.execute(f"""INSERT INTO {db.DROPPED}
+            SELECT '{layer}', source_key, CASE WHEN placed THEN 'duplicate_id' ELSE 'outside_packages' END, count(*)
+            FROM (SELECT l.source_key, row_number() OVER (PARTITION BY l.source_key, l.source_id) AS k,
+                         EXISTS (SELECT 1 FROM {table} t WHERE t.source = l.source_key
+                                                            AND t.source_id = l.source_id) AS placed
+                  FROM lf_{key} l)
+            WHERE NOT placed OR ({key in POINTS} AND k > 1)
+            GROUP BY ALL""")
         if key == "provisioning":
             fallback(c, job, updated, table, country)
     counts = {k: c.execute(f"SELECT count(*) FROM {t}").fetchall()[0][0] for k, t in TABLE.items()}
