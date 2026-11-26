@@ -27,8 +27,11 @@ oa_layer = "state"
 # The layer's own stable ID. OpenAddresses maps no id for this source, so it is named here. If the field is
 # missing from the service the build warns and mints UIDs instead (see ids.py).
 id_field = "ESITEID"
-# E911 sites include hydrants and public phones: keep the site types that are addresses. Empty keeps all.
-exclude_site_types = ["HYDRANT", "PUBLIC PHONE", "PAY PHONE"]   # values to confirm against the live layer
+# E911 sites include points that are equipment, not addresses. SITETYPE values as published (checked against
+# the live layer 2026-11-26; it has no hydrants): 31 PUBLIC TELEPHONE, 371 UTILITY POLE W/PHONE,
+# 3 EMERGENCY PHONE / CALLBOX, 390 COMMUNICATION BOX. Towers, tanks, substations and pump stations stay: they
+# are dispatchable sites with an address. Empty keeps all.
+exclude_site_types = ["PUBLIC TELEPHONE", "UTILITY POLE W/PHONE", "EMERGENCY PHONE / CALLBOX", "COMMUNICATION BOX"]
 # open | share-alike | unknown. "unknown" keeps the source out of anything published openly (plan, Licensing).
 license_status = "unknown"
 license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"

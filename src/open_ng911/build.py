@@ -135,6 +135,8 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "rows": sum(s["rows"] for s in summaries), "records": sum(s["records"] for s in summaries),
                "records_with_gers_id": sum(s["records_with_gers_id"] for s in summaries),
                "gap_fill_candidates": sum(s["gap_fill_candidates"] for s in summaries),
+               "agency_points_excluded": {t: n for _, t, n in c.execute(
+                   "SELECT * FROM agency_excluded ORDER BY n DESC").fetchall()},
                "overture_link_methods": links, "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")} for s in summaries}}

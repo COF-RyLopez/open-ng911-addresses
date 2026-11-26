@@ -50,8 +50,7 @@ def create_agency_addr(c, source, path, conform, has_id):
     excluded = ", ".join("'" + t.replace("'", "''") + "'" for t in source.exclude_site_types) or "NULL"
     site_type = conform_sql(conform.get("addrtype"))
     sid = f"nullif(trim(p->>'{source.id_field}'), '')" if has_id else "NULL"
-    c.execute(f"""CREATE OR REPLACE TABLE agency_addr AS
-        WITH f AS (
+    c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS
             SELECT {sid} AS source_id,
                    {conform_sql(conform.get('number'))} AS number,
                    {conform_sql(conform.get('street'))} AS street,
@@ -60,7 +59,12 @@ def create_agency_addr(c, source, path, conform, has_id):
                    {conform_sql(conform.get('postcode'))} AS postcode,
                    upper({site_type}) AS site_type,
                    ST_GeomFromGeoJSON(g) AS geom
-            FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}}))
+            FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})""")
+    # Points the registry's exclude_site_types drops (public phones, call boxes...), counted for job.json
+    c.execute(f"""CREATE OR REPLACE TABLE agency_excluded AS
+        SELECT '{source.key}' AS source_key, site_type, count(*) AS n FROM agency_raw
+        WHERE site_type IN ({excluded}) GROUP BY ALL""")
+    c.execute(f"""CREATE OR REPLACE TABLE agency_addr AS
         SELECT '{source.key}' AS source_key, source_id,
                -- the agency's own ID makes the Address UID (ADR 0002); without one, a UID from the address
                -- itself (stable only while the address is unedited) until the lineage ledger carries it
@@ -68,9 +72,12 @@ def create_agency_addr(c, source, path, conform, has_id):
                     ELSE agency_uid('{source.key}', concat_ws('|', number, upper(street), upper(unit),
                                     round(ST_X(geom), 6), round(ST_Y(geom), 6))) END AS address_uid,
                number, street, unit, city, postcode, site_type, geom
-        FROM f
+        FROM agency_raw
         WHERE number IS NOT NULL AND street IS NOT NULL AND ST_GeometryType(geom) = 'POINT'
           AND (site_type IS NULL OR site_type NOT IN ({excluded}))""")
+    c.execute("DROP TABLE agency_raw")
+    for key, site_type, n in c.execute("SELECT * FROM agency_excluded ORDER BY n DESC").fetchall():
+        print(f"  [openaddresses] {key}: dropped {n:,} {site_type} points (exclude_site_types)")
     n, distinct_ids = c.execute("SELECT count(*), count(DISTINCT address_uid) FROM agency_addr").fetchall()[0]
     if n != distinct_ids:
         print(f"  [openaddresses] {source.key}: {n - distinct_ids:,} rows share an Address UID; keeping one each")

@@ -23,7 +23,8 @@ def test_vermont_job(tmp_path, conn):
     s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
     assert s["gate_failures"] == []
     assert s["packages"] == 2
-    assert s["records"] == 5  # hydrant and the point outside every Package are dropped
+    assert s["agency_points_excluded"] == {"PUBLIC TELEPHONE": 1}
+    assert s["records"] == 5  # the public phone and the point outside every Package are dropped
     assert s["gap_fill_candidates"] == 2  # o3 (lost to o4 on street key) and o5; o7 is outside
 
     addison = rows(out, "50001")
