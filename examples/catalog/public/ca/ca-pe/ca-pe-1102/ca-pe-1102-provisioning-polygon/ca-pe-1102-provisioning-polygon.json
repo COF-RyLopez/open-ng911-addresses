@@ -43,7 +43,7 @@
   "properties": {
     "title": "Queens: ProvisioningPolygon",
     "description": "The area this Package's data is provisioned for: the Source's provisioning boundary, else the Package area.",
-    "datetime": "2026-11-26T20:34:45Z",
+    "datetime": "2026-11-26T20:58:17Z",
     "ng911:layer": "ProvisioningPolygon",
     "table:row_count": 1,
     "table:primary_geometry": "geom",
@@ -131,7 +131,7 @@
       "title": "ProvisioningPolygon GeoParquet",
       "description": "The area this Package's data is provisioned for: the Source's provisioning boundary, else the Package area.",
       "file:size": 2379,
-      "file:checksum": "1220f6911ced47494e2bdc37c79071ede63c45f0351b4e233d3320d012c565c8aac3"
+      "file:checksum": "122001d3334ddfce789173a4cee1c883c4d5ffcb310f44c6160a2846840d90896873"
     }
   }
 }

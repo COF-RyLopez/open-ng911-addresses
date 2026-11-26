@@ -28,14 +28,16 @@
       "discrpagid",
       "dateupdate",
       "rcl_nguid",
+      "fromaddr_l",
+      "toaddr_l",
+      "fromaddr_r",
+      "toaddr_r",
       "parity_l",
       "parity_r",
       "country_l",
       "country_r",
       "a1_l",
-      "a1_r",
-      "a2_l",
-      "a2_r"
+      "a1_r"
     ]
   },
   "recipient": "Prince Edward Island 911 Administration (Department of Justice and Public Safety)",
@@ -185,6 +187,10 @@
   "road_centerline": {
     "rows": 0,
     "with_gers_id": 0,
+    "without_range": {
+      "left": 0,
+      "right": 0
+    },
     "gers_coverage": null,
     "road_source": null,
     "field_fill": {
@@ -331,25 +337,25 @@
         "fromaddr_l": {
           "fill": 0.0,
           "status": "no_source",
-          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT; 0 where the side has no range (NENA)",
           "required": true
         },
         "toaddr_l": {
           "fill": 0.0,
           "status": "no_source",
-          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT; 0 where the side has no range (NENA)",
           "required": true
         },
         "fromaddr_r": {
           "fill": 0.0,
           "status": "no_source",
-          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT; 0 where the side has no range (NENA)",
           "required": true
         },
         "toaddr_r": {
           "fill": 0.0,
           "status": "no_source",
-          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT; 0 where the side has no range (NENA)",
           "required": true
         },
         "parity_l": {

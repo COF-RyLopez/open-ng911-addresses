@@ -11,7 +11,7 @@
   "title": "Prince, Prince Edward Island: NG9-1-1 Package (unclaimed)",
   "description": "The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1103.unclaimed.invalid until the authority opts in.",
   "license": "other",
-  "updated": "2026-11-26T20:34:45Z",
+  "updated": "2026-11-26T20:58:17Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -73,8 +73,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T20:34:45Z",
-          "2026-11-26T20:34:45Z"
+          "2026-11-26T20:58:17Z",
+          "2026-11-26T20:58:17Z"
         ]
       ]
     }
@@ -179,8 +179,8 @@
       ],
       "title": "Package manifest",
       "description": "Counts, field fill, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 47501,
-      "file:checksum": "122056e885998e007bd9fdf2866194a137d07c6589ab07a76a74aa7d7dc4f8da9d77"
+      "file:size": 47765,
+      "file:checksum": "1220dd9b4db61d91336e92f2a93e08d314bbcfaefaaa39af1a9175a60138f2808041"
     },
     "domains": {
       "href": "./domains.json",
@@ -212,8 +212,8 @@
       ],
       "title": "Vector tiles",
       "description": "PMTiles of a2_polygon, site_structure_address_point for web maps, made with manby.",
-      "file:size": 5622,
-      "file:checksum": "12206c5956da48ff04ab75d6efac5ef4951dedf6d03c34463e03c2387c6924910f54"
+      "file:size": 5624,
+      "file:checksum": "12208830d1e285d3bd55df43d7f8033bb563e4dcb1bf3bf62cff49d036556eb45e8a"
     },
     "style-default": {
       "href": "./styles/default.json",

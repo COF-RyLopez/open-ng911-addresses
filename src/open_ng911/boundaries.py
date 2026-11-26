@@ -23,7 +23,7 @@ import uuid
 
 import duckdb
 
-from . import db, ids, registry  # noqa: F401  db: write_geoparquet once PR #11 (catalog) lands
+from . import db, ids, registry
 
 UNINCORPORATED = "Unincorporated"
 SNAP_DEG = 0.00005  # about 5 m
