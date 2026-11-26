@@ -1,0 +1,524 @@
+# Build jobs: one per state, DC, Puerto Rico, province and territory (ADR 0006: the province is the job).
+# A job builds one Package per county (US) or census division (Canada).
+# `enabled` jobs run in CI; turn one on only once registry/<country>/<code>.toml describes its sources.
+# fips: Census state FIPS (US) or Statistics Canada province code (Canada).
+
+[[job]]
+id = "us-al"
+country = "US"
+code = "AL"
+fips = "01"
+name = "Alabama"
+enabled = false
+
+[[job]]
+id = "us-ak"
+country = "US"
+code = "AK"
+fips = "02"
+name = "Alaska"
+enabled = false
+
+[[job]]
+id = "us-az"
+country = "US"
+code = "AZ"
+fips = "04"
+name = "Arizona"
+enabled = false
+
+[[job]]
+id = "us-ar"
+country = "US"
+code = "AR"
+fips = "05"
+name = "Arkansas"
+enabled = false
+
+[[job]]
+id = "us-ca"
+country = "US"
+code = "CA"
+fips = "06"
+name = "California"
+enabled = false
+
+[[job]]
+id = "us-co"
+country = "US"
+code = "CO"
+fips = "08"
+name = "Colorado"
+enabled = false
+
+[[job]]
+id = "us-ct"
+country = "US"
+code = "CT"
+fips = "09"
+name = "Connecticut"
+enabled = false
+
+[[job]]
+id = "us-de"
+country = "US"
+code = "DE"
+fips = "10"
+name = "Delaware"
+enabled = false
+
+[[job]]
+id = "us-dc"
+country = "US"
+code = "DC"
+fips = "11"
+name = "District of Columbia"
+enabled = false
+
+[[job]]
+id = "us-fl"
+country = "US"
+code = "FL"
+fips = "12"
+name = "Florida"
+enabled = false
+
+[[job]]
+id = "us-ga"
+country = "US"
+code = "GA"
+fips = "13"
+name = "Georgia"
+enabled = false
+
+[[job]]
+id = "us-hi"
+country = "US"
+code = "HI"
+fips = "15"
+name = "Hawaii"
+enabled = false
+
+[[job]]
+id = "us-id"
+country = "US"
+code = "ID"
+fips = "16"
+name = "Idaho"
+enabled = false
+
+[[job]]
+id = "us-il"
+country = "US"
+code = "IL"
+fips = "17"
+name = "Illinois"
+enabled = false
+
+[[job]]
+id = "us-in"
+country = "US"
+code = "IN"
+fips = "18"
+name = "Indiana"
+enabled = false
+
+[[job]]
+id = "us-ia"
+country = "US"
+code = "IA"
+fips = "19"
+name = "Iowa"
+enabled = false
+
+[[job]]
+id = "us-ks"
+country = "US"
+code = "KS"
+fips = "20"
+name = "Kansas"
+enabled = false
+
+[[job]]
+id = "us-ky"
+country = "US"
+code = "KY"
+fips = "21"
+name = "Kentucky"
+enabled = false
+
+[[job]]
+id = "us-la"
+country = "US"
+code = "LA"
+fips = "22"
+name = "Louisiana"
+enabled = false
+
+[[job]]
+id = "us-me"
+country = "US"
+code = "ME"
+fips = "23"
+name = "Maine"
+enabled = false
+
+[[job]]
+id = "us-md"
+country = "US"
+code = "MD"
+fips = "24"
+name = "Maryland"
+enabled = false
+
+[[job]]
+id = "us-ma"
+country = "US"
+code = "MA"
+fips = "25"
+name = "Massachusetts"
+enabled = false
+
+[[job]]
+id = "us-mi"
+country = "US"
+code = "MI"
+fips = "26"
+name = "Michigan"
+enabled = false
+
+[[job]]
+id = "us-mn"
+country = "US"
+code = "MN"
+fips = "27"
+name = "Minnesota"
+enabled = false
+
+[[job]]
+id = "us-ms"
+country = "US"
+code = "MS"
+fips = "28"
+name = "Mississippi"
+enabled = false
+
+[[job]]
+id = "us-mo"
+country = "US"
+code = "MO"
+fips = "29"
+name = "Missouri"
+enabled = false
+
+[[job]]
+id = "us-mt"
+country = "US"
+code = "MT"
+fips = "30"
+name = "Montana"
+enabled = false
+
+[[job]]
+id = "us-ne"
+country = "US"
+code = "NE"
+fips = "31"
+name = "Nebraska"
+enabled = false
+
+[[job]]
+id = "us-nv"
+country = "US"
+code = "NV"
+fips = "32"
+name = "Nevada"
+enabled = false
+
+[[job]]
+id = "us-nh"
+country = "US"
+code = "NH"
+fips = "33"
+name = "New Hampshire"
+enabled = false
+
+[[job]]
+id = "us-nj"
+country = "US"
+code = "NJ"
+fips = "34"
+name = "New Jersey"
+enabled = false
+
+[[job]]
+id = "us-nm"
+country = "US"
+code = "NM"
+fips = "35"
+name = "New Mexico"
+enabled = false
+
+[[job]]
+id = "us-ny"
+country = "US"
+code = "NY"
+fips = "36"
+name = "New York"
+enabled = false
+
+[[job]]
+id = "us-nc"
+country = "US"
+code = "NC"
+fips = "37"
+name = "North Carolina"
+enabled = false
+
+[[job]]
+id = "us-nd"
+country = "US"
+code = "ND"
+fips = "38"
+name = "North Dakota"
+enabled = false
+
+[[job]]
+id = "us-oh"
+country = "US"
+code = "OH"
+fips = "39"
+name = "Ohio"
+enabled = false
+
+[[job]]
+id = "us-ok"
+country = "US"
+code = "OK"
+fips = "40"
+name = "Oklahoma"
+enabled = false
+
+[[job]]
+id = "us-or"
+country = "US"
+code = "OR"
+fips = "41"
+name = "Oregon"
+enabled = false
+
+[[job]]
+id = "us-pa"
+country = "US"
+code = "PA"
+fips = "42"
+name = "Pennsylvania"
+enabled = false
+
+[[job]]
+id = "us-ri"
+country = "US"
+code = "RI"
+fips = "44"
+name = "Rhode Island"
+enabled = false
+
+[[job]]
+id = "us-sc"
+country = "US"
+code = "SC"
+fips = "45"
+name = "South Carolina"
+enabled = false
+
+[[job]]
+id = "us-sd"
+country = "US"
+code = "SD"
+fips = "46"
+name = "South Dakota"
+enabled = false
+
+[[job]]
+id = "us-tn"
+country = "US"
+code = "TN"
+fips = "47"
+name = "Tennessee"
+enabled = false
+
+[[job]]
+id = "us-tx"
+country = "US"
+code = "TX"
+fips = "48"
+name = "Texas"
+enabled = false
+
+[[job]]
+id = "us-ut"
+country = "US"
+code = "UT"
+fips = "49"
+name = "Utah"
+enabled = false
+
+[[job]]
+id = "us-vt"
+country = "US"
+code = "VT"
+fips = "50"
+name = "Vermont"
+enabled = true
+
+[[job]]
+id = "us-va"
+country = "US"
+code = "VA"
+fips = "51"
+name = "Virginia"
+enabled = false
+
+[[job]]
+id = "us-wa"
+country = "US"
+code = "WA"
+fips = "53"
+name = "Washington"
+enabled = false
+
+[[job]]
+id = "us-wv"
+country = "US"
+code = "WV"
+fips = "54"
+name = "West Virginia"
+enabled = false
+
+[[job]]
+id = "us-wi"
+country = "US"
+code = "WI"
+fips = "55"
+name = "Wisconsin"
+enabled = false
+
+[[job]]
+id = "us-wy"
+country = "US"
+code = "WY"
+fips = "56"
+name = "Wyoming"
+enabled = false
+
+[[job]]
+id = "us-pr"
+country = "US"
+code = "PR"
+fips = "72"
+name = "Puerto Rico"
+enabled = false
+
+[[job]]
+id = "ca-nl"
+country = "CA"
+code = "NL"
+fips = "10"
+name = "Newfoundland and Labrador"
+enabled = false
+
+[[job]]
+id = "ca-pe"
+country = "CA"
+code = "PE"
+fips = "11"
+name = "Prince Edward Island"
+enabled = false
+
+[[job]]
+id = "ca-ns"
+country = "CA"
+code = "NS"
+fips = "12"
+name = "Nova Scotia"
+enabled = false
+
+[[job]]
+id = "ca-nb"
+country = "CA"
+code = "NB"
+fips = "13"
+name = "New Brunswick"
+enabled = false
+
+[[job]]
+id = "ca-qc"
+country = "CA"
+code = "QC"
+fips = "24"
+name = "Quebec"
+enabled = false
+
+[[job]]
+id = "ca-on"
+country = "CA"
+code = "ON"
+fips = "35"
+name = "Ontario"
+enabled = false
+
+[[job]]
+id = "ca-mb"
+country = "CA"
+code = "MB"
+fips = "46"
+name = "Manitoba"
+enabled = false
+
+[[job]]
+id = "ca-sk"
+country = "CA"
+code = "SK"
+fips = "47"
+name = "Saskatchewan"
+enabled = false
+
+[[job]]
+id = "ca-ab"
+country = "CA"
+code = "AB"
+fips = "48"
+name = "Alberta"
+enabled = false
+
+[[job]]
+id = "ca-bc"
+country = "CA"
+code = "BC"
+fips = "59"
+name = "British Columbia"
+enabled = false
+
+[[job]]
+id = "ca-yt"
+country = "CA"
+code = "YT"
+fips = "60"
+name = "Yukon"
+enabled = false
+
+[[job]]
+id = "ca-nt"
+country = "CA"
+code = "NT"
+fips = "61"
+name = "Northwest Territories"
+enabled = false
+
+[[job]]
+id = "ca-nu"
+country = "CA"
+code = "NU"
+fips = "62"
+name = "Nunavut"
+enabled = false

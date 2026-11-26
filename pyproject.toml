@@ -1,0 +1,29 @@
+[project]
+name = "open-ng911"
+version = "0.1.0"
+description = "Open-data NENA NG9-1-1 address packages for the 911 authorities of the US and Canada"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = ["duckdb>=2.0", "pyarrow>=17"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+open-ng911 = "open_ng911.build:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/open_ng911"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: reads Overture or a government endpoint over the network (deselect with -m 'not live')"]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]
