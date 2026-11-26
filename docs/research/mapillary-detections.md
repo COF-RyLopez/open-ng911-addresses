@@ -133,8 +133,15 @@ and the private review layer until the licence is settled.
    permission to pull map features and traffic signs in bulk and to publish rules derived from them
    (attributes only, never imagery) in public Packages under CC BY 4.0 or CDLA-Permissive-2.0. Meta co-founded
    Overture and the Packages feed back into Overture's transportation theme. Until a written grant exists,
-   Mapillary stays out, including the private review layer. With a grant, Mapillary becomes one more input to
-   the same engine, behind agency and DOT values.
+   Mapillary stays out, including the private review layer. With a grant, Mapillary has two jobs in the same
+   engine, always behind agency and DOT values:
+   - **Fill gaps** where a government publishes no sign inventory (most local roads, North Dakota, PEI):
+     detections become candidate rules, needing two sightings, flagged as Mapillary-sourced.
+   - **Check government inventories** where they exist (UDOT, future agency sign files): snap both to the
+     same segments and compare. Signs Mapillary sees that the inventory lacks, inventory signs not seen in
+     recent imagery, and changed values (a 45 now read as 35) become a maintenance report offered to that
+     agency, the same opt-in, never-speak-for-them path as the rest of the upstream work. This is also the
+     easiest use for Meta to say yes to, since it improves the government data Overture draws on.
 4. **Open models on open imagery** later, for markings rather than signs: stop bars, crosswalks and turn
    arrows are visible in public-domain aerials (NAIP, and the states' open orthoimagery). Use models whose
    weights and training data both allow production use, which rules out the Mapillary Traffic Sign Dataset.
