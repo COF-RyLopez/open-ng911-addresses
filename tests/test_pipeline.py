@@ -265,9 +265,10 @@ def test_address_ranges_against_records(tmp_path, conn):
     s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
     r = s["address_ranges"]
     # 12 MAIN ST on the even side inside 2-98; 1 MAIN ST on the even side, which the odd side's 1-99 holds;
-    # 14 N EIGHTH ST on the left, which has no range; the Records on streets with no segment nearby
-    assert (r["in_range"], r["wrong_side"], r["no_range"]) == (1, 1, 1)
-    assert r["no_matching_road"] == 6 and r["segment_sides_with_derived_range"] == {"left": 1, "right": 0}
+    # 14 N EIGHTH ST on the left, which has no range; 5 VT ROUTE 9, which the road names Vermont Route 9 (one
+    # street: both are NENA's State Route 9), on the even side, which the odd side's 1-99 holds; the Records on streets with no segment nearby
+    assert (r["in_range"], r["wrong_side"], r["no_range"], r["wrong_parity"]) == (1, 2, 1, 0)
+    assert r["no_matching_road"] == 5 and r["segment_sides_with_derived_range"] == {"left": 1, "right": 0}
     root = os.path.join(out, f"release={RELEASE}", "us-vt", "50001")
     eighth = next(x for x in read(os.path.join(root, "road_centerline.parquet")) if x["source_id"] == "5002")
     assert (eighth["fromaddr_l"], eighth["toaddr_l"], eighth["parity_l"]) == (0, 0, "Z"), "the agency's, unchanged"
@@ -276,4 +277,4 @@ def test_address_ranges_against_records(tmp_path, conn):
     checks = read(os.path.join(root, "address_range_check.parquet"))
     assert {x["result"] for x in checks} >= {"in_range", "wrong_side", "no_range"}
     with open(os.path.join(root, "manifest.json")) as f:
-        assert json.load(f)["address_ranges"]["wrong_side"] == 1
+        assert json.load(f)["address_ranges"]["wrong_side"] == 1, "Bennington's Route 9 is in another Package"

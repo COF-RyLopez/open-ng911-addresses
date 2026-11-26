@@ -3,9 +3,9 @@ Address ranges against address points: the NENA / NSGIC check that every address
 the right road, inside that side's range, and ranges derived from the points where a road side has none.
 
     1. Each Record (an agency address point, ADR 0001) is paired with the nearest road segment on the same street
-       (street.py's key on both sides) within MAX_M, and given the side of the road it sits on.
-    2. Each pair is checked against that side's range: `in_range`, `wrong_side` (outside its side's range but
-       inside the other side's), `outside_range`, `wrong_parity` (inside the range, on the other parity), or `no_range` (the side has none: NENA's 0, roads.without_range). A Record
+       (street.py's key of the NENA street fields on both sides) within MAX_M, and given the side of the road it sits on.
+    2. Each pair is checked against that side's range: `in_range`, `wrong_side` (not its side's range or parity, but the
+       other side's on both), `outside_range`, `wrong_parity` (inside the range, on the other parity), or `no_range` (the side has none: NENA's 0, roads.without_range). A Record
        with no same-street segment within MAX_M is `no_matching_road`.
     3. A road side with no range and at least one Record gets a range derived from them: the numbers at the
        segment's start and end (by where each point falls along it) and their parity. These go in their own
@@ -20,9 +20,16 @@ from . import db, roads
 
 MAX_M = 150.0  # how far from its street a point may sit and still be checked against it
 SIDES = ("l", "r")
+STREET = ("st_predir", "st_pretyp", "st_name", "st_postyp", "st_posdir")
 RESULTS = ("in_range", "wrong_side", "outside_range", "wrong_parity", "no_range", "no_matching_road")
 RCL_COLUMNS = ", ".join(f"derived_fromaddr_{s} INTEGER, derived_toaddr_{s} INTEGER, derived_parity_{s} VARCHAR, "
                         f"range_points_{s} INTEGER" for s in SIDES)
+
+
+def _key(t):
+    """The street key of a row's NENA street fields. Both sides use the fields as delivered, so a road keeps its
+    agency's own pre-directional where the published full name leaves it off (Utah's FULLNAME has no PREDIR)."""
+    return f"parsed_street_key(parse_street(concat_ws(' ', {', '.join(f'{t}.{p}' for p in STREET)})))"
 
 
 def check(c):
@@ -33,15 +40,15 @@ def check(c):
     # one-part line has a single "along" to derive a range by
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _seg AS
         WITH merged AS (
-            SELECT r.uid, r.geoid, parsed_street_key(parse_street(s.street)) AS skey,
+            SELECT r.uid, r.geoid, {_key('r')} AS skey,
                    r.fromaddr_l, r.toaddr_l, r.parity_l, r.fromaddr_r, r.toaddr_r, r.parity_r,
                    ST_Dump(ST_LineMerge(ST_Transform(r.geom, 'EPSG:4326', '{epsg}'))) AS parts
-            FROM rcl r JOIN road_seg s USING (uid))
+            FROM rcl r)
         SELECT * EXCLUDE (parts, part), part.geom AS m, len(parts) AS n_parts
         FROM (SELECT *, unnest(parts) AS part FROM merged)
         WHERE ST_GeometryType(part.geom) = 'LINESTRING' AND NOT ST_IsEmpty(part.geom)""")
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _pt AS
-        SELECT s.uid, s.add_number, s.geoid, a.skey, ST_Transform(s.geom, 'EPSG:4326', '{epsg}') AS m
+        SELECT s.uid, s.add_number, s.geoid, {_key('s')} AS skey, ST_Transform(s.geom, 'EPSG:4326', '{epsg}') AS m
         FROM ssap s JOIN agency_addr a ON a.address_uid = s.uid
         WHERE s.status = 'record' AND s.add_number IS NOT NULL""")
     c.execute(f"""CREATE OR REPLACE TABLE address_range_check AS
@@ -69,8 +76,10 @@ def check(c):
             FROM sided)
         SELECT uid, rcl_uid, side, add_number, CASE WHEN n_parts = 1 THEN t END AS position,
                CASE WHEN side IS NULL OR par IS NULL OR par = 'Z' THEN 'no_range'
-                    WHEN add_number NOT BETWEEN least(f, e) AND greatest(f, e) AND opar IS NOT NULL AND opar <> 'Z'
-                         AND add_number BETWEEN least(of, oe) AND greatest(of, oe)
+                    -- not this side's (outside its range or on its other parity) but the other side's on both
+                    WHEN (add_number NOT BETWEEN least(f, e) AND greatest(f, e)
+                          OR (par = 'O' AND add_number % 2 = 0) OR (par = 'E' AND add_number % 2 = 1))
+                         AND opar IS NOT NULL AND opar <> 'Z' AND add_number BETWEEN least(of, oe) AND greatest(of, oe)
                          AND NOT ((opar = 'O' AND add_number % 2 = 0) OR (opar = 'E' AND add_number % 2 = 1))
                          THEN 'wrong_side'
                     WHEN add_number NOT BETWEEN least(f, e) AND greatest(f, e) THEN 'outside_range'
