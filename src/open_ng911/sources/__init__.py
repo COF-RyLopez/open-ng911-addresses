@@ -1,6 +1,7 @@
 """Readers that each create one table on the build's DuckDB connection.
 
     package_area    one row per Package: geoid, name, geom             (tiger.py; StatCan for Canada, later)
+    municipality    A3 units: geoid, name, kind, incorporated, geom    (tiger.py; statcan.py for Canada)
     agency_addr     a Source agency's address points                   (openaddresses.py)
     overture_addr   Overture addresses inside the job's Packages       (overture.py)
 

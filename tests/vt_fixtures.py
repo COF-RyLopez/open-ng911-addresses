@@ -1,14 +1,25 @@
 """Offline fixtures: two small Vermont-shaped Packages, a few agency points (tests/fixtures/) and Overture
 addresses written to a local parquet in Overture's schema, so the whole job runs without the network."""
+import json
 import os
 
-from open_ng911.sources import openaddresses, overture
+from open_ng911.sources import openaddresses, overture, tiger
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 
 # Two square Packages: Addison (around Middlebury) and Bennington
 PACKAGES = [("50001", "Addison County", (-73.2, 44.0, -73.0, 44.2)),
             ("50003", "Bennington County", (-73.2, 42.8, -73.0, 43.0))]
+
+# Municipalities, as TIGERweb county subdivisions: (GEOID, NAME, BASENAME, FUNCSTAT, bbox)
+MUNICIPALITIES = [
+    # Middlebury's east edge is 1 m short of Record 1001 (-73.1): it snaps in rather than going 'Unincorporated'
+    ("5000144350", "Middlebury town", "Middlebury", "A", (-73.2, 44.0, -73.10001, 44.2)),
+    # an unorganized gore: not a government, so not A3
+    ("5000102725", "Avery's gore", "Avery's", "N", (-73.10001, 44.0, -73.0, 44.2)),
+    # a town in the next county that overlaps Addison by a 1 m sliver: not in Addison's A3 layer
+    ("5002161225", "Ripton town", "Ripton", "A", (-73.2, 43.9, -73.0, 44.00001)),
+]
 
 # Overture addresses: (id, number, street, lon, lat, source record id)
 OVERTURE = [
@@ -39,6 +50,15 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
                   + ", ".join(f"('{g}', '{n}', ST_MakeEnvelope({b[0]}, {b[1]}, {b[2]}, {b[3]}))" for g, n, b in PACKAGES)
                   + ") t(geoid, name, geom)")
 
+    def municipality(c, job, jur, work):
+        path = tmp_path / "municipalities.ndjson"
+        with open(path, "w") as f:
+            for geoid, name, base, funcstat, (x0, y0, x1, y1) in MUNICIPALITIES:
+                ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+                f.write(json.dumps({"p": {"GEOID": geoid, "NAME": name, "BASENAME": base, "FUNCSTAT": funcstat},
+                                    "g": json.dumps({"type": "Polygon", "coordinates": [ring]})}) + "\n")
+        tiger.create_municipality(c, str(path), "county subdivision")
+
     def agency_addr(c, job, jur, work):
         source = jur.sources[0]
         entry = {"number": "HOUSE_NUMBER", "street": ["PD", "PT", "SN", "ST", "SD"], "city": "TOWNNAME",
@@ -50,4 +70,4 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
         write_overture_parquet(c, overture_rows, path)
         overture.create_overture_addr(c, path)
 
-    return {"package_area": package_area, "agency_addr": agency_addr, "overture_addr": overture_addr}
+    return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr, "overture_addr": overture_addr}
