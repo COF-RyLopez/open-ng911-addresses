@@ -42,3 +42,49 @@ attribution = "VT Enhanced 911 Board, VCGI"
 nad = "not_started"
 overture = "not_started"           # addresses reach Overture through OpenAddresses
 esri_community_maps = "not_applicable"
+
+# Road centerlines: the E911 Board's own road layer. OpenAddresses' us/vt/statewide lists no centerlines yet, so
+# the layer entry is written here in OpenAddresses' schema (`oa_entry`), ready to propose upstream; once it is
+# merged there, drop `oa_entry` and the registry's entry is read instead. Every Vermont Package is covered, so
+# none falls back to TIGER.
+[[source]]
+key = "us-vt-e911-rds"
+agency = "Vermont Enhanced 9-1-1 Board (published by VCGI)"
+layer = "centerlines"
+covers = "*"
+openaddresses = "us/vt/statewide"
+oa_layer = "state"
+license_status = "unknown"          # same VCGI warranty notice as the address points; no license stated
+license_url = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+attribution = "VT Enhanced 911 Board, VCGI"
+# AOTCLASS values that aren't roads a 911 call can be routed along: 65 ferry, 80-89 proposed, 96 discontinued,
+# 98 not a road (VCGI metadata, EmergencyE911_RDS)
+exclude = { field = "AOTCLASS", values = ["65", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "96", "98"] }
+
+[source.oa_entry]
+name = "state"
+website = "https://geodata.vermont.gov/datasets/VCGI::vt-data-e911-road-centerlines"
+data = "https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Emergency_RDS_line_SP_v1/FeatureServer/0"
+license = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+attribution = "VT Enhanced 911 Board, VCGI"
+protocol = "ESRI"
+
+[source.oa_entry.conform]
+format = "geojson"
+id = "SEGMENTID"
+name = ["PD", "PT", "SN", "ST", "SD"]
+addr_from_left = "LLO_A"
+addr_to_left = "LHI_A"
+addr_from_right = "RLO_A"
+addr_to_right = "RHI_A"
+zip_left = "LZIP"
+zip_right = "RZIP"
+oneway = { function = "map", field = "ONEWAY", mapping = { Y = "yes", X = "reverse", N = "no" } }
+speed = { function = "mph_to_kph", field = "SPEEDLIMIT" }
+# AOTCLASS: 50s Interstate, 40s US highway, 30 state highway, 1/2/3 town highway classes, 7/70 legal trails,
+# 8/10 private roads and driveways; x5 are ramps
+[source.oa_entry.conform.classification]
+function = "map"
+field = "AOTCLASS"
+else = "residential"
+mapping = { "50" = "motorway", "51" = "motorway", "52" = "motorway", "53" = "motorway", "54" = "motorway", "55" = "motorway_link", "56" = "motorway", "40" = "primary", "41" = "primary", "42" = "primary", "43" = "primary", "44" = "primary", "45" = "primary_link", "46" = "primary", "30" = "secondary", "1" = "tertiary", "11" = "tertiary", "12" = "tertiary", "13" = "tertiary", "14" = "tertiary", "15" = "tertiary_link", "16" = "tertiary", "2" = "tertiary", "7" = "track", "70" = "track", "8" = "service", "10" = "service", "97" = "service" }

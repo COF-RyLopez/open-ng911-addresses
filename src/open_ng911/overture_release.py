@@ -62,5 +62,9 @@ def addresses_glob():
     return f"{release_path()}/theme=addresses/type=address/*.parquet"
 
 
+def segments_glob():
+    return f"{release_path()}/theme=transportation/type=segment/*.parquet"
+
+
 if __name__ == "__main__":
     print(release_id())

@@ -101,3 +101,81 @@ def test_exclude_site_types_drops_and_counts(conn, vt):
     openaddresses.create_agency_addr(conn, source, os.path.join(FIXTURES, "vt_agency_points.ndjson"), conform, True)
     assert conn.execute("SELECT site_type, n FROM agency_excluded").fetchall() == [("PUBLIC TELEPHONE", 1)]
     assert conn.execute("SELECT count(*) FROM agency_addr WHERE source_id = '1005'").fetchall()[0][0] == 0
+
+
+def read(path, where="true"):
+    res = duckdb.connect().execute(f"SELECT * FROM read_parquet('{path}', hive_partitioning = false) WHERE {where}")
+    cols = [d[0] for d in res.description]
+    return [dict(zip(cols, v)) for v in res.fetchall()]
+
+
+def test_road_centerlines(tmp_path, conn):
+    out = str(tmp_path / "out")
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    assert s["gate_failures"] == []
+    assert s["road_sources"] == {"government": 3, "tiger": 2}
+    assert s["road_segments"] == 5 and s["road_segments_with_gers_id"] == 3
+    root = os.path.join(out, f"release={RELEASE}", "us-vt")
+
+    # Addison: the E911 Board's own roads; the "not a road" segment (AOTCLASS 98) is left out
+    addison = {r["source_id"]: r for r in read(os.path.join(root, "50001", "road_centerline.parquet"))}
+    assert set(addison) == {"5001", "5002", "5004"}
+    main = addison["5001"]
+    assert main["road_source"] == "government" and main["source_license"] == "unknown"
+    assert main["uid"] == ids.agency_uid("us-vt-e911-rds", "5001")
+    assert main["rcl_nguid"] == f"urn:emergency:uid:gis:RCL:{main['uid']}:us-vt-50001.unclaimed.invalid"
+    assert (main["fromaddr_l"], main["toaddr_l"], main["parity_l"], main["parity_r"]) == (1, 99, "O", "E")
+    assert (main["st_name"], main["st_postyp"], main["roadclass"], main["oneway"], main["speedlimit"]) == (
+        "MAIN", "Street", "Secondary", "B", 25)
+    eighth = addison["5002"]
+    assert (eighth["st_predir"], eighth["oneway"], eighth["parity_l"], eighth["speedlimit"]) == ("North", "FT", "Z", None)
+    ramp = addison["5004"]
+    assert (ramp["st_pretyp"], ramp["st_name"], ramp["roadclass"], ramp["parity_l"]) == ("State Route", "125", "Ramp", "B")
+
+    # GERS IDs: MAIN ST is cut in two on Overture's side, the primary one runs along most of it; the crossing
+    # segment and the railway on top of it don't link
+    assert main["gers_id"] == "s1" and eighth["gers_id"] == "s4" and ramp["gers_id"] is None
+    cw = read(os.path.join(root, "50001", "road_gers_crosswalk.parquet"))
+    assert {(r["uid"], r["gers_id"], r["is_primary"]) for r in cw} == {
+        (main["uid"], "s1", True), (main["uid"], "s2", False), (eighth["uid"], "s4", True)}
+    assert all(r["overture_release"] == RELEASE for r in cw)
+
+    # Bennington has no government centerlines: TIGER ADDRFEAT, a road feature only (the rail spur is dropped)
+    benn = {r["source_id"]: r for r in read(os.path.join(root, "50003", "road_centerline.parquet"))}
+    assert set(benn) == {"618001:A1:A2", "618002:A3"}
+    vt9 = benn["618001:A1:A2"]
+    assert (vt9["road_source"], vt9["source_license"], vt9["st_pretyp"], vt9["st_name"], vt9["gers_id"]) == (
+        "tiger", "open", "State Route", "9", "s7")
+
+    # nothing of Overture's but its IDs: no Overture geometry or names in either file
+    assert not {"subtype", "names", "class"} & set(main) and not {"geom", "geometry"} & set(cw[0])
+
+    with open(os.path.join(root, "50001", "manifest.json")) as f:
+        m = json.load(f)
+    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "RoadCenterline"]
+    rc = m["road_centerline"]
+    assert rc["rows"] == 3 and rc["road_source"] == "government" and rc["gers_coverage"] == round(2 / 3, 4)
+    (src,) = rc["sources"]
+    assert (src["source_key"], src["license_status"], src["source_date"]) == ("us-vt-e911-rds", "unknown", "2026-02-19")
+    with open(os.path.join(root, "50003", "manifest.json")) as f:
+        rc = json.load(f)["road_centerline"]
+    assert rc["road_source"] == "tiger"
+    assert [(x["source_key"], x["license_status"], x["source_date"]) for x in rc["sources"]] == [
+        ("tiger-addrfeat-2025", "open", "TIGER/Line 2025")]
+    assert s["by_package"]["us-vt-50003"]["road_source"] == "tiger"
+
+
+def test_government_roads_only_where_their_source_covers(tmp_path, conn, monkeypatch):
+    from open_ng911 import registry
+    real = registry.jurisdiction
+
+    def narrowed(j, d=registry.REGISTRY_DIR):
+        jur = real(j, d)
+        next(s for s in jur.sources if s.layer == "centerlines").covers = ["50003"]
+        return jur
+
+    monkeypatch.setattr(registry, "jurisdiction", narrowed)
+    loaders = fixture_loaders(tmp_path)
+    loaders["tiger_roads"] = lambda c, job, jur, work: None  # both Packages would fall back; none read here
+    s = build.run("us-vt", str(tmp_path / "out"), loaders=loaders, release=RELEASE, c=conn)
+    assert s["road_sources"] == {}, "Addison's E911 roads are dropped where the source doesn't cover it"

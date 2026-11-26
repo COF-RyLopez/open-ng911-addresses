@@ -31,15 +31,39 @@ def layer_entry(definition, layer, name):
     raise SystemExit(f"OpenAddresses source has no {layer} layer named {name!r}")
 
 
+def _quote(v):
+    return "'" + str(v).replace("'", "''") + "'"
+
+
+def entry_for(source):
+    """The OpenAddresses layer entry a registry Source reads: its own `oa_entry` where OpenAddresses doesn't list
+    the endpoint yet, else the entry named `oa_layer` in the OpenAddresses source `openaddresses`."""
+    if source.oa_entry:
+        return source.oa_entry
+    return layer_entry(source_definition(source.openaddresses), source.layer, source.oa_layer)
+
+
 def conform_sql(spec):
-    """An OpenAddresses conform value (a field name, or a list of fields joined with spaces) as SQL over the
-    JSON properties column p. Anything else (functions like regexp or join) isn't supported yet: NULL."""
+    """An OpenAddresses conform value as SQL over the JSON properties column p: a field name, a list of fields
+    joined with spaces, or the functions `join` (fields + separator), `map` (field + mapping + else, as
+    centerline conforms use for classification and oneway) and `mph_to_kph`. Anything else (regexp, prefixed
+    number, ...) isn't supported yet: NULL."""
     if spec is None:
         return "NULL"
     if isinstance(spec, str):
-        return f"nullif(trim(p->>'{spec}'), '')"
+        return f"nullif(trim(p->>{_quote(spec)}), '')"
     if isinstance(spec, list) and all(isinstance(s, str) for s in spec):
-        return "nullif(trim(concat_ws(' ', " + ", ".join(f"nullif(trim(p->>'{s}'), '')" for s in spec) + ")), '')"
+        return "nullif(trim(concat_ws(' ', " + ", ".join(conform_sql(s) for s in spec) + ")), '')"
+    fn = spec.get("function") if isinstance(spec, dict) else None
+    if fn == "join" and all(isinstance(s, str) for s in spec.get("fields", [])):
+        sep = _quote(spec.get("separator", " "))
+        return f"nullif(trim(concat_ws({sep}, " + ", ".join(conform_sql(s) for s in spec["fields"]) + ")), '')"
+    if fn == "map" and isinstance(spec.get("field"), str):
+        whens = " ".join(f"WHEN {_quote(k)} THEN {_quote(v)}" for k, v in spec.get("mapping", {}).items())
+        default = _quote(spec["else"]) if "else" in spec else conform_sql(spec["field"])
+        return f"CASE {conform_sql(spec['field'])} {whens} ELSE {default} END" if whens else default
+    if fn == "mph_to_kph" and isinstance(spec.get("field"), str):
+        return f"round(try_cast({conform_sql(spec['field'])} AS DOUBLE) * 1.609344)::INTEGER::VARCHAR"
     print(f"  [openaddresses] conform {spec!r} isn't supported yet; left empty")
     return "NULL"
 
@@ -120,7 +144,7 @@ def load_agency_addr(c, jurisdiction, work_dir):
     sources = [s for s in jurisdiction.sources if s.layer == "addresses"]
     assert len(sources) == 1, "Phase 1 scaffold reads one address source per job"  # several: union per package
     s = sources[0]
-    entry = layer_entry(source_definition(s.openaddresses), "addresses", s.oa_layer)
+    entry = entry_for(s)
     if entry.get("protocol") != "ESRI":
         raise SystemExit(f"{s.key}: protocol {entry.get('protocol')!r} isn't supported yet (ESRI only)")
     fields = {f["name"] for f in arcgis.layer_info(entry["data"]).get("fields", [])}

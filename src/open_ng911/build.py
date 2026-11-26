@@ -10,7 +10,9 @@ Steps:
   4. Give each Overture address an Address UID through the lineage ledger (lineage.py).
   5. Assemble the SiteStructureAddressPoint layer: every Record, plus Overture addresses no Record matched
      as Gap-fill candidates (ADR 0001), with NGUIDs built from the Address UID (ADR 0002).
-  6. Write one Package per county or census division, the ledger and a job summary; fail the job if a
+  6. Build the RoadCenterline layer: government centerlines, TIGER where a Package has none, Overture GERS
+     IDs attached (roads.py).
+  7. Write one Package per county or census division, the ledger and a job summary; fail the job if a
      NENA mandatory field isn't filled on every row.
 """
 import argparse
@@ -19,13 +21,17 @@ import json
 import os
 import sys
 
-from . import db, ids, lineage, matcher, nena, overture_release, package, registry, street
-from .sources import openaddresses, overture, tiger
+from . import db, ids, lineage, matcher, nena, overture_release, package, registry, roads, street
+from .sources import centerlines, openaddresses, overture, tiger
 
 LIVE_LOADERS = {
     "package_area": lambda c, job, jur, work: tiger.load_package_area(c, job, work),
     "agency_addr": lambda c, job, jur, work: openaddresses.load_agency_addr(c, jur, work),
     "overture_addr": lambda c, job, jur, work: overture.load_overture_addr(c, jur, work),
+    # RoadCenterline (roads.py)
+    "gov_roads": centerlines.load_government,
+    "tiger_roads": centerlines.load_tiger,
+    "overture_segment": lambda c, job, jur, work: overture.load_overture_segment(c, jur, work),
 }
 
 
@@ -51,7 +57,7 @@ def prepare(c):
 
 
 def assemble_ssap(c, job, jurisdiction, updated):
-    source = jurisdiction.sources[0]
+    source = next(s for s in jurisdiction.sources if s.layer == "addresses")
     c.execute(f"""CREATE OR REPLACE TABLE ssap AS
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
@@ -137,11 +143,13 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     links = lineage.link(c, release)
     print(f"[{job.id}] Overture address UIDs by link method: {links}")
     assemble_ssap(c, job, jur, updated)
+    roads.build(c, job, jur, work_dir, loaders, updated)
 
     root, summaries = package.write(c, job, jur, release, out_dir)
+    road_stats = roads.write(c, job, root, release)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
-    fails = gate(c)
+    fails = gate(c) + roads.gate(c)
     summary = {"job": job.id, "overture_release": release, "built": updated, "packages": len(summaries),
                "rows": sum(s["rows"] for s in summaries), "records": sum(s["records"] for s in summaries),
                "records_with_gers_id": sum(s["records_with_gers_id"] for s in summaries),
@@ -155,9 +163,14 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                    "ORDER BY n DESC LIMIT 25").fetchall()},
                "agency_points_id_shared": c.execute(
                    "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
-               "overture_link_methods": links, "gate_failures": fails,
+               "overture_link_methods": links,
+               "road_segments": sum(r["rows"] for r in road_stats.values()),
+               "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),
+               "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
+               "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
-                                                               "record_gers_coverage")} for s in summaries}}
+                                                               "record_gers_coverage")}
+                              | roads.package_summary(road_stats[s["package"]]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
         json.dump(summary, f, indent=2)
     print(json.dumps({k: v for k, v in summary.items() if k != "by_package"}, indent=2))
