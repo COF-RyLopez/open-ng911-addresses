@@ -22,7 +22,7 @@ def test_vermont_boundaries(tmp_path, conn):
     out = str(tmp_path / "out")
     s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
     assert s["gate_failures"] == []
-    assert s["a3"] == {"addresses_in_municipality": 6, "addresses_unincorporated": 1, "addresses_without_a3": 0,
+    assert s["a3"] == {"addresses_in_municipality": 10, "addresses_unincorporated": 2, "addresses_without_a3": 0,
                        "a3_polygons": 1}
 
     a3 = {r["source_id"]: r["a3"] for r in read(out, "50001", "site_structure_address_point")}
@@ -46,7 +46,7 @@ def test_vermont_boundaries(tmp_path, conn):
 
     with open(os.path.join(out, f"release={RELEASE}", "us-vt", "50001", "manifest.json")) as f:
         m = json.load(f)
-    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon"]
+    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
     assert m["boundaries"]["A3Polygon"]["features"] == 1
     assert m["boundaries"]["A3Polygon"]["record_community_agrees_with_a3"] == 1.0
     assert m["boundaries"]["A2Polygon"]["license"] == "public domain"

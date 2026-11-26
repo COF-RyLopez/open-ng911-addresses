@@ -3,7 +3,7 @@
 Open-data NENA NG9-1-1 address datasets for the 911 authorities of the US and Canada, built mostly from each
 area's own government sources and handed back NENA-ready to the agencies that opt in.
 
-**Status: Phase 1 scaffold.** One state (Vermont) runs end to end in CI. The plan behind it, with its 25 settled
+**Status: Phase 1 scaffold.** Four pilot states (Vermont, Maine, Utah, North Dakota) run end to end in CI. The plan behind it, with its 25 settled
 decisions, is the "NG911 Address Pipeline: US + Canada Infrastructure Plan"; the terms are in
 [GLOSSARY.md](GLOSSARY.md) and the decisions in [docs/adr](docs/adr). The California prototype is
 [ng911-pipeline](https://github.com/COF-RyLopez/ng911-pipeline).
@@ -27,7 +27,10 @@ or census division:
    under the agency's own domain once it opts in and a `.invalid` placeholder until then. Each point gets
    its A3 from the municipality it falls in ('Unincorporated' outside them, ADR 0009).
 6. Write the A2Polygon (the county itself) and A3Polygon (its municipalities, clipped to it) layers.
-7. Gate: every NENA mandatory field filled and every NGUID unique, or the job fails.
+7. Write the RoadCenterline layer: the Source agency's own centerlines (through the OpenAddresses registry), else
+   Census TIGER address-range roads for that Package, each segment carrying the GERS IDs of the Overture road
+   segments that run along it. Overture's road geometry and names (ODbL) never go in (ADR 0010).
+8. Gate: every NENA mandatory field filled and every NGUID unique, on every layer, or the job fails.
 
 ```
 data/output/release=<overture release>/<job>/
@@ -36,14 +39,16 @@ data/output/release=<overture release>/<job>/
     <geoid>/site_structure_address_point.parquet   GeoParquet
     <geoid>/a2_polygon.parquet   A2Polygon, the county or census division
     <geoid>/a3_polygon.parquet   A3Polygon, its municipalities
-    <geoid>/manifest.json        recipient, opt-in state, field fill, sources and their license status
+    <geoid>/road_centerline.parquet                GeoParquet: NENA RCL fields + uid, gers_id, road_source
+    <geoid>/road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
+    <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date
 ```
 
 ## Run it
 
 ```sh
 uv pip install -e ".[dev]"
-pytest -q                                   # offline, on fixtures
+pytest -q -m "not live"                     # offline, on fixtures
 python -m open_ng911.build --job us-vt      # live: TIGERweb, Vermont's E911 service, Overture on S3
 OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <previous address_lineage.parquet>
 ```
@@ -57,9 +62,8 @@ OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <p
 
 - The StatCan census-division Package areas and census-subdivision A3 for the pilot province; A4
   (unincorporated communities) once there's an open source that isn't the statistical CDPs.
-- Road centerlines: government centerlines from the OpenAddresses registry, TIGER ADDRFEAT as the fallback,
-  with a GERS crosswalk (no Overture geometry).
-- Two or three more pilot states of different shapes, several address sources per job, parcels for Placement.
+- Several address sources per job, parcels for Placement, and pilot states whose statewide source is a
+  file download rather than an ArcGIS service.
 - Phase 2: changelog-driven reruns, `exact_rematch` / `near_rematch` in the ledger, the churn table.
 
 ## Licensing

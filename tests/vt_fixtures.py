@@ -3,7 +3,7 @@ addresses written to a local parquet in Overture's schema, so the whole job runs
 import json
 import os
 
-from open_ng911.sources import openaddresses, overture, tiger
+from open_ng911.sources import centerlines, openaddresses, overture, tiger
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -70,4 +70,69 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
         write_overture_parquet(c, overture_rows, path)
         overture.create_overture_addr(c, path)
 
-    return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr, "overture_addr": overture_addr}
+    return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr,
+            "overture_addr": overture_addr,
+            **road_loaders(tmp_path)}
+
+
+# Overture road segments (GERS ID, subtype, WKT). Only their IDs may reach a Package.
+SEGMENTS = [
+    ("s1", "road", "LINESTRING (-73.1062 44.10024, -73.0995 44.10024)"),   # along MAIN ST 5001, west part
+    ("s2", "road", "LINESTRING (-73.0995 44.10024, -73.0938 44.10024)"),   # along MAIN ST 5001, east part
+    ("s3", "road", "LINESTRING (-73.098 44.099, -73.098 44.101)"),         # crosses MAIN ST: no link
+    ("s4", "road", "LINESTRING (-73.10104 44.1003, -73.10104 44.1081)"),   # along N EIGHTH ST 5002
+    ("s5", "rail", "LINESTRING (-73.106 44.1002, -73.094 44.1002)"),       # a railway on MAIN ST: not a road
+    ("s7", "road", "LINESTRING (-73.15 42.90003, -73.05 42.90003)"),       # along the TIGER segment in Bennington
+]
+
+# TIGER ADDRFEAT for the Bennington fixture Package, which has no government centerlines
+ADDRFEAT = [  # TLID, ARIDL, ARIDR, FULLNAME, LFROMHN, LTOHN, RFROMHN, RTOHN, ZIPL, ZIPR, ROAD_MTFCC, EDGE_MTFCC, WKT
+    (618001, "A1", "A2", "Vermont Route 9", "1", "99", "2", "98", "05201", "05201", "S1200", "S1200",
+     "LINESTRING (-73.15 42.9, -73.05 42.9)"),
+    (618002, "A3", "", "Hidden Ln", "", "", "", "", "", "", "S1400", "S1400",
+     "LINESTRING (-73.12 42.95, -73.119 42.951)"),
+    (618003, "", "", "Rail Spur", "", "", "", "", "", "", "", "R1011", "LINESTRING (-73.12 42.96, -73.11 42.96)"),
+]
+
+
+def write_segment_parquet(c, rows, path):
+    values = ", ".join(f"('{i}', '{t}', ST_GeomFromText('{w}'))" for i, t, w in rows)
+    c.execute(f"""COPY (SELECT id, subtype, geometry,
+                         {{'xmin': ST_XMin(geometry), 'xmax': ST_XMax(geometry),
+                           'ymin': ST_YMin(geometry), 'ymax': ST_YMax(geometry)}} AS bbox
+                  FROM (VALUES {values}) t(id, subtype, geometry)) TO '{path}' (FORMAT parquet)""")
+
+
+def write_addrfeat(c, rows, path):
+    values = ", ".join(
+        "(" + ", ".join([str(r[0])] + [f"'{v}'" for v in r[1:-1]]) + f", ST_GeomFromText('{r[-1]}'))" for r in rows)
+    c.execute(f"""COPY (SELECT * FROM (VALUES {values}) t(TLID, ARIDL, ARIDR, FULLNAME, LFROMHN, LTOHN, RFROMHN,
+                                                          RTOHN, ZIPL, ZIPR, ROAD_MTFCC, EDGE_MTFCC, geom))
+                  TO '{path}' (FORMAT GDAL, DRIVER 'ESRI Shapefile')""")
+
+
+def road_loaders(tmp_path, segments=SEGMENTS):
+    def gov_roads(c, job, jur, work):
+        source = next(s for s in jur.sources if s.layer == "centerlines")
+        centerlines.insert_government(c, source, os.path.join(FIXTURES, "vt_e911_rds.ndjson"),
+                                      source.oa_entry["conform"], True)
+        centerlines.add_meta(c, {"source_key": source.key, "road_source": "government", "agency": source.agency,
+                                 "license_status": source.license_status, "license_url": source.license_url,
+                                 "attribution": source.attribution, "source_date": "2026-02-19",
+                                 "fetched": "2026-11-26T00:00:00Z", "data_url": source.oa_entry["data"]})
+
+    def tiger_roads(c, job, jur, work):
+        assert [g for g, in c.execute("SELECT geoid FROM road_fallback").fetchall()] == ["50003"]
+        path = str(tmp_path / "tl_2025_50003_addrfeat.shp")
+        write_addrfeat(c, ADDRFEAT, path)
+        centerlines.insert_tiger(c, path, 2025)
+        centerlines.add_meta(c, {"source_key": "tiger-addrfeat-2025", "road_source": "tiger",
+                                 "agency": "U.S. Census Bureau", "license_status": "open",
+                                 "source_date": "TIGER/Line 2025"})
+
+    def overture_segment(c, job, jur, work):
+        path = str(tmp_path / "segments.parquet")
+        write_segment_parquet(c, segments, path)
+        overture.create_overture_segment(c, path)
+
+    return {"gov_roads": gov_roads, "tiger_roads": tiger_roads, "overture_segment": overture_segment}
