@@ -30,7 +30,7 @@ def test_statewide_geopackage(tmp_path, conn):
     assert r["agency_owed"]["FirePolygon"] == {f: r["layers"]["FirePolygon"] for f in ("Agency_ID", "ServiceURI", "AVcard_URI")}
     con = sqlite3.connect(gpkg)
     ddl = con.execute("SELECT sql FROM sqlite_master WHERE name = 'FirePolygon'").fetchone()[0]
-    assert "[Agency_ID] TEXT(100) check((typeof([Agency_ID]) = 'text' or typeof([Agency_ID]) = 'null')" in ddl
+    assert "[Agency_ID] TEXT(100) check([Agency_ID] is null or (typeof([Agency_ID]) = 'text'" in ddl
     assert "[DsplayName] TEXT(60) check(typeof([DsplayName]) = 'text' and not length([DsplayName]) > 60) not null" in ddl
     assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
     assert os.path.exists(gpkg + ".report.json")
@@ -38,3 +38,20 @@ def test_statewide_geopackage(tmp_path, conn):
     fires = os.path.join(out, f"release={RELEASE}", "us-vt", "*", "fire_polygon.parquet")
     pieces, zones = conn.execute(f"SELECT count(*), count(DISTINCT (source, source_id)) FROM read_parquet('{fires}')").fetchall()[0]
     assert r["layers"]["FirePolygon"] == zones and pieces > zones, (pieces, zones)
+
+
+def test_missing_required_value_is_left_empty_and_reported(tmp_path, conn):
+    """A road a source left unnamed is still written, St_Name empty, and counted; nothing is filled in."""
+    out = str(tmp_path / "out")
+    build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    job = os.path.join(out, f"release={RELEASE}", "us-vt")
+    roads = os.path.join(job, "50001", "road_centerline.parquet")
+    conn.execute(f"COPY (SELECT * REPLACE (CASE WHEN row_number() OVER () = 1 THEN NULL ELSE st_name END AS st_name) "
+                 f"FROM read_parquet('{roads}')) TO '{tmp_path}/r.parquet' (FORMAT parquet)")
+    os.replace(tmp_path / "r.parquet", roads)
+    gpkg = str(tmp_path / "us-vt.gpkg")
+    r = export.export(job, gpkg)
+    assert r["problems"]["RoadCenterLine"]["St_Name"] == {"missing_required": 1}
+    assert r["layers"]["RoadCenterLine"] == pyogrio.read_info(gpkg, layer="RoadCenterLine")["features"], "every road"
+    assert set(export.required(gpkg, "RoadCenterLine")) == set(export.required(export.TEMPLATE, "RoadCenterLine")) - {"St_Name"}
+    assert "DiscrpAgID" in export.required(gpkg, "RoadCenterLine"), "complete fields stay NOT NULL"
