@@ -1,0 +1,7 @@
+# The OpenAddresses commit every build reads its source registry at (sources/<path>.json): endpoints, field mappings
+# and the fixes OpenAddresses makes to them. Builds are reproducible from this pin; a bump is its own PR, and the
+# jobs whose sources changed between the two commits are the ones to rebuild (openaddresses.source_paths).
+# OPENADDRESSES_COMMIT in the environment overrides it for one run.
+[openaddresses]
+commit = "1d9762c36aa2a35cce4b28bd2191ee92ef3190f3"
+date = "2026-11-20"

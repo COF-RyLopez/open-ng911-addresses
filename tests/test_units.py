@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from open_ng911 import ids, overture_release, registry, street
@@ -57,7 +59,7 @@ def test_registry_refuses_a_domain_without_opt_in(vt):
 
 
 def test_conform_sql():
-    assert conform_sql("A") == "nullif(trim(p->>'A'), '')"
+    assert conform_sql("A") == "nullif(trim(coalesce(p->>'A', '')), '')"
     assert "concat_ws" in conform_sql(["A", "B"])
     assert conform_sql({"function": "regexp"}) == "NULL"
 
@@ -71,6 +73,36 @@ def test_conform_functions(conn):
     got = conn.execute(f"SELECT {oneway}, {cls}, {kph}, {name} FROM (SELECT ?::JSON AS p)",
                        ['{"ONEWAY": "X", "C": "7", "S": 25, "A": "x", "B": "y"}']).fetchall()[0]
     assert got == ("reverse", "7", "40", "x-y")
+
+
+def test_oa_address_functions(conn):
+    """OpenAddresses' address functions give what its batch-machine conform gives on the same row."""
+    row = {"ADDR": "123 Maple St Apt 4", "N": "12.0", "D": "N", "S": "Main", "T": "", "FULL": "12 N Main St",
+           "PRE": "12", "CODE": "A-77", "E": "  "}
+    cases = [
+        ({"function": "prefixed_number", "field": "ADDR"}, "123"),
+        ({"function": "prefixed_number", "field": "S"}, None),
+        ({"function": "postfixed_street", "field": "ADDR"}, "Maple St Apt 4"),
+        ({"function": "postfixed_street", "field": "ADDR", "may_contain_units": True}, "Maple St"),
+        ({"function": "postfixed_unit", "field": "ADDR"}, "Apt 4"),
+        ({"function": "regexp", "field": "CODE", "pattern": "^([A-Z])-(\\d+)$"}, "A77"),
+        ({"function": "regexp", "field": "CODE", "pattern": "^Z"}, None),
+        ({"function": "regexp", "field": "ADDR", "pattern": "(\\d+)", "replace": "#$1"}, "#123 Maple St Apt #4"),
+        ({"function": "regexp", "field": "ADDR", "pattern": "^(?=1)"}, None),  # lookahead: RE2 can't
+        ({"function": "remove_prefix", "field": "FULL", "field_to_remove": "PRE"}, "N Main St"),
+        ({"function": "remove_postfix", "field": "FULL", "field_to_remove": "T"}, "12 N Main St"),
+        ({"function": "format", "fields": ["N", "D", "S"], "format": "$1 $2 $3"}, "12 N Main"),
+        ({"function": "format", "fields": ["T", "S"], "format": "$1-$2"}, "Main"),
+        ({"function": "format", "fields": ["T", "E"], "format": "x$1-$2"}, None),
+        ({"function": "first_non_empty", "fields": ["T", "E", "S"]}, "Main"),
+        ({"function": "constant", "value": "VT"}, "VT"),
+        ({"function": "chain", "variable": "st", "functions": [
+            {"function": "postfixed_street", "field": "ADDR", "may_contain_units": True},
+            {"function": "regexp", "field": "st", "pattern": " St$", "replace": " Street"}]}, "Maple Street"),
+    ]
+    sql = ", ".join(conform_sql(spec) for spec, _ in cases)
+    got = conn.execute(f"SELECT {sql} FROM (SELECT ?::JSON AS p)", [json.dumps(row)]).fetchall()[0]
+    assert list(got) == [want for _, want in cases]
 
 
 def test_road_helpers(conn):
@@ -91,3 +123,13 @@ def test_every_country_has_one_row_and_its_boundary_loaders():
         k = registry.country(j)
         module = importlib.import_module(f"open_ng911.sources.{k.boundaries}")
         assert callable(module.load_package_area) and callable(module.load_municipality)
+
+
+def test_openaddresses_pin(monkeypatch):
+    from open_ng911.sources import openaddresses
+    p = openaddresses.pin()
+    assert len(p["commit"]) == 40 and p["date"]
+    assert openaddresses.source_paths("us-vt") == ["us/vt/statewide"]
+    assert openaddresses.source_paths("ca-pe") == ["ca/pe/province"]
+    monkeypatch.setenv("OPENADDRESSES_COMMIT", "abc123")
+    assert openaddresses.pin() == {"commit": "abc123", "date": None}

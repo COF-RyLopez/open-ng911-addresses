@@ -13,15 +13,36 @@ The n_ columns are the Source's own fields mapped straight to NENA fields by its
 """
 import json
 import os
+import re
+import tomllib
 
-from .. import db, fieldmap, ids
+from .. import db, fieldmap, ids, registry
 from . import arcgis
 
-OA_RAW = "https://raw.githubusercontent.com/openaddresses/openaddresses/master/sources/{path}.json"
+OA_RAW = "https://raw.githubusercontent.com/openaddresses/openaddresses/{commit}/sources/{path}.json"
 
 
-def source_definition(path):
-    return json.loads(arcgis.get(OA_RAW.format(path=path), timeout=60, tries=1))
+def pin(registry_dir=registry.REGISTRY_DIR):
+    """The OpenAddresses commit builds read at: registry/openaddresses.toml, or OPENADDRESSES_COMMIT for one run.
+    {commit, date}; date is None for an override."""
+    if os.environ.get("OPENADDRESSES_COMMIT"):
+        return {"commit": os.environ["OPENADDRESSES_COMMIT"], "date": None}
+    with open(os.path.join(registry_dir, "openaddresses.toml"), "rb") as f:
+        p = tomllib.load(f)["openaddresses"]
+    return {"commit": p["commit"], "date": str(p["date"])}
+
+
+def source_definition(path, commit=None):
+    url = OA_RAW.format(commit=commit or pin()["commit"], path=path)
+    return json.loads(arcgis.get(url, timeout=60, tries=1))
+
+
+def source_paths(job, commit=None, registry_dir=registry.REGISTRY_DIR):
+    """The OpenAddresses sources a job reads, as paths under sources/ without .json ('us/vt/statewide'), sorted:
+    the ones its registry Sources name. A Source that is only an `oa_entry` has no path. `commit` is for
+    listing the sources at another commit, once they are discovered from the registry there."""
+    j = registry.job(job, registry_dir) if isinstance(job, str) else job
+    return sorted({s.openaddresses for s in registry.jurisdiction(j, registry_dir).sources if s.openaddresses})
 
 
 def layer_entry(definition, layer, name):
@@ -39,29 +60,128 @@ def entry_for(source):
     return layer_entry(source_definition(source.openaddresses), source.layer, source.oa_layer)
 
 
-def conform_sql(spec):
-    """An OpenAddresses conform value as SQL over the JSON properties column p: a field name, a list of fields
-    joined with spaces, or the functions `join` (fields + separator), `map` (field + mapping + else, as
-    centerline conforms use for classification and oneway) and `mph_to_kph`. Anything else (regexp, prefixed
-    number, ...) isn't supported yet: NULL."""
+# OpenAddresses' own patterns for its address functions (openaddresses/batch-machine openaddr/conform.py, ISC)
+_NUMBER = r"\d+(?:[ -]\d/\d)?|\d+-\d+|\d+-?[A-Z]"
+PREFIXED_NUMBER = rf"^\s*({_NUMBER})\s+"
+POSTFIXED_STREET = rf"^(?:\s*(?:{_NUMBER})\s+)?(.*)"
+_UNIT_WORDS = r"(?:(?:UNIT|APARTMENT|APT\.?|SUITE|STE\.?|BUILDING|BLDG\.?|LOT)\s+|#)"
+POSTFIXED_STREET_UNITS = rf"^(?:\s*(?:{_NUMBER})\s+)?(.+?)(?:\s+{_UNIT_WORDS}.+)?$"
+POSTFIXED_UNIT = rf"\s({_UNIT_WORDS}.+)$"
+
+
+def _groups(pattern):
+    try:
+        return re.compile(pattern).groups
+    except re.error:
+        return None
+
+
+def conform_sql(spec, env=None):
+    """An OpenAddresses conform value as SQL over the JSON properties column p, as OpenAddresses' own conform
+    (batch-machine) resolves it: a field name, a list of fields joined with spaces, or one of its functions:
+    join, regexp (groups or replace), prefixed_number, postfixed_street (may_contain_units), postfixed_unit,
+    remove_prefix, remove_postfix, format, chain (with its variable), first_non_empty, constant, map and
+    mph_to_kph. A pattern our regex engine (RE2) can't run, or an unknown function, is left empty and named in the
+    build log."""
+    sql = _conform(spec, env or {})
+    return "NULL" if sql is None else f"nullif(trim({sql}), '')"
+
+
+def _raw(name, env):
+    """A field's text as OpenAddresses reads it: '' where missing; a chain's variable where one is named."""
+    return env[name] if name in env else f"coalesce(p->>{db.quote(name)}, '')"
+
+
+def _conform(spec, env):
     if spec is None:
-        return "NULL"
+        return None
     if isinstance(spec, str):
-        return f"nullif(trim(p->>{db.quote(spec)}), '')"
+        return _raw(spec, env)
     if isinstance(spec, list) and all(isinstance(s, str) for s in spec):
-        return "nullif(trim(concat_ws(' ', " + ", ".join(conform_sql(s) for s in spec) + ")), '')"
+        return "concat_ws(' ', " + ", ".join(f"nullif(trim({_raw(s, env)}), '')" for s in spec) + ")"
     fn = spec.get("function") if isinstance(spec, dict) else None
+    field = spec.get("field") if isinstance(spec, dict) else None
+    v = _raw(field, env) if isinstance(field, str) else None
+    ci = "'i'"
     if fn == "join" and all(isinstance(s, str) for s in spec.get("fields", [])):
         sep = db.quote(spec.get("separator", " "))
-        return f"nullif(trim(concat_ws({sep}, " + ", ".join(conform_sql(s) for s in spec["fields"]) + ")), '')"
-    if fn == "map" and isinstance(spec.get("field"), str):
-        whens = " ".join(f"WHEN {db.quote(k)} THEN {db.quote(v)}" for k, v in spec.get("mapping", {}).items())
-        default = db.quote(spec["else"]) if "else" in spec else conform_sql(spec["field"])
-        return f"CASE {conform_sql(spec['field'])} {whens} ELSE {default} END" if whens else default
-    if fn == "mph_to_kph" and isinstance(spec.get("field"), str):
-        return f"round(try_cast({conform_sql(spec['field'])} AS DOUBLE) * 1.609344)::INTEGER::VARCHAR"
+        return f"concat_ws({sep}, " + ", ".join(f"nullif(trim({_raw(s, env)}), '')" for s in spec["fields"]) + ")"
+    if fn == "prefixed_number" and v:
+        return f"regexp_extract({v}, {db.quote(PREFIXED_NUMBER)}, 1, {ci})"
+    if fn == "postfixed_street" and v:
+        pat = POSTFIXED_STREET_UNITS if spec.get("may_contain_units") else POSTFIXED_STREET
+        return f"regexp_extract({v}, {db.quote(pat)}, 1, {ci})"
+    if fn == "postfixed_unit" and v:
+        return f"regexp_extract({v}, {db.quote(POSTFIXED_UNIT)}, 1, {ci})"
+    if fn == "regexp" and v and isinstance(spec.get("pattern"), str):
+        pat, n = spec["pattern"], _groups(spec["pattern"])
+        if n is None or "(?=" in pat or "(?!" in pat or "(?<" in pat.replace("(?P<", ""):
+            print(f"  [openaddresses] regexp {pat!r} can't run here; left empty")
+            return None
+        q = db.quote(pat)
+        if spec.get("replace"):
+            # OpenAddresses' $1 is RE2's \1; Python's re.sub replaces every match
+            repl = db.quote(re.sub(r"\$(\d+)", r"\\\1", spec["replace"]))
+            return f"CASE WHEN regexp_matches({v}, {q}) THEN regexp_replace({v}, {q}, {repl}, 'g') ELSE '' END"
+        # the match's groups joined, '' without a match (or without groups)
+        parts = ", ".join(f"regexp_extract({v}, {q}, {g})" for g in range(1, n + 1))
+        return f"concat_ws('', {parts})" if n else "''"
+    if fn in ("remove_prefix", "remove_postfix") and v and isinstance(spec.get("field_to_remove"), str):
+        r = _raw(spec["field_to_remove"], env)
+        if fn == "remove_prefix":
+            return f"CASE WHEN starts_with({v}, {r}) THEN ltrim({v}[length({r}) + 1:], ' ') ELSE {v} END"
+        return (f"CASE WHEN {r} <> '' AND ends_with({v}, {r}) THEN rtrim({v}[:length({v}) - length({r})], ' ') "
+                f"ELSE {v} END")
+    if fn == "format" and isinstance(spec.get("format"), str):
+        return _format(spec, env)
+    if fn == "first_non_empty":
+        fields = [f for f in spec.get("fields", []) if isinstance(f, str)]
+        return "coalesce(" + ", ".join(f"nullif(trim({_raw(f, env)}), '')" for f in fields) + ", '')" if fields else "''"
+    if fn == "constant" and "value" in spec:
+        return db.quote(spec["value"])
+    if fn == "chain" and isinstance(spec.get("functions"), list):
+        var, cur, out = spec.get("variable"), None, None
+        for f in spec["functions"]:
+            step = _conform(f, {**env, var: cur} if var and cur is not None else env)
+            if step is None:
+                return None
+            # the chain's value is its last step's; each non-empty step becomes the variable the next one reads
+            out = step
+            cur = step if cur is None else f"coalesce(nullif({step}, ''), {cur})"
+        return out
+    if fn == "map" and isinstance(field, str):
+        whens = " ".join(f"WHEN {db.quote(k)} THEN {db.quote(x)}" for k, x in spec.get("mapping", {}).items())
+        default = db.quote(spec["else"]) if "else" in spec else f"trim({v})"
+        return f"CASE {v} {whens} ELSE {default} END" if whens else default
+    if fn == "mph_to_kph" and isinstance(field, str):
+        return f"coalesce(round(try_cast({v} AS DOUBLE) * 1.609344)::INTEGER::VARCHAR, '')"
     print(f"  [openaddresses] conform {spec!r} isn't supported yet; left empty")
-    return "NULL"
+    return None
+
+
+def _any(vals):
+    return " OR ".join(f"{v} <> ''" for v in vals)
+
+
+def _format(spec, env):
+    """OpenAddresses' format: $1, $2 ... are the fields. The text before the first $n is always kept; text before a
+    later one only where an earlier field was added and this one isn't empty; nothing at all when no field is added."""
+    fields = [f"regexp_replace(trim({_raw(f, env)}), '[.]0$', '')" for f in spec.get("fields", [])]
+    fmt, pieces, added, idx = spec["format"], [], [], 0
+    for m in re.finditer(r"\$([0-9]+)", fmt):
+        k = int(m.group(1))
+        if 0 < k <= len(fields):
+            val, lit = fields[k - 1], db.quote(fmt[idx:m.start()])
+            if idx == 0:
+                pieces.append(lit)
+            elif added:
+                pieces.append(f"CASE WHEN {val} <> '' AND ({_any(added)}) THEN {lit} ELSE '' END")
+            pieces.append(val)
+            added.append(val)
+        idx = m.end()
+    if not added:
+        return "''"
+    return f"CASE WHEN {_any(added)} THEN concat({', '.join(pieces)}, {db.quote(fmt[idx:])}) ELSE '' END"
 
 
 def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):

@@ -65,6 +65,7 @@ def test_vermont_job(tmp_path, conn):
     assert m["opted_in"] is False and m["recipient"] == "Vermont Enhanced 9-1-1 Board"
     assert m["records"] == 9 and m["records_with_gers_id"] == 3
     assert m["manifest_version"] == 2 and "field_fill" not in m
+    assert m["openaddresses_commit"] == openaddresses.pin()["commit"], "the OpenAddresses commit the sources came from"
     assert m["nena_coverage"]["SiteStructureAddressPoint"]["fields"]["nguid"]["fill"] == 1.0
     assert m["sources"][0]["license_status"] == "unknown"
 
@@ -256,3 +257,25 @@ def test_gate_covers_every_built_layer(tmp_path, conn):
     fails = build.gate(conn, registry.job("us-vt"), build.coverage_spec(conn, registry.job("us-vt"),
                                                                          registry.jurisdiction(registry.job("us-vt"))))
     assert "FirePolygon.dateupdate: 4 rows empty" in fails and "FirePolygon.nguid: 2 duplicates" in fails
+
+
+def test_address_ranges_against_records(tmp_path, conn):
+    """Records against the road range on their side of their street; a side with no range gets one derived from
+    its Records, in its own columns (the agency's FromAddr/ToAddr stay as published)."""
+    out = str(tmp_path / "out")
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    r = s["address_ranges"]
+    # 12 MAIN ST on the even side inside 2-98; 1 MAIN ST on the even side, which the odd side's 1-99 holds;
+    # 14 N EIGHTH ST on the left, which has no range; 5 VT ROUTE 9, which the road names Vermont Route 9 (one
+    # street: both are NENA's State Route 9), on the even side, which the odd side's 1-99 holds; the Records on streets with no segment nearby
+    assert (r["in_range"], r["wrong_side"], r["no_range"], r["wrong_parity"]) == (1, 2, 1, 0)
+    assert r["no_matching_road"] == 5 and r["segment_sides_with_derived_range"] == {"left": 1, "right": 0}
+    root = os.path.join(out, f"release={RELEASE}", "us-vt", "50001")
+    eighth = next(x for x in read(os.path.join(root, "road_centerline.parquet")) if x["source_id"] == "5002")
+    assert (eighth["fromaddr_l"], eighth["toaddr_l"], eighth["parity_l"]) == (0, 0, "Z"), "the agency's, unchanged"
+    assert (eighth["derived_fromaddr_l"], eighth["derived_toaddr_l"], eighth["derived_parity_l"]) == (14, 14, "E")
+    assert eighth["derived_fromaddr_r"] is None, "the right side has the agency's own range"
+    checks = read(os.path.join(root, "address_range_check.parquet"))
+    assert {x["result"] for x in checks} >= {"in_range", "wrong_side", "no_range"}
+    with open(os.path.join(root, "manifest.json")) as f:
+        assert json.load(f)["address_ranges"]["wrong_side"] == 1, "Bennington's Route 9 is in another Package"

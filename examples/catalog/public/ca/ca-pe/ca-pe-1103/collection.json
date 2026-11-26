@@ -11,7 +11,7 @@
   "title": "Prince, Prince Edward Island: NG9-1-1 Package (unclaimed)",
   "description": "The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1103.unclaimed.invalid until the authority opts in.",
   "license": "other",
-  "updated": "2026-11-26T21:07:15Z",
+  "updated": "2026-11-26T21:50:15Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -73,8 +73,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T21:07:15Z",
-          "2026-11-26T21:07:15Z"
+          "2026-11-26T21:50:15Z",
+          "2026-11-26T21:50:15Z"
         ]
       ]
     }
@@ -87,6 +87,7 @@
   "ng911:nena_standard": "NENA-STA-006.3-2026",
   "ng911:value_domains": "CLDXF-CA",
   "ng911:overture_release": "2026-11-18.0",
+  "ng911:openaddresses_commit": "1d9762c36aa2a35cce4b28bd2191ee92ef3190f3",
   "ng911:records": 2,
   "ng911:gap_fill_candidates": 0,
   "ng911:record_gers_coverage": 1.0,
@@ -179,8 +180,8 @@
       ],
       "title": "Package manifest",
       "description": "Counts, NENA field coverage, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 46291,
-      "file:checksum": "122006e5d74e288ecffdf3bee57db70f75adb349426011450ef02971bf4fe04a93ac"
+      "file:size": 46822,
+      "file:checksum": "12208b76526abeb6ec80a1e76842c34f0d4599f8bb1b587fe5ba576b36d5502ce5d0"
     },
     "domains": {
       "href": "./domains.json",
@@ -212,8 +213,8 @@
       ],
       "title": "Vector tiles",
       "description": "PMTiles of a2_polygon, site_structure_address_point for web maps, made with manby.",
-      "file:size": 5623,
-      "file:checksum": "1220f194edbd5be5623130021205f4542e6ea1654fceb5a855c452f237e44b9b320b"
+      "file:size": 5624,
+      "file:checksum": "1220c980a35baea4b7fa5267984b8635b6f8ecb6008df969dcf4e7c5d65fd37a7ec3"
     },
     "style-default": {
       "href": "./styles/default.json",
