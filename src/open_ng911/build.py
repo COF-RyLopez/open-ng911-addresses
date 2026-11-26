@@ -106,7 +106,7 @@ def assemble_ssap(c, job, jurisdiction, updated, table="ssap", native=True):
     """The SiteStructureAddressPoint layer: every NENA field of the job's country, from the Source's own field
     where its registry `nena` table maps one (fieldmap.py), else from the OpenAddresses fields and the parse.
     native=False builds the same layer from the OpenAddresses fields alone (the coverage report's `before`)."""
-    source = jurisdiction.sources_for("addresses")[0]
+    licence = db.case("a.source_key", {s.key: s.license_status for s in jurisdiction.sources_for("addresses")})
     country = job.country
     ncols = fieldmap.column_names(SSAP, country)
     rec_n = ", ".join(f"a.{n}" if native else f"NULL::{t} AS {n}" for n, t in
@@ -142,7 +142,7 @@ def assemble_ssap(c, job, jurisdiction, updated, table="ssap", native=True):
     c.execute(f"""CREATE OR REPLACE TABLE {table} AS
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
-                   a.source_id, '{source.license_status}' AS source_license, 'agency_record' AS link_method,
+                   a.source_id, {licence} AS source_license, 'agency_record' AS link_method,
                    m.distance_m AS match_distance_m, m.street_key_match, a.site_type AS source_site_type,
                    a.number, a.ps, a.unit, a.city, a.postcode, a.geom, a.geoid, {rec_n}
             FROM agency_addr a LEFT JOIN address_match m USING (address_uid)),

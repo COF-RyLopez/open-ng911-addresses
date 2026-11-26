@@ -108,6 +108,31 @@ def test_exclude_site_types_drops_and_counts(conn, vt):
     assert conn.execute("SELECT count(*) FROM agency_addr WHERE source_id = '1005'").fetchall()[0][0] == 0
 
 
+def test_address_sources_combined(conn, vt):
+    """Several address Sources in one job: all their points, a site both publish kept once (the earlier Source's)
+    and the other counted."""
+    _, jur = vt
+    street.install(conn)
+    nena.install(conn)
+    fieldmap.install(conn)
+    conform = {"number": "HOUSE_NUMBER", "street": ["PD", "PT", "SN", "ST", "SD"], "addrtype": "SITETYPE"}
+    path = os.path.join(FIXTURES, "vt_agency_points.ndjson")
+    county = jur.sources[0]
+    city = dataclasses.replace(county, key="us-vt-city-points")
+    openaddresses.create_agency_addr(conn, county, path, conform, True)
+    n = conn.execute("SELECT count(*) FROM agency_addr").fetchall()[0][0]
+    openaddresses.stash(conn, 0)
+    openaddresses.create_agency_addr(conn, city, path, conform, True)
+    conn.execute("DELETE FROM agency_addr WHERE source_id = '1001'")  # one point only the county publishes
+    openaddresses.stash(conn, 1)
+    openaddresses.combine(conn, 2)
+    assert conn.execute("SELECT source_key, count(*) FROM agency_addr GROUP BY 1").fetchall() == [(county.key, n)]
+    dup = conn.execute("SELECT sum(n) FROM agency_dropped WHERE reason = 'duplicate_across_sources' "
+                       "AND source_key = 'us-vt-city-points'").fetchall()[0][0]
+    assert dup == n - 1
+    assert conn.execute("SELECT count(*) FROM agency_excluded").fetchall()[0][0] >= 0
+
+
 def read(path, where="true"):
     res = duckdb.connect().execute(f"SELECT * FROM read_parquet('{path}', hive_partitioning = false) WHERE {where}")
     cols = [d[0] for d in res.description]
