@@ -228,6 +228,10 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
         release=None, c=None):
     job = registry.job(job_id, registry_dir)
     jur = registry.jurisdiction(job, registry_dir)
+    if jur.discover:
+        found = openaddresses.discover(job, jur)
+        print(f"[{job.id}] {len(found)} address sources found in OpenAddresses at {openaddresses.pin()['commit'][:12]}")
+        jur.sources += found
     release = release or overture_release.release_id()
     loaders = {**LIVE_LOADERS, **(loaders or {})}
     work_dir = work_dir or os.path.join(out_dir, "_work", job.id)
