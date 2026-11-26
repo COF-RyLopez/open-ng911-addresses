@@ -9,7 +9,8 @@ requires-python = ">=3.12"
 dependencies = ["duckdb>=2.0", "pyarrow>=17", "numpy>=2", "manby>=0.2.11"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "pyyaml>=6"]  # pyyaml: scripts/nena_layer_reference.py
+export = ["pyogrio>=0.10"]  # export.py: the NENA GeoPackage
+dev = ["pytest>=8", "ruff>=0.6", "pyyaml>=6", "pyogrio>=0.10"]  # pyyaml: scripts/nena_layer_reference.py
 # portolan-cli (`portolan check`, `portolan push`) is not a dependency: it pins duckdb<1.6 and this project needs
 # 2.0, so install it as a separate tool: `uv tool install portolan-cli` (tests/test_catalog.py uses it when found).
 
