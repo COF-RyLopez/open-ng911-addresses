@@ -44,13 +44,23 @@ def conform_sql(spec):
     return "NULL"
 
 
-def create_agency_addr(c, source, path, conform, has_id):
-    """agency_addr from an NDJSON of features (arcgis.fetch's format) and the layer's conform mapping."""
+def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
+    """agency_addr from an NDJSON of features (arcgis.fetch's format) and the layer's conform mapping.
+
+    Every point the source publishes is kept unless it can't be an addressed site; each drop is counted by
+    reason and site type in agency_dropped (job.json `agency_points_dropped`):
+        no_geometry        the feature has no location (counted by the fetch)
+        not_point          the geometry isn't a point
+        no_street          no street name: a NENA SSAP needs at least the street (a number is optional, so
+                           un-numbered sites such as call boxes on a named road stay)
+        excluded_site_type the registry's exclude_site_types (only for points that aren't addressed sites)
+        duplicate          the same ID, address and location published twice
+    Rows that share an ID but differ (another unit, another point) are all kept; their Address UID is made
+    from the ID plus the address so each stays distinct (`id_shared` in job.json).
+    """
     ids.install(c)
     excluded = ", ".join("'" + t.replace("'", "''") + "'" for t in source.exclude_site_types) or "NULL"
     site_type = conform_sql(conform.get("addrtype"))
-    # an empty list keeps everything (NOT IN (NULL) would keep nothing)
-    keep = f"(site_type IS NULL OR site_type NOT IN ({excluded}))" if source.exclude_site_types else "true"
     sid = f"nullif(trim(p->>'{source.id_field}'), '')" if has_id else "NULL"
     c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS
             SELECT {sid} AS source_id,
@@ -62,29 +72,47 @@ def create_agency_addr(c, source, path, conform, has_id):
                    upper({site_type}) AS site_type,
                    ST_GeomFromGeoJSON(g) AS geom
             FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})""")
-    # Points the registry's exclude_site_types drops (sites that aren't addressed), counted for job.json
-    c.execute(f"""CREATE OR REPLACE TABLE agency_excluded AS
-        SELECT '{source.key}' AS source_key, site_type, count(*) AS n FROM agency_raw
-        WHERE site_type IN ({excluded}) GROUP BY ALL""")
+    c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS SELECT *,
+            CASE WHEN ST_GeometryType(geom) <> 'POINT' THEN 'not_point'
+                 WHEN street IS NULL THEN 'no_street'
+                 WHEN site_type IN ({excluded}) THEN 'excluded_site_type' END AS drop_reason,
+            concat_ws('|', number, upper(street), upper(unit), round(ST_X(geom), 6), round(ST_Y(geom), 6)) AS addr_key
+        FROM agency_raw""")
     c.execute(f"""CREATE OR REPLACE TABLE agency_addr AS
+        WITH k AS (
+            SELECT *, count(DISTINCT addr_key) OVER (PARTITION BY source_id) AS keys_per_id
+            FROM agency_raw WHERE drop_reason IS NULL)
         SELECT '{source.key}' AS source_key, source_id,
-               -- the agency's own ID makes the Address UID (ADR 0002); without one, a UID from the address
-               -- itself (stable only while the address is unedited) until the lineage ledger carries it
-               CASE WHEN source_id IS NOT NULL THEN agency_uid('{source.key}', source_id)
-                    ELSE agency_uid('{source.key}', concat_ws('|', number, upper(street), upper(unit),
-                                    round(ST_X(geom), 6), round(ST_Y(geom), 6))) END AS address_uid,
+               -- the agency's own ID makes the Address UID (ADR 0002); an ID shared by different addresses gets
+               -- the address added; no ID, a UID from the address itself (stable only while the address is
+               -- unedited) until the lineage ledger carries it
+               CASE WHEN source_id IS NOT NULL AND keys_per_id = 1 THEN agency_uid('{source.key}', source_id)
+                    WHEN source_id IS NOT NULL THEN agency_uid('{source.key}', source_id || '|' || addr_key)
+                    ELSE agency_uid('{source.key}', addr_key) END AS address_uid,
+               source_id IS NOT NULL AND keys_per_id > 1 AS id_shared,
                number, street, unit, city, postcode, site_type, geom
-        FROM agency_raw
-        WHERE number IS NOT NULL AND street IS NOT NULL AND ST_GeometryType(geom) = 'POINT'
-          AND {keep}""")
-    c.execute("DROP TABLE agency_raw")
-    for key, site_type, n in c.execute("SELECT * FROM agency_excluded ORDER BY n DESC").fetchall():
-        print(f"  [openaddresses] {key}: dropped {n:,} {site_type} points (exclude_site_types)")
-    n, distinct_ids = c.execute("SELECT count(*), count(DISTINCT address_uid) FROM agency_addr").fetchall()[0]
-    if n != distinct_ids:
-        print(f"  [openaddresses] {source.key}: {n - distinct_ids:,} rows share an Address UID; keeping one each")
+        FROM k""")
+    dupes = c.execute("SELECT count(*) - count(DISTINCT address_uid) FROM agency_addr").fetchall()[0][0]
+    c.execute(f"""CREATE OR REPLACE TABLE agency_dropped AS
+        SELECT '{source.key}' AS source_key, drop_reason AS reason, site_type, count(*) AS n
+        FROM agency_raw WHERE drop_reason IS NOT NULL GROUP BY ALL""")
+    if dupes:
+        c.execute(f"""INSERT INTO agency_dropped
+            SELECT '{source.key}', 'duplicate', site_type, count(*) FROM (SELECT site_type FROM agency_addr
+                QUALIFY row_number() OVER (PARTITION BY address_uid ORDER BY source_id) > 1) GROUP BY ALL""")
         c.execute("CREATE OR REPLACE TABLE agency_addr AS SELECT * FROM agency_addr "
                   "QUALIFY row_number() OVER (PARTITION BY address_uid ORDER BY source_id) = 1")
+    if no_geometry:
+        c.execute(f"INSERT INTO agency_dropped VALUES ('{source.key}', 'no_geometry', NULL, {int(no_geometry)})")
+    # kept for the build summary's excluded-site-type view
+    c.execute("CREATE OR REPLACE TABLE agency_excluded AS SELECT source_key, site_type, n FROM agency_dropped "
+              "WHERE reason = 'excluded_site_type'")
+    c.execute("DROP TABLE agency_raw")
+    for key, reason, st, n in c.execute("SELECT * FROM agency_dropped ORDER BY n DESC").fetchall():
+        print(f"  [openaddresses] {key}: dropped {n:,} points, {reason}" + (f" ({st})" if st else ""))
+    shared = c.execute("SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0]
+    if shared:
+        print(f"  [openaddresses] {source.key}: {shared:,} points share an ID with another address; all kept")
     print(f"  [openaddresses] {source.key}: {c.execute('SELECT count(*) FROM agency_addr').fetchall()[0][0]:,} address points")
 
 
@@ -100,5 +128,5 @@ def load_agency_addr(c, jurisdiction, work_dir):
     if s.id_field and not has_id:
         print(f"  [WARNING] {s.key}: id_field {s.id_field!r} isn't in the layer ({sorted(fields)}); minting UIDs")
     path = os.path.join(work_dir, f"{s.key}.ndjson")
-    arcgis.fetch(entry["data"], path)
-    create_agency_addr(c, s, path, entry.get("conform", {}), has_id)
+    n, total = arcgis.fetch(entry["data"], path)
+    create_agency_addr(c, s, path, entry.get("conform", {}), has_id, no_geometry=total - n)

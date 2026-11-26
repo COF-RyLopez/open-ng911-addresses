@@ -33,8 +33,12 @@ def prepare(c):
     """Parsed streets, keys and Package GEOIDs on both address tables."""
     c.execute("""CREATE OR REPLACE TABLE agency_addr AS
         SELECT a.* EXCLUDE (geoid), p.geoid FROM (SELECT *, NULL::VARCHAR AS geoid FROM agency_addr) a
-        JOIN package_area p ON ST_Intersects(p.geom, a.geom)
+        LEFT JOIN package_area p ON ST_Intersects(p.geom, a.geom)
         QUALIFY row_number() OVER (PARTITION BY a.address_uid ORDER BY p.geoid) = 1""")
+    # a point in no Package (off the state's TIGER counties: bad coordinates, or across the line) is counted
+    c.execute("""INSERT INTO agency_dropped SELECT source_key, 'outside_packages', site_type, count(*)
+                 FROM agency_addr WHERE geoid IS NULL GROUP BY ALL""")
+    c.execute("DELETE FROM agency_addr WHERE geoid IS NULL")
     for t in ("agency_addr", "overture_addr"):
         c.execute(f"""CREATE OR REPLACE TABLE {t} AS
             SELECT *, parsed_street_key(ps) AS skey FROM (SELECT *, parse_street(street) AS ps FROM {t})""")
@@ -138,6 +142,13 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "gap_fill_candidates": sum(s["gap_fill_candidates"] for s in summaries),
                "agency_points_excluded": {t: n for _, t, n in c.execute(
                    "SELECT * FROM agency_excluded ORDER BY n DESC").fetchall()},
+               "agency_points_dropped": dict(c.execute(
+                   "SELECT reason, sum(n)::BIGINT FROM agency_dropped GROUP BY 1 ORDER BY 2 DESC").fetchall()),
+               "agency_points_dropped_by_site_type": {f"{r}: {t}": n for r, t, n in c.execute(
+                   "SELECT reason, site_type, n FROM agency_dropped WHERE site_type IS NOT NULL "
+                   "ORDER BY n DESC LIMIT 25").fetchall()},
+               "agency_points_id_shared": c.execute(
+                   "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
                "overture_link_methods": links, "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")} for s in summaries}}
