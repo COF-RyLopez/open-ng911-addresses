@@ -3,26 +3,39 @@
   "published": [
     {
       "package": "ca-pe-1102",
-      "collection": "ca/ca-pe/ca-pe-1102/collection.json"
+      "collection": "ca/ca-pe/ca-pe-1102/collection.json",
+      "withheld_layers": {
+        "psap_polygon": [
+          "source_license:ca-pe-esz-psap=unknown"
+        ],
+        "police_polygon": [
+          "source_license:ca-pe-esz-police=unknown"
+        ],
+        "fire_polygon": [
+          "source_license:ca-pe-esz-fire=unknown"
+        ],
+        "ems_polygon": [
+          "source_license:ca-pe-esz-ems=unknown"
+        ]
+      }
     },
     {
       "package": "ca-pe-1103",
-      "collection": "ca/ca-pe/ca-pe-1103/collection.json"
+      "collection": "ca/ca-pe/ca-pe-1103/collection.json",
+      "withheld_layers": {}
     }
   ],
   "withheld": [
     {
       "package": "us-vt-50001",
       "reasons": [
-        "source_license:us-vt-e911-esite=unknown",
-        "source_license:us-vt-e911-rds=unknown"
+        "source_license:us-vt-e911-esite=unknown"
       ]
     },
     {
       "package": "us-vt-50003",
       "reasons": [
-        "source_license:us-vt-e911-esite=unknown",
-        "source_license:us-vt-e911-rds=unknown"
+        "source_license:us-vt-e911-esite=unknown"
       ]
     }
   ]

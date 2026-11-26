@@ -60,6 +60,15 @@ LAYERS = (
      "IDs of the Overture road segments along it. No Overture geometry or names (ODbL) are in it.")),
     ("a2_polygon", "A2Polygon", "The county or census division the Package covers."),
     ("a3_polygon", "A3Polygon", "The municipalities in the Package, clipped to it."),
+    # layers.py: written only where a Source publishes them (a missing file gets no Item)
+    ("psap_polygon", "PsapPolygon", "PSAP service boundaries from the Source agency, cut to the Package."),
+    ("police_polygon", "PolicePolygon", "Law enforcement service boundaries, cut to the Package."),
+    ("fire_polygon", "FirePolygon", "Fire service boundaries, cut to the Package."),
+    ("ems_polygon", "EmsPolygon", "EMS service boundaries, cut to the Package."),
+    ("provisioning_polygon", "ProvisioningPolygon",
+     "The area this Package's data is provisioned for: the Source's provisioning boundary, else the Package area."),
+    ("distance_marker_point", "DistanceMarkerPoint", "Distance markers (mile or kilometre posts) along roads."),
+    ("location_marker_point", "LocationMarkerPoint", "Location markers from the Source agency."),
 )
 CROSSWALK = "road_gers_crosswalk"
 
@@ -133,21 +142,34 @@ def open_license(name):
     return n.startswith(OPEN_LICENSE_PREFIXES)
 
 
+def layer_reasons(m):
+    """{layer file stem: why that layer can't go public} for every layer with a source that isn't open. The
+    address points answer for their address Sources and the Overture licences of their Gap-fill candidates; the
+    roads for the Sources the Package's roads came from; every other layer for its own Sources (layers.py). The
+    boundaries are Census / StatCan, open by construction (registry.COUNTRIES)."""
+    def closed(sources):
+        return [f"source_license:{s.get('key') or s.get('source_key')}={s['license_status']}"
+                for s in sources if "license_status" in s and s["license_status"] != "open"]
+    out = {"site_structure_address_point":
+           closed(s for s in m["sources"] if s["layer"] == "addresses")
+           + [f"gap_fill_license:{n}" for n in m["gap_fill_licenses"] if not open_license(n)],
+           "road_centerline": closed(m["road_centerline"]["sources"])}
+    for stem, layer, _ in LAYERS:
+        if layer in m.get("nena_layers", {}):
+            out[stem] = closed(m["nena_layers"][layer]["sources"])
+    return {k: sorted(set(v), key=v.index) for k, v in out.items() if v}
+
+
 def withheld_reasons(m, job_summary, require_opt_in=False):
-    """Why a Package can't go public; empty when it can. require_opt_in: also hold back a Package whose 911
-    authority hasn't opted in (ADR 0003 before its 2026-11-26 amendment); off by default."""
-    reasons = []
-    if job_summary.get("gate_failures"):
-        reasons.append("job_gate_failed")
-    for s in m["sources"] + m["road_centerline"]["sources"]:
-        if s["license_status"] != "open":
-            reasons.append(f"source_license:{s.get('key') or s.get('source_key')}={s['license_status']}")
-    for name in m["gap_fill_licenses"]:
-        if not open_license(name):
-            reasons.append(f"gap_fill_license:{name}")
+    """Why a Package can't go public at all; empty when it can. Its address points are its core: if they can't go,
+    nothing does. Any other layer with a closed source is left out of a published Package on its own
+    (layer_reasons). require_opt_in: also hold back a Package whose 911 authority hasn't opted in (ADR 0003
+    before its 2026-11-26 amendment); off by default."""
+    reasons = ["job_gate_failed"] if job_summary.get("gate_failures") else []
+    reasons += layer_reasons(m).get("site_structure_address_point", [])
     if require_opt_in and not m["opted_in"]:
         reasons.append("not_opted_in")
-    return sorted(set(reasons), key=reasons.index)
+    return reasons
 
 
 # ---- files -------------------------------------------------------------------------------------------------
@@ -336,9 +358,11 @@ def write_package(c, m, job, built, src_dir, coll_dir):
     """One published Package: its Collection, an Item per non-empty NENA layer, and the metadata assets.
     Returns the collection's bbox."""
     key, country = m["package"], job.country
-    items, extents = [], []
+    items, extents, held = [], [], layer_reasons(m)
     for stem, layer, what in LAYERS:
         src = os.path.join(src_dir, f"{stem}.parquet")
+        if not os.path.exists(src) or stem in held:
+            continue  # not built here, or a closed source: left out (ng911:withheld_layers says which)
         b = bbox(c, [src])
         if b is None:
             continue  # an empty layer (no centerlines here yet) gets no Item; the manifest says why
@@ -366,16 +390,17 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         items.append((item_id, f"{m['name']}: {layer}"))
     for name in ("manifest.json", "domains.json"):
         place(os.path.join(src_dir, name), os.path.join(coll_dir, name))
-    thumbnail(c, [(os.path.join(src_dir, f"{s}.parquet"), rgb) for s, rgb in
-                  (("a3_polygon", (200, 200, 200)), ("a2_polygon", (60, 60, 60)), ("road_centerline", (230, 140, 40)),
-                   ("site_structure_address_point", (30, 90, 200)))], os.path.join(coll_dir, "thumbnail.png"))
+    shown = [s for s in ("a2_polygon", "a3_polygon", "road_centerline", "site_structure_address_point")
+             if s not in held and os.path.exists(os.path.join(src_dir, f"{s}.parquet"))]
+    colours = {"a2_polygon": ((60, 60, 60), "fill", "#3c3c3c"), "a3_polygon": ((200, 200, 200), "line", "#a0a0a0"),
+               "road_centerline": ((230, 140, 40), "line", "#e68c28"),
+               "site_structure_address_point": ((30, 90, 200), "circle", "#1e5ac8")}
+    thumbnail(c, [(os.path.join(src_dir, f"{s}.parquet"), colours[s][0]) for s in shown],
+              os.path.join(coll_dir, "thumbnail.png"))
     ext = [min(e[0] for e in extents), min(e[1] for e in extents), max(e[2] for e in extents),
            max(e[3] for e in extents)]
     vis_links, vis_assets = visual(c, coll_dir, key, [
-        (s, os.path.join(src_dir, f"{s}.parquet"), kind, col) for s, kind, col in (
-            ("a2_polygon", "fill", "#3c3c3c"), ("a3_polygon", "line", "#a0a0a0"),
-            ("road_centerline", "line", "#e68c28"), ("site_structure_address_point", "circle", "#1e5ac8"))],
-        m["name"])
+        (s, os.path.join(src_dir, f"{s}.parquet"), colours[s][1], colours[s][2]) for s in shown], m["name"])
     rcl = m["road_centerline"]
     title = f"{m['name']}, {job.name}: NG9-1-1 Package" + ("" if m["opted_in"] else " (unclaimed)")
     desc = (f"The NENA NG9-1-1 GIS dataset for {m['name']} ({job.name}), built from the Source agencies' own "
@@ -386,6 +411,10 @@ def write_package(c, m, job, built, src_dir, coll_dir):
                f" Unclaimed: built from open government sources, not issued or checked by "
                f"{m['recipient'] or 'a 911 authority'}; its NGUIDs use the placeholder domain {m['nguid_domain']} "
                "until the authority opts in."))
+    if held:
+        names = {s: n for s, n, _ in LAYERS}
+        desc += (" Left out because a source's licence isn't open yet: "
+                 + ", ".join(names[s] for s in held) + " (ng911:withheld_layers says which source).")
     coll = {
         "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE, WEB_MAP_LINKS],
         "id": key,
@@ -400,7 +429,8 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         "ng911:overture_release": m["overture_release"], "ng911:records": m["records"],
         "ng911:gap_fill_candidates": m["gap_fill_candidates"], "ng911:record_gers_coverage": m["record_gers_coverage"],
         "ng911:road_segments": rcl["rows"], "ng911:road_gers_coverage": rcl["gers_coverage"],
-        "ng911:road_source": rcl["road_source"],
+        "ng911:road_source": rcl["road_source"] if "road_centerline" not in held else None,
+        "ng911:withheld_layers": held,
         "links": nav(3) + [{"rel": "item", "href": f"./{i}/{i}.json", "type": "application/geo+json", "title": t}
                            for i, t in items] + vis_links + license_links(m) + via_links(m) + doc_links(),
         "assets": {
@@ -535,9 +565,10 @@ def build(release, out_dir="data/output", catalog_dir="data/catalog", registry_d
             if not reasons:
                 coll_dir = os.path.join(pub, job.country.lower(), job.id, m["package"])
                 ext = write_package(c, m, job, summary["built"], src, coll_dir)
+                held = layer_reasons(m)
                 tree.setdefault(job.country, {}).setdefault(job.id, []).append((m["package"], m["name"], ext))
                 href = f"{job.country.lower()}/{job.id}/{m['package']}/collection.json"
-                report["published"].append({"package": m["package"], "collection": href})
+                report["published"].append({"package": m["package"], "collection": href, "withheld_layers": held})
             else:
                 report["withheld"].append({"package": m["package"], "reasons": reasons})
             cards.append((m["package"], m["name"], m["job"], job.country, m["recipient"], m["opted_in"], not reasons,

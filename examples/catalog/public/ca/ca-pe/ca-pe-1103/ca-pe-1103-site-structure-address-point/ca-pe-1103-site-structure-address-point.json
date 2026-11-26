@@ -43,7 +43,7 @@
   "properties": {
     "title": "Prince: SiteStructureAddressPoint",
     "description": "Every addressed site the Source agency publishes (Records), plus Overture addresses no Record matched (Gap-fill candidates, status = 'gap_fill_candidate').",
-    "datetime": "2026-11-26T20:26:29Z",
+    "datetime": "2026-11-26T20:34:45Z",
     "ng911:layer": "SiteStructureAddressPoint",
     "table:row_count": 2,
     "table:primary_geometry": "geom",
@@ -109,6 +109,16 @@
         "description": "When the build last wrote or changed the row (UTC)"
       },
       {
+        "name": "effective",
+        "type": "varchar",
+        "description": "When the boundary takes effect; empty when the source gives no date"
+      },
+      {
+        "name": "expire",
+        "type": "varchar",
+        "description": "When the boundary stops applying; empty when the source gives no date"
+      },
+      {
         "name": "nguid",
         "type": "varchar",
         "description": "NENA globally unique ID, built from the row's own UID under discrpagid's domain (never a GERS ID)"
@@ -129,9 +139,25 @@
         "description": "County or census division name"
       },
       {
+        "name": "addcode",
+        "type": "varchar"
+      },
+      {
         "name": "a3",
         "type": "varchar",
         "description": "Municipality name, or 'Unincorporated' outside every municipality"
+      },
+      {
+        "name": "a4",
+        "type": "varchar"
+      },
+      {
+        "name": "a5",
+        "type": "varchar"
+      },
+      {
+        "name": "addnum_pre",
+        "type": "varchar"
       },
       {
         "name": "add_number",
@@ -144,6 +170,18 @@
         "description": "Address number suffix (e.g. 'B' in 30B)"
       },
       {
+        "name": "addnum_cmp",
+        "type": "varchar"
+      },
+      {
+        "name": "distmarker",
+        "type": "varchar"
+      },
+      {
+        "name": "st_premod",
+        "type": "varchar"
+      },
+      {
         "name": "st_predir",
         "type": "varchar",
         "description": "Street name pre-directional, NENA registry word (e.g. North)"
@@ -152,6 +190,10 @@
         "name": "st_pretyp",
         "type": "varchar",
         "description": "Street name pre-type, NENA registry word (e.g. State Route; Rue in Canada)"
+      },
+      {
+        "name": "st_presep",
+        "type": "varchar"
       },
       {
         "name": "st_name",
@@ -169,9 +211,40 @@
         "description": "Street name post-directional, NENA registry word"
       },
       {
-        "name": "unit",
-        "type": "varchar",
-        "description": "Unit, suite or apartment"
+        "name": "st_posmod",
+        "type": "varchar"
+      },
+      {
+        "name": "dir_travel",
+        "type": "varchar"
+      },
+      {
+        "name": "lst_predir",
+        "type": "varchar"
+      },
+      {
+        "name": "lst_name",
+        "type": "varchar"
+      },
+      {
+        "name": "lst_typ",
+        "type": "varchar"
+      },
+      {
+        "name": "lst_posdir",
+        "type": "varchar"
+      },
+      {
+        "name": "esn",
+        "type": "varchar"
+      },
+      {
+        "name": "msagcomm",
+        "type": "varchar"
+      },
+      {
+        "name": "lcountyid",
+        "type": "varchar"
       },
       {
         "name": "post_comm",
@@ -184,9 +257,90 @@
         "description": "Postal code or ZIP code"
       },
       {
+        "name": "site",
+        "type": "varchar"
+      },
+      {
+        "name": "subsite",
+        "type": "varchar"
+      },
+      {
+        "name": "structure",
+        "type": "varchar"
+      },
+      {
+        "name": "floor",
+        "type": "varchar"
+      },
+      {
+        "name": "floorindex",
+        "type": "integer"
+      },
+      {
+        "name": "wing",
+        "type": "varchar"
+      },
+      {
+        "name": "unit",
+        "type": "varchar",
+        "description": "Unit, suite or apartment"
+      },
+      {
+        "name": "section",
+        "type": "varchar"
+      },
+      {
+        "name": "row",
+        "type": "varchar"
+      },
+      {
+        "name": "room",
+        "type": "varchar"
+      },
+      {
+        "name": "seat",
+        "type": "varchar"
+      },
+      {
+        "name": "locmarker",
+        "type": "varchar"
+      },
+      {
+        "name": "addtl_loc",
+        "type": "varchar"
+      },
+      {
+        "name": "adddatauri",
+        "type": "varchar"
+      },
+      {
+        "name": "place_type",
+        "type": "varchar"
+      },
+      {
         "name": "placement",
         "type": "varchar",
         "description": "How the point was placed on the site; 'Unknown' where the source doesn't say"
+      },
+      {
+        "name": "longitude",
+        "type": "double"
+      },
+      {
+        "name": "latitude",
+        "type": "double"
+      },
+      {
+        "name": "elevation",
+        "type": "double"
+      },
+      {
+        "name": "altitude",
+        "type": "double"
+      },
+      {
+        "name": "height",
+        "type": "double"
       },
       {
         "name": "geom",
@@ -225,8 +379,8 @@
       ],
       "title": "SiteStructureAddressPoint GeoParquet",
       "description": "Every addressed site the Source agency publishes (Records), plus Overture addresses no Record matched (Gap-fill candidates, status = 'gap_fill_candidate').",
-      "file:size": 5009,
-      "file:checksum": "12205bbba18a0bd31219858c7cd7f97774fe1601cf50d29634a84837e704add687ff"
+      "file:size": 8758,
+      "file:checksum": "12208f76d1a9a2176b1313c3deacedf418d6fdb7ceb8cf7bad46e0154b81bb2b74ca"
     }
   }
 }

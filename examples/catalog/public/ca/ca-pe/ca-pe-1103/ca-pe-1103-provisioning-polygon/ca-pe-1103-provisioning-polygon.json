@@ -1,0 +1,137 @@
+{
+  "type": "Feature",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
+  "id": "ca-pe-1103-provisioning-polygon",
+  "collection": "ca-pe-1103",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -64.2,
+          46.4
+        ],
+        [
+          -63.6,
+          46.4
+        ],
+        [
+          -63.6,
+          46.9
+        ],
+        [
+          -64.2,
+          46.9
+        ],
+        [
+          -64.2,
+          46.4
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -64.2,
+    46.4,
+    -63.6,
+    46.9
+  ],
+  "properties": {
+    "title": "Prince: ProvisioningPolygon",
+    "description": "The area this Package's data is provisioned for: the Source's provisioning boundary, else the Package area.",
+    "datetime": "2026-11-26T20:34:45Z",
+    "ng911:layer": "ProvisioningPolygon",
+    "table:row_count": 1,
+    "table:primary_geometry": "geom",
+    "table:columns": [
+      {
+        "name": "uid",
+        "type": "varchar",
+        "description": "The project's stable ID: the Address UID for an address point, the segment UID for a road"
+      },
+      {
+        "name": "source",
+        "type": "varchar",
+        "description": "Source key: the registry's Source agency layer, or 'overture' for a Gap-fill candidate"
+      },
+      {
+        "name": "source_id",
+        "type": "varchar",
+        "description": "The row's own ID in its source"
+      },
+      {
+        "name": "source_license",
+        "type": "varchar",
+        "description": "Licence of the row's source: the registry's status for agency data, Overture's per-source licence for a Gap-fill candidate"
+      },
+      {
+        "name": "discrpagid",
+        "type": "varchar",
+        "description": "Agency responsible for the row: the NGUID domain, a .invalid placeholder until the 911 authority opts in"
+      },
+      {
+        "name": "dateupdate",
+        "type": "varchar",
+        "description": "When the build last wrote or changed the row (UTC)"
+      },
+      {
+        "name": "effective",
+        "type": "varchar",
+        "description": "When the boundary takes effect; empty when the source gives no date"
+      },
+      {
+        "name": "expire",
+        "type": "varchar",
+        "description": "When the boundary stops applying; empty when the source gives no date"
+      },
+      {
+        "name": "nguid",
+        "type": "varchar",
+        "description": "NENA globally unique ID, built from the row's own UID under discrpagid's domain (never a GERS ID)"
+      },
+      {
+        "name": "geom",
+        "type": "geometry",
+        "description": "Geometry, WGS 84 longitude/latitude"
+      },
+      {
+        "name": "release",
+        "type": "varchar"
+      }
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {
+    "provisioning_polygon": {
+      "href": "./provisioning_polygon.parquet",
+      "type": "application/vnd.apache.parquet",
+      "roles": [
+        "data"
+      ],
+      "title": "ProvisioningPolygon GeoParquet",
+      "description": "The area this Package's data is provisioned for: the Source's provisioning boundary, else the Package area.",
+      "file:size": 2370,
+      "file:checksum": "122015e542cc460db9ca2364bb6602613da2d3ac7de9f59cf38af5e0fb202bd01fc6"
+    }
+  }
+}

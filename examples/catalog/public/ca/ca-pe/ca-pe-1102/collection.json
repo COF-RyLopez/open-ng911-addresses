@@ -9,9 +9,9 @@
   ],
   "id": "ca-pe-1102",
   "title": "Queens, Prince Edward Island: NG9-1-1 Package (unclaimed)",
-  "description": "The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 1 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1102.unclaimed.invalid until the authority opts in.",
+  "description": "The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 1 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1102.unclaimed.invalid until the authority opts in. Left out because a source's licence isn't open yet: PsapPolygon, PolicePolygon, FirePolygon, EmsPolygon (ng911:withheld_layers says which source).",
   "license": "other",
-  "updated": "2026-11-26T20:26:29Z",
+  "updated": "2026-11-26T20:34:45Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -24,6 +24,20 @@
   "providers": [
     {
       "name": "Government of Prince Edward Island, Civic Addressing",
+      "roles": [
+        "producer",
+        "licensor"
+      ]
+    },
+    {
+      "name": "Government of Prince Edward Island (road centreline)",
+      "roles": [
+        "producer",
+        "licensor"
+      ]
+    },
+    {
+      "name": "Prince Edward Island 911 Administration (Emergency Service Zones)",
       "roles": [
         "producer",
         "licensor"
@@ -67,8 +81,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T20:26:29Z",
-          "2026-11-26T20:26:29Z"
+          "2026-11-26T20:34:45Z",
+          "2026-11-26T20:34:45Z"
         ]
       ]
     }
@@ -87,6 +101,20 @@
   "ng911:road_segments": 0,
   "ng911:road_gers_coverage": null,
   "ng911:road_source": null,
+  "ng911:withheld_layers": {
+    "psap_polygon": [
+      "source_license:ca-pe-esz-psap=unknown"
+    ],
+    "police_polygon": [
+      "source_license:ca-pe-esz-police=unknown"
+    ],
+    "fire_polygon": [
+      "source_license:ca-pe-esz-fire=unknown"
+    ],
+    "ems_polygon": [
+      "source_license:ca-pe-esz-ems=unknown"
+    ]
+  },
   "links": [
     {
       "rel": "root",
@@ -115,6 +143,12 @@
       "href": "./ca-pe-1102-a3-polygon/ca-pe-1102-a3-polygon.json",
       "type": "application/geo+json",
       "title": "Queens: A3Polygon"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-provisioning-polygon/ca-pe-1102-provisioning-polygon.json",
+      "type": "application/geo+json",
+      "title": "Queens: ProvisioningPolygon"
     },
     {
       "rel": "pmtiles",
@@ -146,6 +180,12 @@
       "href": "https://github.com/openaddresses/openaddresses/blob/master/sources/ca/pe/province.json"
     },
     {
+      "rel": "via",
+      "type": "text/html",
+      "title": "Source: Government of Prince Edward Island (road centreline) (centerlines)",
+      "href": "https://github.com/openaddresses/openaddresses/blob/master/sources/ca/pe/province.json"
+    },
+    {
       "rel": "agents",
       "href": "./AGENTS.md",
       "type": "text/markdown",
@@ -167,8 +207,8 @@
       ],
       "title": "Package manifest",
       "description": "Counts, field fill, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 5324,
-      "file:checksum": "1220a40a76b50692f6c0e502d7b5e67175039cfc76a643bc3821138b7be489ea4028"
+      "file:size": 48757,
+      "file:checksum": "122029e0ccf771749d2c940ce48cd396c4ecb0479c4718117723b19a0711e31333f9"
     },
     "domains": {
       "href": "./domains.json",
@@ -178,8 +218,8 @@
       ],
       "title": "Value domains",
       "description": "The value domains the layers use (CLDXF-CA).",
-      "file:size": 10486,
-      "file:checksum": "122055f26b840a9a1a750b1db4bbdb05e64549c8b4746769a780429620421beda850"
+      "file:size": 14112,
+      "file:checksum": "122085f0ccfdca57ce03ebe48e5a8ab13f9a86ada46dac591714d7c51960d654f681"
     },
     "thumbnail": {
       "href": "./thumbnail.png",
@@ -200,8 +240,8 @@
       ],
       "title": "Vector tiles",
       "description": "PMTiles of a2_polygon, a3_polygon, site_structure_address_point for web maps, made with manby.",
-      "file:size": 5927,
-      "file:checksum": "1220ba468048e9c8f1177b1d507cb1d1df81ae1d51993a79493a133f706383435ffd"
+      "file:size": 6257,
+      "file:checksum": "122007d06ccdb9e82ae8bf3498aec44b880338b5b438114ac83fe57445f191aa66f6"
     },
     "style-default": {
       "href": "./styles/default.json",

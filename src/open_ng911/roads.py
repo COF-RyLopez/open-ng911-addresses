@@ -23,7 +23,7 @@ and a `road_centerline` section in manifest.json naming every road source with i
 import math
 import os
 
-from . import db, nena
+from . import coverage, db, fieldmap, nena
 
 ROAD_MATCH_M = 20.0  # how far an Overture segment may sit from the government line and still run along it
 MAX_ANGLE = 30.0     # degrees between the two shared stretches: more is a road crossing, not running along
@@ -118,35 +118,76 @@ def _parity(f, t):
             f"WHEN coalesce({f}, {t}) % 2 = 0 AND coalesce({t}, {f}) % 2 = 0 THEN 'E' ELSE 'B' END")
 
 
-def assemble_rcl(c, job, updated):
-    c.execute(f"""CREATE OR REPLACE TABLE rcl AS
-        WITH x AS (SELECT *, nena_type_word(ps.type) AS postyp FROM (SELECT *, parse_street(street) AS ps FROM road_seg)),
-        y AS (SELECT *, nena_pretype_raw(ps.name, postyp) AS pre_raw FROM x)
+RCL = "RoadCenterLine"
+# How the pipeline fills a RoadCenterline field no Source maps (the coverage report's `derived`)
+RCL_DERIVED = {
+    "discrpagid": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+    "dateupdate": "build time, where the Source maps no edit date",
+    "rcl_nguid": "segment UID under the Package's domain (ADR 0002)",
+    **{f: "OpenAddresses centerline conform / TIGER ADDRFEAT" for f in (
+        "fromaddr_l", "toaddr_l", "fromaddr_r", "toaddr_r", "postcode_l", "postcode_r", "roadclass", "oneway",
+        "speedlimit")},
+    "parity_l": "the address range", "parity_r": "the address range",
+    **{p: "street name, parsed (street.py)" for p in ("st_predir", "st_pretyp", "st_name", "st_postyp", "st_posdir")},
+    "country_l": "the job", "country_r": "the job", "a1_l": "the job", "a1_r": "the job",
+    "a2_l": "the Package (A2Polygon)", "a2_r": "the Package (A2Polygon)",
+}
+
+
+def assemble_rcl(c, job, updated, table="rcl", native=True):
+    """The RoadCenterline layer: every NENA field of the job's country, from the government Source's own field where
+    its registry `nena` table maps one (fieldmap.py), else from the centerline conform, TIGER and the parse.
+    native=False builds it from the OpenAddresses conform alone (the coverage report's `before`)."""
+    country = job.country
+    if native:
+        n_sel = ""
+    else:
+        n_sel = ", " + ", ".join(f"NULL::{fieldmap.SQL_TYPE.get(f['type'], 'VARCHAR')} AS {fieldmap.PREFIX}{n}"
+                                 for n, f in fieldmap.fields(RCL, country).items())
+    ncols = fieldmap.column_names(RCL, country)
+    base = f"SELECT * EXCLUDE ({', '.join(ncols)}){n_sel} FROM road_seg" if not native else "SELECT * FROM road_seg"
+    parsed = {"st_predir": "nena_dir_word(y.ps.predir)", "st_pretyp": "nena_pretype_word(y.pre_raw)",
+              "st_name": "nena_st_name(y.ps.name, y.pre_raw)", "st_postyp": "y.postyp",
+              "st_posdir": "nena_dir_word(y.ps.posdir)"}
+    value = {
+        "discrpagid": "d.domain",
+        "dateupdate": f"coalesce(y.n_dateupdate, '{updated}')",
+        "rcl_nguid": "build_nguid('RCL', y.uid, d.domain)",
+        "fromaddr_l": "coalesce(y.n_fromaddr_l, y.from_l)", "toaddr_l": "coalesce(y.n_toaddr_l, y.to_l)",
+        "fromaddr_r": "coalesce(y.n_fromaddr_r, y.from_r)", "toaddr_r": "coalesce(y.n_toaddr_r, y.to_r)",
+        "parity_l": f"coalesce(y.n_parity_l, {_parity('coalesce(y.n_fromaddr_l, y.from_l)', 'coalesce(y.n_toaddr_l, y.to_l)')})",
+        "parity_r": f"coalesce(y.n_parity_r, {_parity('coalesce(y.n_fromaddr_r, y.from_r)', 'coalesce(y.n_toaddr_r, y.to_r)')})",
+        # ESN and MSAG community come only from the Source's own fields (AGENTS.md): never made up here
+        "country_l": f"'{job.country}'", "country_r": f"'{job.country}'",
+        "a1_l": f"'{job.code}'", "a1_r": f"'{job.code}'", "a2_l": "p.name", "a2_r": "p.name",
+        "postcode_l": "coalesce(y.n_postcode_l, y.zip_l)", "postcode_r": "coalesce(y.n_postcode_r, y.zip_r)",
+        "roadclass": "coalesce(y.n_roadclass, y.road_class)", "oneway": "coalesce(y.n_oneway, y.oneway)",
+        "speedlimit": "coalesce(y.n_speedlimit, y.speed_mph)",
+    }
+    street = dict(zip(fieldmap.STREET_PARTS, fieldmap.native_street("y", parsed)))
+    out = []
+    for f in nena.layer_fields(RCL, country):
+        n = f["name"]
+        out.append(street[n] if n in street else f"{value.get(n, 'y.n_' + n)} AS {n}")
+    c.execute(f"""CREATE OR REPLACE TABLE {table} AS
+        WITH x AS (SELECT *, nena_type_word(ps.type) AS postyp FROM (SELECT *, parse_street(street) AS ps FROM ({base}))),
+        y AS (SELECT *, nena_pretype_raw(ps.name, postyp) AS pre_raw, {fieldmap.npre_raw_sql('x')} FROM x)
         SELECT y.uid, g.gers_id, g.rcl_share AS gers_rcl_share, y.road_source, y.source_key AS source, y.source_id,
                m.license_status AS source_license,
-               d.domain AS discrpagid,
-               '{updated}' AS dateupdate,
-               build_nguid('RCL', y.uid, d.domain) AS rcl_nguid,
-               y.from_l AS fromaddr_l, y.to_l AS toaddr_l, y.from_r AS fromaddr_r, y.to_r AS toaddr_r,
-               {_parity('y.from_l', 'y.to_l')} AS parity_l,
-               {_parity('y.from_r', 'y.to_r')} AS parity_r,
-               nena_dir_word(y.ps.predir) AS st_predir,
-               nena_pretype_word(y.pre_raw) AS st_pretyp,
-               nena_st_name(y.ps.name, y.pre_raw) AS st_name,
-               y.postyp AS st_postyp,
-               nena_dir_word(y.ps.posdir) AS st_posdir,
-               -- ESN and MSAG community come only from the 911 authority (AGENTS.md): never filled in here
-               '{job.country}' AS country_l, '{job.country}' AS country_r,
-               '{job.code}' AS a1_l, '{job.code}' AS a1_r,
-               p.name AS a2_l, p.name AS a2_r,
-               NULL::VARCHAR AS a3_l, NULL::VARCHAR AS a3_r,  -- per side of a segment: not derived yet (it can run along a town line)
-               y.zip_l AS postcode_l, y.zip_r AS postcode_r,
-               y.road_class AS roadclass, y.oneway, y.speed_mph AS speedlimit,
+               {", ".join(out)},
                y.geoid, y.geom
         FROM y
         JOIN package_domain d USING (geoid) JOIN package_area p USING (geoid)
         LEFT JOIN road_source_meta m USING (source_key)
         LEFT JOIN (SELECT * FROM road_gers WHERE is_primary) g USING (uid)""")
+
+
+def rcl_before(c, job, updated):
+    """{field: fill} of the layer built from the OpenAddresses conform alone."""
+    assemble_rcl(c, job, updated, "rcl_oa_only", native=False)
+    _, fill = coverage.fills(c, "rcl_oa_only", [f["name"] for f in nena.layer_fields(RCL, job.country)])
+    c.execute("DROP TABLE rcl_oa_only")
+    return fill
 
 
 def build(c, job, jurisdiction, work_dir, loaders, updated):
@@ -174,7 +215,7 @@ def gate(c):
 def write_package(c, geoid, d, release, meta):
     """road_centerline.parquet and road_gers_crosswalk.parquet in the Package folder d; returns the manifest's
     `road_centerline` section. meta: the road_source_meta rows (db.rows)."""
-    fill_sql = ", ".join(f"count({f}) AS {f}" for f in nena.RCL_FIELDS)
+    fill_sql = ", ".join(f"count({f}) AS {f}" for f in nena.RCL_FIELDS)  # the summary fields; coverage has all
     db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM rcl WHERE geoid = '{geoid}'",
                         os.path.join(d, "road_centerline.parquet"), "uid")
     c.execute(f"""COPY (SELECT g.uid, r.rcl_nguid, g.gers_id, g.overlap_m, g.rcl_share, g.segment_share,

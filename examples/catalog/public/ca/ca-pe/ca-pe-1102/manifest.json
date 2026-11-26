@@ -10,7 +10,12 @@
       "SiteStructureAddressPoint",
       "A2Polygon",
       "A3Polygon",
-      "RoadCenterline"
+      "RoadCenterline",
+      "PsapPolygon",
+      "PolicePolygon",
+      "FirePolygon",
+      "EmsPolygon",
+      "ProvisioningPolygon"
     ],
     "mandatory_fields": [
       "discrpagid",
@@ -45,22 +50,60 @@
   "field_fill": {
     "discrpagid": 1.0,
     "dateupdate": 1.0,
+    "effective": 0.0,
+    "expire": 0.0,
     "nguid": 1.0,
     "country": 1.0,
     "a1": 1.0,
     "a2": 1.0,
+    "addcode": 0.0,
     "a3": 1.0,
+    "a4": 0.0,
+    "a5": 0.0,
+    "addnum_pre": 0.0,
     "add_number": 1.0,
     "addnum_suf": 0.0,
+    "addnum_cmp": 0.0,
+    "distmarker": 0.0,
+    "st_premod": 0.0,
     "st_predir": 0.0,
     "st_pretyp": 0.0,
+    "st_presep": 0.0,
     "st_name": 1.0,
     "st_postyp": 1.0,
     "st_posdir": 0.0,
-    "unit": 0.3333,
+    "st_posmod": 0.0,
+    "dir_travel": 0.0,
+    "lst_predir": 0.0,
+    "lst_name": 0.0,
+    "lst_typ": 0.0,
+    "lst_posdir": 0.0,
+    "esn": 0.0,
+    "msagcomm": 0.0,
+    "lcountyid": 0.0,
     "post_comm": 1.0,
     "post_code": 0.0,
-    "placement": 1.0
+    "site": 0.0,
+    "subsite": 0.0,
+    "structure": 0.0,
+    "floor": 0.0,
+    "floorindex": 0.0,
+    "wing": 0.0,
+    "unit": 0.3333,
+    "section": 0.0,
+    "row": 0.0,
+    "room": 0.0,
+    "seat": 0.0,
+    "locmarker": 0.0,
+    "addtl_loc": 0.0,
+    "adddatauri": 0.0,
+    "place_type": 0.0,
+    "placement": 1.0,
+    "longitude": 1.0,
+    "latitude": 1.0,
+    "elevation": 0.0,
+    "altitude": 0.0,
+    "height": 0.0
   },
   "sources": [
     {
@@ -69,6 +112,51 @@
       "layer": "addresses",
       "openaddresses": "ca/pe/province",
       "license_status": "open",
+      "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+    },
+    {
+      "key": "ca-pe-road-centreline",
+      "agency": "Government of Prince Edward Island (road centreline)",
+      "layer": "centerlines",
+      "openaddresses": "ca/pe/province",
+      "license_status": "unknown",
+      "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+    },
+    {
+      "key": "ca-pe-esz-psap",
+      "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+      "layer": "psap",
+      "openaddresses": "",
+      "license_status": "unknown",
+      "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+    },
+    {
+      "key": "ca-pe-esz-police",
+      "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+      "layer": "police",
+      "openaddresses": "",
+      "license_status": "unknown",
+      "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+    },
+    {
+      "key": "ca-pe-esz-fire",
+      "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+      "layer": "fire",
+      "openaddresses": "",
+      "license_status": "unknown",
+      "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+    },
+    {
+      "key": "ca-pe-esz-ems",
+      "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+      "layer": "ems",
+      "openaddresses": "",
+      "license_status": "unknown",
       "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
       "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
     }
@@ -133,6 +221,1665 @@
       "overture_release": "2026-11-18.0",
       "theme": "transportation/segment",
       "note": "GERS IDs only; no Overture geometry or names (ODbL) are in this Package"
+    }
+  },
+  "nena_layers": {
+    "PsapPolygon": {
+      "features": 1,
+      "sources": [
+        {
+          "key": "ca-pe-esz-psap",
+          "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+          "license_status": "unknown",
+          "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+        }
+      ]
+    },
+    "PolicePolygon": {
+      "features": 1,
+      "sources": [
+        {
+          "key": "ca-pe-esz-police",
+          "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+          "license_status": "unknown",
+          "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+        }
+      ]
+    },
+    "FirePolygon": {
+      "features": 1,
+      "sources": [
+        {
+          "key": "ca-pe-esz-fire",
+          "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+          "license_status": "unknown",
+          "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+        }
+      ]
+    },
+    "EmsPolygon": {
+      "features": 1,
+      "sources": [
+        {
+          "key": "ca-pe-esz-ems",
+          "agency": "Prince Edward Island 911 Administration (Emergency Service Zones)",
+          "license_status": "unknown",
+          "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+        }
+      ]
+    },
+    "ProvisioningPolygon": {
+      "features": 1,
+      "sources": [
+        {
+          "key": "package-area",
+          "note": "the Package's own area: no provisioning Source covers it"
+        }
+      ]
+    },
+    "DistanceMarkerPoint": {
+      "features": 0,
+      "sources": []
+    },
+    "LocationMarkerPoint": {
+      "features": 0,
+      "sources": []
+    }
+  },
+  "nena_coverage": {
+    "RoadCenterLine": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 55,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "rcl_nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "segment UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "adnumpre_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "adnumpre_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "fromaddr_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "required": true
+        },
+        "toaddr_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "required": true
+        },
+        "fromaddr_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "required": true
+        },
+        "toaddr_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT",
+          "required": true
+        },
+        "parity_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the address range",
+          "required": true
+        },
+        "parity_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the address range",
+          "required": true
+        },
+        "st_premod": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_predir": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "street name, parsed (street.py)"
+        },
+        "st_pretyp": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "street name, parsed (street.py)"
+        },
+        "st_presep": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_name": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "street name, parsed (street.py)",
+          "required": true
+        },
+        "st_postyp": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "street name, parsed (street.py)"
+        },
+        "st_posdir": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "street name, parsed (street.py)"
+        },
+        "st_posmod": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "dir_travel": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_predir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_name": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_typ": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_posdir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "esn_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "esn_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "msagcomm_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "msagcomm_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lcntyid_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lcntyid_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "country_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the job",
+          "required": true
+        },
+        "country_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the job",
+          "required": true
+        },
+        "a1_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the job",
+          "required": true
+        },
+        "a1_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the job",
+          "required": true
+        },
+        "a2_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the Package (A2Polygon)"
+        },
+        "a2_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the Package (A2Polygon)"
+        },
+        "addcode_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addcode_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a4_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a4_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a5_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a5_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "postcode_l": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT"
+        },
+        "postcode_r": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT"
+        },
+        "postcomm_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "postcomm_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "roadclass": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT"
+        },
+        "oneway": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT"
+        },
+        "speedlimit": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses centerline conform / TIGER ADDRFEAT"
+        },
+        "valid_l": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "valid_r": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "SiteStructureAddressPoint": {
+      "built": true,
+      "rows": 3,
+      "filled": 14,
+      "partial": 1,
+      "no_source": 41,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Address UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "country": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the job",
+          "required": true
+        },
+        "a1": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the job",
+          "required": true
+        },
+        "a2": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package (A2Polygon)"
+        },
+        "addcode": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the municipality the point falls in (A3Polygon)"
+        },
+        "a4": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a5": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addnum_pre": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "add_number": {
+          "fill": 1.0,
+          "status": "filled",
+          "source": [
+            "ca-pe-civic-address: STREET_NO"
+          ]
+        },
+        "addnum_suf": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses number"
+        },
+        "addnum_cmp": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "distmarker": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_premod": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_predir": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses street, parsed (street.py)"
+        },
+        "st_pretyp": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses street, parsed (street.py)"
+        },
+        "st_presep": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_name": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "OpenAddresses street, parsed (street.py)"
+        },
+        "st_postyp": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "OpenAddresses street, parsed (street.py)"
+        },
+        "st_posdir": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses street, parsed (street.py)"
+        },
+        "st_posmod": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "dir_travel": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_predir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_name": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_typ": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_posdir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "esn": {
+          "fill": 0.0,
+          "status": "no_source",
+          "source": [
+            "ca-pe-civic-address: ESN"
+          ]
+        },
+        "msagcomm": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lcountyid": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "post_comm": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "OpenAddresses city"
+        },
+        "post_code": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "OpenAddresses postcode"
+        },
+        "site": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "subsite": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "structure": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "floor": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "floorindex": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "wing": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "unit": {
+          "fill": 0.3333,
+          "status": "partial",
+          "source": [
+            "ca-pe-civic-address: APT_NO"
+          ]
+        },
+        "section": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "row": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "room": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "seat": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "locmarker": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addtl_loc": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "adddatauri": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "place_type": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "placement": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "'Unknown' where the Source states no method"
+        },
+        "longitude": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the point"
+        },
+        "latitude": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the point"
+        },
+        "elevation": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "altitude": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "height": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "SiteStructureAddressPolygon": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 49,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "country": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a1": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a2": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addcode": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a4": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a5": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addnum_pre": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "add_number": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addnum_suf": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addnum_cmp": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_premod": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_predir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_pretyp": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_presep": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_name": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_postyp": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_posdir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "st_posmod": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "dir_travel": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_predir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_name": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_typ": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lst_posdir": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "esn": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "msagcomm": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lcountyid": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "post_comm": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "post_code": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "site": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "subsite": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "structure": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "floor": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "floorindex": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "wing": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "unit": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "section": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "row": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "room": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "seat": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addtl_loc": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "adddatauri": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "place_type": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "placement": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "PsapPolygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 5,
+      "partial": 0,
+      "no_source": 6,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "agency_id": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceuri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceurn": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "NENA's URN for the layer (urn:emergency:service:sos.psap)",
+          "required": true
+        },
+        "servicenum": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "avcard_uri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dsplayname": {
+          "fill": 1.0,
+          "status": "filled",
+          "source": [
+            "ca-pe-esz-psap: PSAP"
+          ],
+          "required": true
+        }
+      }
+    },
+    "PolicePolygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 5,
+      "partial": 0,
+      "no_source": 6,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "agency_id": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceuri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceurn": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "NENA's URN for the layer (urn:emergency:service:responder.police)",
+          "required": true
+        },
+        "servicenum": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "avcard_uri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dsplayname": {
+          "fill": 1.0,
+          "status": "filled",
+          "source": [
+            "ca-pe-esz-police: POLICE"
+          ],
+          "required": true
+        }
+      }
+    },
+    "FirePolygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 5,
+      "partial": 0,
+      "no_source": 6,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "agency_id": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceuri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceurn": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "NENA's URN for the layer (urn:emergency:service:responder.fire)",
+          "required": true
+        },
+        "servicenum": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "avcard_uri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dsplayname": {
+          "fill": 1.0,
+          "status": "filled",
+          "source": [
+            "ca-pe-esz-fire: FIRE"
+          ],
+          "required": true
+        }
+      }
+    },
+    "EmsPolygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 5,
+      "partial": 0,
+      "no_source": 6,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "agency_id": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceuri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceurn": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "NENA's URN for the layer (urn:emergency:service:responder.ems)",
+          "required": true
+        },
+        "servicenum": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "avcard_uri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dsplayname": {
+          "fill": 1.0,
+          "status": "filled",
+          "source": [
+            "ca-pe-esz-ems: EMS"
+          ],
+          "required": true
+        }
+      }
+    },
+    "ServiceBoundaryPolygon": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 11,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "agency_id": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceuri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "serviceurn": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "servicenum": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "avcard_uri": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dsplayname": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        }
+      }
+    },
+    "ProvisioningPolygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 3,
+      "partial": 0,
+      "no_source": 2,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        }
+      }
+    },
+    "A1Polygon": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 7,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "country": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a1": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        }
+      }
+    },
+    "A2Polygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 6,
+      "partial": 0,
+      "no_source": 3,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "country": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "a1": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "a2": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "addcode": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "A3Polygon": {
+      "built": true,
+      "rows": 1,
+      "filled": 7,
+      "partial": 0,
+      "no_source": 3,
+      "fields": {
+        "discrpagid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "country": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "a1": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions",
+          "required": true
+        },
+        "a2": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census divisions"
+        },
+        "addcode": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3": {
+          "fill": 1.0,
+          "status": "filled",
+          "derived": "Statistics Canada census subdivisions",
+          "required": true
+        }
+      }
+    },
+    "A4Polygon": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 11,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "country": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a1": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a2": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "addcode": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a4": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        }
+      }
+    },
+    "A5Polygon": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 11,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "effective": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "expire": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "country": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a1": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "a2": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a3": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a4": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "a5": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        }
+      }
+    },
+    "RailroadCenterLine": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 8,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "rlown": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "rlop": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "rlname": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "rmpl": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "rmph": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "HydrologyLine": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 5,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "hs_type": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "hs_name": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "HydrologyPolygon": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 5,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "hp_type": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "hp_name": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "DistanceMarkerPoint": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 9,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "dm_unit": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dm_value": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dm_rte": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dm_type": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "dm_ind": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "dm_label": {
+          "fill": 0.0,
+          "status": "no_source"
+        }
+      }
+    },
+    "LocationMarkerPoint": {
+      "built": false,
+      "rows": 0,
+      "filled": 0,
+      "partial": 0,
+      "no_source": 6,
+      "fields": {
+        "discrpagid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
+          "required": true
+        },
+        "dateupdate": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "build time, where the Source maps no edit date",
+          "required": true
+        },
+        "nguid": {
+          "fill": 0.0,
+          "status": "no_source",
+          "derived": "feature UID under the Package's domain (ADR 0002)",
+          "required": true
+        },
+        "lm_label": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        },
+        "lm_type": {
+          "fill": 0.0,
+          "status": "no_source"
+        },
+        "lm_ind": {
+          "fill": 0.0,
+          "status": "no_source",
+          "required": true
+        }
+      }
     }
   },
   "upstream": {

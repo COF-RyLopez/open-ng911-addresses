@@ -11,7 +11,7 @@
   "title": "Package scorecard",
   "description": "Every Package built for Overture release 2026-11-18.0, 4 in all and 2 published here: counts, GERS coverage, licence and opt-in state, on each county or census division outline. Withheld Packages appear here with their reasons and no address data.",
   "license": "other",
-  "updated": "2026-11-26T20:26:29Z",
+  "updated": "2026-11-26T20:34:45Z",
   "keywords": [
     "NG9-1-1",
     "scorecard",
@@ -216,8 +216,8 @@
       ],
       "title": "Scorecard GeoParquet",
       "description": "One row per Package.",
-      "file:size": 3706,
-      "file:checksum": "122006e07e615b542c401be710665eeb0b609610ff79111294e87e4ab7f61f6f1c51"
+      "file:size": 3696,
+      "file:checksum": "12202cc0296bd39e395d9f436e2c45666e24a83e3ee4b5598d6bb4816da186b4e3d6"
     },
     "thumbnail": {
       "href": "./thumbnail.png",
@@ -238,8 +238,8 @@
       ],
       "title": "Vector tiles",
       "description": "PMTiles of scorecard for web maps, made with manby.",
-      "file:size": 1823,
-      "file:checksum": "12204f0215515d702234f596226d3e712aed19f272f3809393a6ef2c743c490df5d5"
+      "file:size": 1807,
+      "file:checksum": "1220645aec312edc056ab65fc253cf30ca802fcc3e1492e071f2ec8f87cc05b38345"
     },
     "style-default": {
       "href": "./styles/default.json",

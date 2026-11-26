@@ -36,3 +36,114 @@ attribution = "Utah UGRC"
 nad = "not_started"
 overture = "not_started"
 esri_community_maps = "not_applicable"
+
+# NENA fields straight from UGRC's own fields (fieldmap.py). A 2,000-point sample (2026-11-26): AddNum, StreetName,
+# ZipCode and LoadDate on every point; PrefixDir 93%; StreetType 64%; SuffixDir 35%; PtType 94%; PtLocation 80%
+# (mostly 'Unknown'); UnitType 13% and UnitID 17%; LandmarkName 8%; Building 3%. City is the municipality (A3
+# carries it), AddSystem the county address grid (no NENA field). LoadDate is when UGRC last loaded the point.
+[source.nena]
+add_number = "AddNum"
+addnum_suf = "AddNumSuffix"
+st_predir = "PrefixDir"
+st_name = "StreetName"
+st_postyp = "StreetType"
+st_posdir = "SuffixDir"
+unitpretyp = "UnitType"
+unitvalue = "UnitID"
+post_code = "ZipCode"
+site = "LandmarkName"
+structure = "Building"
+dateupdate = "LoadDate"
+
+[source.nena.placement]
+function = "map"
+field = "PtLocation"
+else = ""
+mapping = { "Rooftop" = "Structure", "ROOFTOP" = "Structure", "Parcel Centroid" = "Parcel", "Geocoded" = "Geocoding", "Primary Structure Entrance" = "ExteriorAccess", "Driveway Entrance" = "PropertyAccess", "Unknown" = "Unknown" }
+
+[source.nena.place_type]
+function = "map"
+field = "PtType"
+else = ""
+mapping = { "Residential" = "residence", "Industrial" = "industrial", "Other" = "other", "Unknown" = "unknown" }
+
+# Road centerlines: UGRC's statewide roads (the Utah NG911 road layer, 414,592 segments), already in OpenAddresses
+# (us/ut/statewide centerlines) with no licence recorded: unknown (tracker: us-ut-ugrc-ng911). UNIQUE_ID is the
+# segment's stable ID; the OpenAddresses conform maps none.
+[[source]]
+key = "us-ut-ugrc-roads"
+agency = "Utah Geospatial Resource Center (UGRC), compiled from county road authorities"
+layer = "centerlines"
+covers = "*"
+openaddresses = "us/ut/statewide"
+oa_layer = "state"
+id_field = "UNIQUE_ID"
+license_status = "unknown"
+license_url = ""
+attribution = "Utah UGRC"
+# 2,000-segment sample: PREDIR, NAME, POSTCOMM_L/R, ZIPCODE_L/R and UPDATED on (nearly) every segment, POSTTYPE
+# 47%, POSTDIR 50%, INCMUNI_L 89%; PARITY, ESN, MSAG community, A4/A5 communities and EFFECTIVE are empty there.
+[source.nena]
+dateupdate = "UPDATED"
+effective = "EFFECTIVE"
+expire = "EXPIRE"
+parity_l = "PARITY_L"
+parity_r = "PARITY_R"
+st_predir = "PREDIR"
+st_name = "NAME"
+st_postyp = "POSTTYPE"
+st_posdir = "POSTDIR"
+esn_l = "ESN_L"
+esn_r = "ESN_R"
+msagcomm_l = "MSAGCOMM_L"
+msagcomm_r = "MSAGCOMM_R"
+a3_l = "INCMUNI_L"
+a3_r = "INCMUNI_R"
+a4_l = "UNINCCOM_L"
+a4_r = "UNINCCOM_R"
+a5_l = "NBRHDCOM_L"
+a5_r = "NBRHDCOM_R"
+postcomm_l = "POSTCOMM_L"
+postcomm_r = "POSTCOMM_R"
+
+# Service boundaries: UGRC publishes the Utah 911 Committee's PSAP boundaries and the law enforcement and fire
+# response areas in NENA's own fields (ES_NGUID, DsplayName, ServiceURN ...). Agency_ID, ServiceURI and AVcard_URI
+# are mostly empty there and stay so. The layers carry only an "as is" disclaimer: unknown (tracker:
+# us-ut-ugrc-ng911). Utah's EMS service areas (EMSServiceAreas, last edited 2021, no NENA fields) aren't read yet.
+[[source]]
+key = "us-ut-ugrc-psap"
+agency = "Utah 911 Committee and UGRC (PSAP boundaries)"
+layer = "psap"
+covers = "*"
+id_field = "ES_NGUID"
+endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/UtahPSAP_Boundaries/FeatureServer/0", protocol = "ESRI" }
+license_status = "unknown"
+license_url = ""
+attribution = "Utah 911 Committee, UGRC"
+nena = { dateupdate = "DateUpdate", effective = "Effective", expire = "Expire", agency_id = "Agency_ID", serviceuri = "ServiceURI", serviceurn = "ServiceURN", servicenum = "ServiceNum", avcard_uri = "AVcard_URI", dsplayname = "DsplayName" }
+
+# The law and fire areas are drawn in full detail (one page of them is over 150 MB and fails), so they are read
+# 20 at a time and generalised to about 1 m (`page`, `query`).
+[[source]]
+key = "us-ut-ugrc-law"
+agency = "Utah Department of Public Safety and UGRC (law enforcement boundaries)"
+layer = "police"
+covers = "*"
+id_field = "ES_NGUID"
+endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/LawEnforcementBoundaries/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
+license_status = "unknown"
+license_url = ""
+attribution = "Utah Department of Public Safety, UGRC"
+nena = { dateupdate = "DateUpdate", effective = "Effective", expire = "Expire", agency_id = "Agency_ID", serviceuri = "ServiceURI", serviceurn = "ServiceURN", servicenum = "ServiceNum", avcard_uri = "AVcard_URI", dsplayname = "DsplayName" }
+
+[[source]]
+key = "us-ut-ugrc-fire"
+agency = "Utah Division of Forestry, Fire and State Lands and UGRC (fire response areas)"
+layer = "fire"
+covers = "*"
+id_field = "ES_NGUID"
+endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/FireResponseAreas/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
+license_status = "unknown"
+license_url = ""
+attribution = "Utah FFSL, UGRC"
+nena = { dateupdate = "DateUpdate", effective = "Effective", expire = "Expire", agency_id = "Agency_ID", serviceurn = "ServiceURN", servicenum = "ServiceNum", avcard_uri = "AVcard_URI", dsplayname = "DsplayName" }

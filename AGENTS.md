@@ -21,6 +21,13 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - `sources/` one table each (the table list is in `sources/__init__.py`): boundaries from `tiger.py` or
   `statcan.py`, agency points through the OpenAddresses registry (`openaddresses.py`, `arcgis.py`), government
   roads and TIGER ADDRFEAT (`centerlines.py`), Overture addresses and road-segment IDs (`overture.py`).
+- `fieldmap.py` each Source's own fields into NENA fields: the registry's `[source.nena]` table (a NENA field,
+  lower-cased, to a spec in the OpenAddresses conform language, or `{value = "..."}`), every value checked against
+  the field on the way in, rejections counted. `layers.py` the other NENA layers read from a Source's `endpoint`
+  (PSAP, police, fire, EMS, provisioning with the Package area as fallback, distance and location markers;
+  `dissolve` merges zones by one field). `coverage.py` per layer and field: filled / partial / no_source, the
+  basis (source or derived), and `before` (the OpenAddresses schema alone); `scripts/nena_coverage.py` turns the
+  builds' coverage into `docs/standards/nena-coverage.md` and `registry/remediation/nena_field_gaps.csv`.
 - `boundaries.py` the A2Polygon and A3Polygon layers and every address point's A3 (ADR 0009).
 - `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
 - `upstream.py` where government roads and Overture / TIGER disagree; `odbl_inventory.py` which government
@@ -47,6 +54,12 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   un-numbered sites on a named road all stay. A point is dropped only for a reason `openaddresses.create_agency_addr`
   names (no geometry, not a point, no street, a true duplicate, outside every Package, or the registry's
   `exclude_site_types`), and every drop is counted in job.json `agency_points_dropped`.
+- **Map what the Source publishes, from its own fields.** A jurisdiction's differences are its registry file's
+  `nena` tables, never code. A value that doesn't fit the NENA field is left empty and counted, never guessed.
+  Never mapped (registry.validate refuses them): NGUID, RCL_NGUID and DiscrpAgID (ours until opt-in; the agency's
+  own NGUID goes in as `id_field`) and the fields the boundary layers own (Country, A1-A3, the RCL's sides).
+  Agency_ID, ServiceURI and AVcard_URI are filled only where the Source publishes them. The OpenAddresses conform
+  stays as it is: it feeds the street match and is what we propose upstream.
 - **Records win** (ADR 0001): an agency point is a Record; Overture fills in only as `gap_fill_candidate`.
 - **NGUIDs come from the Address UID, never a GERS ID** (ADR 0002). Changing `ids.NAMESPACE` or the UID
   recipe changes every published NGUID: don't.
@@ -58,7 +71,8 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - **Unclear licences go in the tracker** (`registry/remediation/requests.toml`, `docs/license-remediation.md`),
   never into a guess. Agents don't contact agencies; a person does.
 - **Public catalog** (ADR 0011): a Package's data goes into `catalog/public/` only when every source is
-  `open`, every Gap-fill licence is open (`catalog.open_license`) and the job's gate passed. A Package whose
+  open (address Sources and Gap-fill licences, `catalog.open_license`) and the job's gate passed;
+  any other layer with a closed Source is left out on its own (`catalog.layer_reasons`). A Package whose
   authority hasn't opted in is published as *unclaimed* (placeholder domain, labelled in its title, description
   and AGENTS.md); keep that label prominent and never put a real agency domain on it.
 - **Layer files go through `db.write_geoparquet`** (GeoParquet 2.0, Hilbert order, row groups under 150k) so

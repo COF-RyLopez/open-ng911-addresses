@@ -12,12 +12,12 @@
 key = "us-vt-e911-sites"
 job = "us-vt"
 publisher = "VCGI, for the Vermont Enhanced 9-1-1 Board"
-layers = ["addresses", "centerlines"]
-sources = ["us/vt/statewide (addresses)", "VCGI EmergencyE911_RDS (centerlines, PR #5 oa_entry)"]
+layers = ["addresses", "centerlines", "psap", "police", "fire", "ems"]
+sources = ["us/vt/statewide (addresses)", "VCGI EmergencyE911_RDS (centerlines, PR #5 oa_entry)", "VCGI EmergencyE911_ESZ (emergency service zones: PSAP, law, fire and EMS display names)"]
 issue = "stated_unreviewed"
 found = "The only licence text is VCGI's 2013 warranty and copyright notice, which disclaims warranty but grants no reuse terms we can read as open."
 evidence = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
-ask = "Whether the E911 site points and road centerlines may be redistributed, with attribution, under an open licence (for example CC BY 4.0 or public domain)."
+ask = "Whether the E911 site points, road centerlines and emergency service zones may be redistributed, with attribution, under an open licence (for example CC BY 4.0 or public domain). For the opted-in Package: the Agency_ID, ServiceURI and AVcard_URI of each PSAP, law, fire and EMS agency the zones name (not published)."
 contact = "https://vcgi.vermont.gov/"
 status = "found"
 last_checked = "2026-11-26"
@@ -33,6 +33,75 @@ found = "OpenAddresses records no licence, and the pilot-states work (PR #2) fou
 evidence = "https://gishubdata-ndgov.hub.arcgis.com/datasets/GOcSXpzwBHyk2nog::ndgishub-site-structure-address-points/about"
 ask = "Which licence applies to the statewide NG911 SSAP layer, and whether redistribution with attribution is allowed."
 contact = "https://gishubdata-ndgov.hub.arcgis.com/"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "us-nd-ng911-layers"
+job = "us-nd"
+publisher = "North Dakota GIS Hub (NG9-1-1 road centerlines, fire and law enforcement boundaries, road mile markers)"
+layers = ["centerlines", "fire", "police", "distance_markers"]
+sources = ["NDGISHUBRoadsNG911", "NDGISHUB_Fire_Boundary", "NDGISHUB_Law_Enforcement_Boundary", "NDGISHUB_Road_Mile_Markers"]
+issue = "unstated"
+found = "Each layer carries the State's cartographic disclaimer and no licence (checked 2026-11-26). No PSAP boundary layer was found on the Hub, and its EMS layer is the Health Department's four regions."
+evidence = "https://gishubdata-ndgov.hub.arcgis.com/"
+ask = "Which licence applies to the NG9-1-1 road centerlines and the fire and law enforcement boundaries, and whether PSAP and EMS response-area boundaries are published."
+contact = "https://gishubdata-ndgov.hub.arcgis.com/"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "us-ut-ugrc-ng911"
+job = "us-ut"
+publisher = "Utah Geospatial Resource Center (UGRC), for the Utah 911 Committee and DPS"
+layers = ["centerlines", "psap", "police", "fire", "ems"]
+sources = ["us/ut/statewide (centerlines, UtahRoads)", "UtahPSAP_Boundaries", "LawEnforcementBoundaries", "FireResponseAreas", "EMSServiceAreas (not read: last edited 2021)"]
+issue = "unstated"
+found = "The address points are CC BY 4.0 (OpenAddresses), but the roads record no licence in OpenAddresses and the PSAP, law and fire layers carry only an 'as is' disclaimer (checked 2026-11-26). Utah's EMS service areas were last edited in 2021 and have no NENA fields."
+evidence = "https://opendata.gis.utah.gov/"
+ask = "Whether the CC BY 4.0 terms of the address points also cover the road centerlines and the PSAP, law and fire boundaries, and which layer is the current EMS response-area boundary."
+contact = "https://gis.utah.gov/"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "us-me-e911-roads"
+job = "us-me"
+publisher = "Maine Emergency Services Communication Bureau (Maine E911 roads)"
+layers = ["centerlines"]
+sources = ["Maine_E911_Roads_Feature (Maine_E911_NG_ROADS, 155,257 segments)"]
+issue = "restricted"
+found = "The item states 'Access: RESTRICTED ... For use by Maine ESCB and PSAP partners only' (checked 2026-11-26), unlike the address points, which are public. Not read; Maine Packages use TIGER ADDRFEAT."
+evidence = "https://services1.arcgis.com/RbMX0mRVOFNTdLzd/arcgis/rest/services/Maine_E911_Roads_Feature/FeatureServer"
+ask = "Whether the E911 road centerlines can be shared under the same public terms as the address points, or with the Bureau as the recipient of its own Package only."
+contact = "https://www.maine.gov/mpuc/emergency-services-communication"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "us-me-medot-mileposts"
+job = "us-me"
+publisher = "Maine Department of Transportation (mile marker signs)"
+layers = ["distance_markers"]
+sources = ["Mileposts (GISVIEW.MEDOT.MILE_MARKER_SIGNS)"]
+issue = "unstated"
+found = "No licence on the layer or its item (checked 2026-11-26); last edited 2021."
+ask = "The licence of the mile marker sign inventory, and whether a current one exists."
+contact = "https://www.maine.gov/mdot/"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "ca-pe-ng911-layers"
+job = "ca-pe"
+publisher = "Government of Prince Edward Island (provincial GIS server)"
+layers = ["centerlines", "psap", "police", "fire", "ems"]
+sources = ["road_centerline", "Emergency_Service_Zones", "fire_coverage_zones, fire_district_zones, police_coverage_zones, ambulance_coverage_zones (not read: the zones layer names all four)"]
+issue = "unstated"
+found = "The civic addresses are under the Open Government Licence - PEI, but the road centreline and emergency service zone layers on the same server state no licence themselves (checked 2026-11-26). The road layer has no address ranges."
+evidence = "https://gis.princeedwardisland.ca/server/rest/services"
+ask = "Whether the OGL-PEI also covers the road centreline and emergency service zone layers, and whether a road layer with civic address ranges is published."
+contact = "https://www.princeedwardisland.ca/en/topic/911-administration"
 status = "found"
 last_checked = "2026-11-26"
 

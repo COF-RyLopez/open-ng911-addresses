@@ -51,11 +51,16 @@ def test_pilots_as_registered(builds):
     r = catalog.build(RELEASE, out, cat)
     assert [p["package"] for p in r["published"]] == ["ca-pe-1102", "ca-pe-1103"]
     reasons = {w["package"]: w["reasons"] for w in r["withheld"]}
-    assert reasons == {p: ["source_license:us-vt-e911-esite=unknown", "source_license:us-vt-e911-rds=unknown"]
-                       for p in ("us-vt-50001", "us-vt-50003")}
+    assert reasons == {p: ["source_license:us-vt-e911-esite=unknown"] for p in ("us-vt-50001", "us-vt-50003")}
+    # a published Package leaves out only the layers whose own source is closed: PEI's emergency service zones
+    pe = {p["package"]: p["withheld_layers"] for p in r["published"]}
+    assert pe["ca-pe-1102"] == {s: [f"source_license:ca-pe-esz-{k}=unknown"]
+                                for s, k in (("psap_polygon", "psap"), ("police_polygon", "police"),
+                                             ("fire_polygon", "fire"), ("ems_polygon", "ems"))}
     pub = os.path.join(cat, "public")
     assert sorted(os.listdir(pub)) == ["AGENTS.md", "README.md", "ca", "catalog.json", "scorecard"]
     assert not glob.glob(os.path.join(pub, "**", "*50001*"), recursive=True)
+    assert not glob.glob(os.path.join(pub, "**", "*psap_polygon.parquet"), recursive=True)
     with open(os.path.join(pub, "ca", "ca-pe", "ca-pe-1102", "collection.json")) as f:
         coll = json.load(f)
     assert coll["title"].endswith("(unclaimed)") and "unclaimed" in coll["keywords"]
@@ -87,9 +92,10 @@ def test_published_packages(builds):
     assert coll["providers"][-1]["roles"] == ["processor", "host"] and coll["providers"][-1]["url"]
     assert coll["ng911:nguid_domain"] == "us-vt-50001.unclaimed.invalid" and coll["ng911:records"] == 9
     items = [lk["href"] for lk in coll["links"] if lk["rel"] == "item"]
-    assert [h.split("/")[2] for h in items] == [
-        "us-vt-50001-site-structure-address-point.json", "us-vt-50001-road-centerline.json",
-        "us-vt-50001-a2-polygon.json", "us-vt-50001-a3-polygon.json"]
+    names = [h.split("/")[2] for h in items]
+    assert names[:4] == ["us-vt-50001-site-structure-address-point.json", "us-vt-50001-road-centerline.json",
+                         "us-vt-50001-a2-polygon.json", "us-vt-50001-a3-polygon.json"]
+    assert "us-vt-50001-provisioning-polygon.json" in names  # layers.py's layers are Items too
     with open(os.path.join(pub, "us", "us-vt", "us-vt-50001", "us-vt-50001-road-centerline",
                            "us-vt-50001-road-centerline.json")) as f:
         rcl = json.load(f)

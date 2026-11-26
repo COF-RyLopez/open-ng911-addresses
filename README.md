@@ -32,7 +32,13 @@ or census division:
    segments that run along it. Overture's road geometry and names (ODbL) never go in (ADR 0010).
 8. Count where the government roads and Overture / TIGER disagree, and which government sources could stand in
    for Overture's ODbL themes in each Package (the `upstream` and `odbl_replacement` manifest sections).
-9. Gate: every NENA mandatory field filled and every NGUID unique, on every layer, or the job fails.
+9. Write the other NENA layers a Source agency publishes on its own endpoint: PSAP, police, fire and EMS
+   boundaries (cut to each Package), ProvisioningPolygon (the Package area where no Source covers it), distance
+   and location markers. Every layer carries every NENA field, mapped from the Source's own fields where it
+   publishes them (the registry's `nena` tables) and empty where it doesn't; nothing is invented.
+10. Report NENA field coverage per layer (filled, partial, no source; before and after the Sources' own fields)
+    in job.json and each manifest.
+11. Gate: every NENA mandatory field filled and every NGUID unique, on every layer, or the job fails.
 
 ```
 data/output/release=<overture release>/<job>/
@@ -43,8 +49,11 @@ data/output/release=<overture release>/<job>/
     <geoid>/a3_polygon.parquet   A3Polygon, its municipalities
     <geoid>/road_centerline.parquet                GeoParquet: NENA RCL fields + uid, gers_id, road_source
     <geoid>/road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
+    <geoid>/psap_polygon.parquet, police_polygon.parquet, fire_polygon.parquet, ems_polygon.parquet,
+            provisioning_polygon.parquet, distance_marker_point.parquet, location_marker_point.parquet
+                                 the other NENA layers, only where they have features
     <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date,
-                                 upstream counts, ODbL replacement inventory
+                                 upstream counts, ODbL replacement inventory, NENA field coverage
     <geoid>/domains.json         the value domains used: NENA-STA-006.3, plus CLDXF-CA in a Canadian Package
 ```
 
