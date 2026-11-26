@@ -102,22 +102,26 @@ def insert_source(c, source, path, has_id):
 
 
 def load_sources(c, job, jurisdiction, work_dir):
-    """Every Source of these layers in the job's registry, from its endpoint (ESRI only, like the others)."""
+    """Every Source of these layers in the job's registry, from its endpoint (ESRI only, like the others). Sources
+    reading the same endpoint (one zone layer feeding PSAP, police, fire and EMS) share one download."""
     create_tables(c)
+    fetched = {}
     for s in jurisdiction.sources:
         if s.layer not in TABLE:
             continue
         if s.endpoint.get("protocol", "ESRI") != "ESRI":
             raise SystemExit(f"{s.key}: protocol {s.endpoint.get('protocol')!r} isn't supported yet (ESRI only)")
-        url = s.endpoint["data"]
-        fields = {f["name"] for f in arcgis.layer_info(url).get("fields", [])}
+        url, where = s.endpoint["data"], s.endpoint.get("where", "1=1")
+        key = (url, where, repr(sorted((s.endpoint.get("query") or {}).items())))
+        if key not in fetched:
+            path = os.path.join(work_dir, f"{s.key}.ndjson")
+            # `page` and `query` (extra query parameters, e.g. maxAllowableOffset) for a layer too heavy to page whole
+            arcgis.fetch(url, path, where=where, extra=s.endpoint.get("query"), page=s.endpoint.get("page"))
+            fetched[key] = (path, {f["name"] for f in arcgis.layer_info(url).get("fields", [])})
+        path, fields = fetched[key]
         has_id = bool(s.id_field) and s.id_field in fields
         if s.id_field and not has_id:
             print(f"  [WARNING] {s.key}: id_field {s.id_field!r} isn't in the layer; UIDs from geometry instead")
-        path = os.path.join(work_dir, f"{s.key}.ndjson")
-        # `page` and `query` (extra query parameters, e.g. maxAllowableOffset) for a layer too heavy to page whole
-        arcgis.fetch(url, path, where=s.endpoint.get("where", "1=1"), extra=s.endpoint.get("query"),
-                     page=s.endpoint.get("page"))
         insert_source(c, s, path, has_id)
 
 
