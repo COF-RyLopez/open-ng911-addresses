@@ -120,7 +120,7 @@ def test_published_packages(builds):
     assert os.path.exists(os.path.join(cat, "report.json")) and not os.path.exists(os.path.join(pub, "report.json"))
 
 
-@pytest.mark.skipif(shutil.which("portolan") is None, reason="portolan-cli not installed (pip install .[publish])")
+@pytest.mark.skipif(shutil.which("portolan") is None, reason="portolan-cli not installed (uv tool install portolan-cli)")
 def test_portolan_check(builds):
     tmp, _, out_open = builds
     cat = str(tmp / "cat_check")

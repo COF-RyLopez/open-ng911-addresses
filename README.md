@@ -73,7 +73,7 @@ authority has opted in. [examples/catalog](examples/catalog) is the catalog buil
 (`python scripts/sample_catalog.py`). To check and upload one:
 
 ```sh
-uv pip install -e ".[publish]"              # portolan-cli
+uv tool install portolan-cli                # its own env: it pins an older DuckDB
 (cd data/catalog/public && portolan check)
 ```
 

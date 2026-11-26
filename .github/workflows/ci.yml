@@ -17,7 +17,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: uv pip install --system -e ".[dev,publish]"  # publish: portolan-cli, to validate the catalog
+      - run: uv pip install --system -e ".[dev]"
+      # portolan-cli validates the catalog in tests/test_catalog.py; it pins duckdb<1.6, so it gets its own env
+      - run: uv tool install "portolan-cli>=0.9"
+      - run: echo "$(uv tool dir --bin)" >> "$GITHUB_PATH"
       - run: ruff check src tests
       - run: pytest -q -m "not live"  # offline; live checks run in the build job
 
