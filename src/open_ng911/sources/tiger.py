@@ -6,9 +6,11 @@ Table package_area(geoid, name, geom): counties, 'Chittenden County'.
 Table municipality(geoid, name, kind, incorporated, geom): the A3 units (boundaries.py reads it).
 
 Which TIGER unit is A3 depends on the state. In the 12 "strong MCD" states, the county subdivision (town,
-township, city) is the general-purpose local government and covers the whole state, so it is A3: Vermont's
-towns and cities, not the villages inside them. Everywhere else A3 is the incorporated place; an address in
-no place is 'Unincorporated'. Census designated places are statistical (they're A4 material), never A3.
+township) is the general-purpose local government and covers the whole state, so it is A3: Vermont's towns,
+not the villages inside them. A city there that is independent of any town is an incorporated place whose
+county subdivision is only a fictitious stand-in (FUNCSTAT F), so places outside every active county
+subdivision are A3 too (Burlington, Rutland). Everywhere else A3 is the incorporated place; an address in no
+place is 'Unincorporated'. Census designated places are statistical (they're A4 material), never A3.
 """
 import os
 
@@ -63,9 +65,33 @@ def create_municipality(c, path, kind_layer):
         FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})""")
 
 
-def load_municipality(c, job, work_dir):
-    name = municipality_layer(job)
-    path = os.path.join(work_dir, f"tiger_municipalities_{job.fips}.ndjson")
+def fetch_layer(name, job, work_dir):
+    path = os.path.join(work_dir, f"tiger_{name.lower().replace(' ', '_')}_{job.fips}.ndjson")
     arcgis.fetch(layer_url(name), path, where=f"STATE='{job.fips}'", out_fields="GEOID,NAME,BASENAME,FUNCSTAT",
                  extra=GENERALIZE)
-    create_municipality(c, path, "county subdivision" if name == COUSUB_LAYER else "place")
+    return path
+
+
+def add_independent_places(c, places_path):
+    """Strong MCD states: add the active incorporated places that lie in no active county subdivision
+    (independent cities); villages and boroughs inside an active town stay out."""
+    c.execute("ALTER TABLE municipality RENAME TO cousub")
+    create_municipality(c, places_path, "place")
+    c.execute("""CREATE OR REPLACE TABLE municipality AS
+        SELECT * FROM cousub
+        UNION ALL
+        SELECT p.* FROM municipality p
+        WHERE p.incorporated AND NOT EXISTS (
+            SELECT 1 FROM cousub m WHERE m.incorporated AND ST_Intersects(m.geom, ST_PointOnSurface(p.geom)))""")
+    c.execute("DROP TABLE cousub")
+
+
+def load_municipality(c, job, work_dir):
+    name = municipality_layer(job)
+    create_municipality(c, fetch_layer(name, job, work_dir), "county subdivision" if name == COUSUB_LAYER else "place")
+    if name == COUSUB_LAYER:
+        add_independent_places(c, fetch_layer(PLACE_LAYER, job, work_dir))
+    for kind, incorporated, n, names in c.execute("""SELECT kind, incorporated, count(*), string_agg(name, ', ' ORDER BY name)
+            FROM municipality GROUP BY ALL ORDER BY 2 DESC, 3 DESC""").fetchall():
+        print(f"  [tiger] municipalities: {n:,} {kind}{'' if incorporated else ' (not a government)'}"
+              + ("" if incorporated and n > 20 else f": {names}"))

@@ -66,3 +66,25 @@ def test_municipality_layer_by_state():
     assert tiger.municipality_layer(jobs["VT"]) == tiger.COUSUB_LAYER  # strong MCD: towns
     assert tiger.municipality_layer(jobs["CA"]) == tiger.PLACE_LAYER   # California's code, not Canada
     assert boundaries.boundary_uid("us-a3", "x") == boundaries.boundary_uid("us-a3", "x")
+
+
+def test_strong_mcd_state_adds_independent_cities(tmp_path, conn):
+    """Vermont: a city whose county subdivision is fictitious is A3 as a place; a village inside a town isn't."""
+    def write(name, rows):
+        path = tmp_path / f"{name}.ndjson"
+        with open(path, "w") as f:
+            for geoid, nm, base, funcstat, (x0, y0, x1, y1) in rows:
+                ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+                f.write(json.dumps({"p": {"GEOID": geoid, "NAME": nm, "BASENAME": base, "FUNCSTAT": funcstat},
+                                    "g": json.dumps({"type": "Polygon", "coordinates": [ring]})}) + "\n")
+        return str(path)
+
+    tiger.create_municipality(conn, write("cousub", [
+        ("5000710675", "Burlington city", "Burlington", "F", (0, 0, 1, 1)),
+        ("5000724175", "Essex town", "Essex", "A", (1, 0, 3, 1))]), "county subdivision")
+    tiger.add_independent_places(conn, write("places", [
+        ("5010675", "Burlington city", "Burlington", "A", (0, 0, 1, 1)),
+        ("5024400", "Village of Somewhere village", "Village of Somewhere", "A", (1.5, 0.2, 1.8, 0.8))]))
+    got = conn.execute("SELECT geoid, name, kind, incorporated FROM municipality ORDER BY 1").fetchall()
+    assert got == [("5000710675", "Burlington", "city", False), ("5000724175", "Essex", "town", True),
+                   ("5010675", "Burlington", "city", True)]

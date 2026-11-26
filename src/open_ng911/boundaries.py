@@ -84,6 +84,12 @@ def assign_a3(c):
         QUALIFY row_number() OVER (PARTITION BY uid ORDER BY d, nests DESC, mgeoid) = 1""")
     c.execute(f"""UPDATE ssap SET a3 = coalesce((SELECT x.a3 FROM ssap_a3 x WHERE x.uid = ssap.uid),
                                                 '{UNINCORPORATED}')""")
+    # QA in the build log: the communities the Records name where we found no municipality
+    top = c.execute(f"""SELECT post_comm, count(*) FROM ssap WHERE a3 = '{UNINCORPORATED}' AND status = 'record'
+                        GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 10""").fetchall()
+    if top:
+        print("  [boundaries] Unincorporated Records by their own community: "
+              + ", ".join(f"{name} {n:,}" for name, n in top))
 
 
 def create_layers(c, job, updated):
