@@ -29,32 +29,35 @@ def check(c):
     """address_range_check(uid, rcl_uid, side, add_number, result, distance_m, geoid) and the RCL's derived
     ranges; returns {result: n}."""
     epsg = roads.utm_epsg(c)
-    # one line per segment: a multi-part line that doesn't merge into one has no single "along"; its points are
-    # still checked, but it gets no derived range
+    # one row per part of each segment's (merged) line: a point is sided against the nearest part, and only a
+    # one-part line has a single "along" to derive a range by
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _seg AS
-        SELECT r.uid, r.geoid, parsed_street_key(parse_street(s.street)) AS skey,
-               r.fromaddr_l, r.toaddr_l, r.parity_l, r.fromaddr_r, r.toaddr_r, r.parity_r,
-               ST_LineMerge(ST_Transform(r.geom, 'EPSG:4326', '{epsg}')) AS m
-        FROM rcl r JOIN road_seg s USING (uid)""")
+        WITH merged AS (
+            SELECT r.uid, r.geoid, parsed_street_key(parse_street(s.street)) AS skey,
+                   r.fromaddr_l, r.toaddr_l, r.parity_l, r.fromaddr_r, r.toaddr_r, r.parity_r,
+                   ST_Dump(ST_LineMerge(ST_Transform(r.geom, 'EPSG:4326', '{epsg}'))) AS parts
+            FROM rcl r JOIN road_seg s USING (uid))
+        SELECT * EXCLUDE (parts, part), part.geom AS m, len(parts) AS n_parts
+        FROM (SELECT *, unnest(parts) AS part FROM merged)
+        WHERE ST_GeometryType(part.geom) = 'LINESTRING' AND NOT ST_IsEmpty(part.geom)""")
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _pt AS
         SELECT s.uid, s.add_number, s.geoid, a.skey, ST_Transform(s.geom, 'EPSG:4326', '{epsg}') AS m
         FROM ssap s JOIN agency_addr a ON a.address_uid = s.uid
         WHERE s.status = 'record' AND s.add_number IS NOT NULL""")
     c.execute(f"""CREATE OR REPLACE TABLE address_range_check AS
         WITH pairs AS (
-            SELECT p.uid, p.add_number, p.geoid, g.uid AS rcl_uid, ST_Distance(p.m, g.m) AS d, p.m AS pm, g.*
-                   EXCLUDE (uid, geoid, skey)
+            SELECT p.uid, p.add_number, p.geoid, g.uid AS rcl_uid, ST_Distance(p.m, g.m) AS d, p.m AS pm, g.m AS gm, g.*
+                   EXCLUDE (uid, geoid, skey, m)
             FROM _pt p JOIN _seg g ON p.skey = g.skey AND ST_DWithin(p.m, g.m, {MAX_M})
             QUALIFY row_number() OVER (PARTITION BY p.uid ORDER BY ST_Distance(p.m, g.m), g.uid) = 1),
         placed AS (
-            SELECT *, CASE WHEN ST_GeometryType(m) = 'LINESTRING' THEN ST_LineLocatePoint(m, pm) END AS t FROM pairs),
+            SELECT *, ST_LineLocatePoint(gm, pm) AS t FROM pairs),
         sided AS (
             -- left or right of the segment's direction at the point: the sign of the cross product
-            SELECT *, CASE WHEN t IS NULL THEN NULL
-                      WHEN (ST_X(b) - ST_X(a)) * (ST_Y(pm) - ST_Y(a)) - (ST_Y(b) - ST_Y(a)) * (ST_X(pm) - ST_X(a)) >= 0
+            SELECT *, CASE WHEN (ST_X(b) - ST_X(a)) * (ST_Y(pm) - ST_Y(a)) - (ST_Y(b) - ST_Y(a)) * (ST_X(pm) - ST_X(a)) >= 0
                       THEN 'l' ELSE 'r' END AS side
-            FROM (SELECT *, ST_LineInterpolatePoint(m, greatest(t - 0.001, 0)) AS a,
-                            ST_LineInterpolatePoint(m, least(t + 0.001, 1)) AS b FROM placed)),
+            FROM (SELECT *, ST_LineInterpolatePoint(gm, greatest(t - 0.001, 0)) AS a,
+                            ST_LineInterpolatePoint(gm, least(t + 0.001, 1)) AS b FROM placed)),
         ranged AS (
             SELECT *, CASE side WHEN 'l' THEN fromaddr_l WHEN 'r' THEN fromaddr_r END AS f,
                       CASE side WHEN 'l' THEN toaddr_l WHEN 'r' THEN toaddr_r END AS e,
@@ -64,7 +67,7 @@ def check(c):
                       CASE side WHEN 'l' THEN toaddr_r WHEN 'r' THEN toaddr_l END AS oe,
                       CASE side WHEN 'l' THEN parity_r WHEN 'r' THEN parity_l END AS opar
             FROM sided)
-        SELECT uid, rcl_uid, side, add_number, t AS position,
+        SELECT uid, rcl_uid, side, add_number, CASE WHEN n_parts = 1 THEN t END AS position,
                CASE WHEN side IS NULL OR par IS NULL OR par = 'Z' THEN 'no_range'
                     WHEN add_number NOT BETWEEN least(f, e) AND greatest(f, e) AND opar IS NOT NULL AND opar <> 'Z'
                          AND add_number BETWEEN least(of, oe) AND greatest(of, oe)
@@ -87,18 +90,19 @@ def check(c):
 
 def derive(c):
     """The RCL's derived_* columns: on a side with no range (parity 'Z') and at least one Record on it, the numbers
-    nearest the segment's start and end, and their parity; range_points_*: the Records checked on each side."""
+    nearest the segment's start and end, and their parity (none on a line in separate pieces, which has no single
+    start and end); range_points_*: the Records checked on each side."""
     for col in RCL_COLUMNS.split(", "):
         c.execute(f"ALTER TABLE rcl ADD COLUMN IF NOT EXISTS {col}")
     for s in SIDES:
         c.execute(f"""UPDATE rcl r SET range_points_{s} = k.n,
                 derived_fromaddr_{s} = CASE WHEN r.parity_{s} = 'Z' THEN k.first END,
                 derived_toaddr_{s} = CASE WHEN r.parity_{s} = 'Z' THEN k.last END,
-                derived_parity_{s} = CASE WHEN r.parity_{s} <> 'Z' THEN NULL
+                derived_parity_{s} = CASE WHEN r.parity_{s} <> 'Z' OR k.first IS NULL THEN NULL
                     WHEN k.odd = k.n THEN 'O' WHEN k.odd = 0 THEN 'E' ELSE 'B' END
             FROM (SELECT rcl_uid, count(*)::INTEGER AS n, count(*) FILTER (add_number % 2 = 1) AS odd,
                          arg_min(add_number, position) AS first, arg_max(add_number, position) AS last
-                  FROM address_range_check WHERE side = '{s}' AND position IS NOT NULL GROUP BY 1) k
+                  FROM address_range_check WHERE side = '{s}' GROUP BY 1) k
             WHERE r.uid = k.rcl_uid""")
 
 
