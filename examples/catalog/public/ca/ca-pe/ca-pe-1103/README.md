@@ -28,5 +28,6 @@ Each layer keeps its sources' licences; no OpenStreetMap-derived geometry or nam
 ## Provenance
 
 Built by [open-ng911-addresses](https://github.com/COF-RyLopez/open-ng911-addresses) from the Source agencies' layers, read through the OpenAddresses
-source registry, and Overture release 2026-11-18.0. NGUIDs are under `ca-pe-1103.unclaimed.invalid`.
+source registry at commit `1d9762c36aa2`, and Overture
+release 2026-11-18.0. NGUIDs are under `ca-pe-1103.unclaimed.invalid`.
 This is a processed copy: the agencies' own services are the authoritative data (see the `via` links).

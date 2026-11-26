@@ -21,6 +21,7 @@ import os
 
 from . import boundaries, coverage, db, ids, layers, nena, odbl_inventory, ranges, registry, roads, upstream
 from .nena import SSAP_REQUIRED
+from .sources import openaddresses
 
 # 2: one name per thing across sections (`source_key`, `license_status`, `features`), the SiteStructureAddressPoint
 # count as `address_points`, and no `field_fill` (every layer's field fill is in `nena_coverage`)
@@ -80,6 +81,7 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
         manifest = {
             "manifest_version": MANIFEST_VERSION,
             "package": package_key(job, geoid), "name": name, "job": job.id, "overture_release": release,
+            "openaddresses_commit": openaddresses.pin()["commit"],
             "nena": {"standard": "NENA-STA-006.3-2026", "values": values,
                      "layers": ["SiteStructureAddressPoint", *bounds, "RoadCenterline",
                                 *(k for k, v in other.items() if v["features"])],
