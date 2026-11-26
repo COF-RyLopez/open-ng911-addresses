@@ -1,0 +1,232 @@
+{
+  "type": "Feature",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
+  "id": "ca-pe-1102-site-structure-address-point",
+  "collection": "ca-pe-1102",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -63.15,
+          46.23
+        ],
+        [
+          -63.12,
+          46.23
+        ],
+        [
+          -63.12,
+          46.25
+        ],
+        [
+          -63.15,
+          46.25
+        ],
+        [
+          -63.15,
+          46.23
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -63.15,
+    46.23,
+    -63.12,
+    46.25
+  ],
+  "properties": {
+    "title": "Queens: SiteStructureAddressPoint",
+    "description": "Every addressed site the Source agency publishes (Records), plus Overture addresses no Record matched (Gap-fill candidates, status = 'gap_fill_candidate').",
+    "datetime": "2026-11-26T17:41:51Z",
+    "ng911:layer": "SiteStructureAddressPoint",
+    "table:row_count": 3,
+    "table:primary_geometry": "geom",
+    "table:columns": [
+      {
+        "name": "uid",
+        "type": "varchar",
+        "description": "The project's stable ID: the Address UID for an address point, the segment UID for a road"
+      },
+      {
+        "name": "gers_id",
+        "type": "varchar",
+        "description": "Overture GERS ID linked to this row (a reference that can change between Overture releases)"
+      },
+      {
+        "name": "status",
+        "type": "varchar",
+        "description": "'record' (the Source agency's own point) or 'gap_fill_candidate' (an Overture address to check)"
+      },
+      {
+        "name": "source",
+        "type": "varchar",
+        "description": "Source key: the registry's Source agency layer, or 'overture' for a Gap-fill candidate"
+      },
+      {
+        "name": "source_id",
+        "type": "varchar",
+        "description": "The row's own ID in its source"
+      },
+      {
+        "name": "source_license",
+        "type": "varchar",
+        "description": "Licence of the row's source: the registry's status for agency data, Overture's per-source licence for a Gap-fill candidate"
+      },
+      {
+        "name": "link_method",
+        "type": "varchar",
+        "description": "How the Address UID was found: agency_record, minted, or carried over by the lineage ledger"
+      },
+      {
+        "name": "match_distance_m",
+        "type": "double",
+        "description": "Distance in metres to the Overture address the Record matched"
+      },
+      {
+        "name": "street_key_match",
+        "type": "boolean",
+        "description": "Whether the matched Overture address has the same parsed street"
+      },
+      {
+        "name": "source_site_type",
+        "type": "varchar",
+        "description": "The source's own site type (e.g. PUBLIC TELEPHONE), kept as published"
+      },
+      {
+        "name": "discrpagid",
+        "type": "varchar",
+        "description": "Agency responsible for the row: the NGUID domain, a .invalid placeholder until the 911 authority opts in"
+      },
+      {
+        "name": "dateupdate",
+        "type": "varchar",
+        "description": "When the build last wrote or changed the row (UTC)"
+      },
+      {
+        "name": "nguid",
+        "type": "varchar",
+        "description": "NENA globally unique ID, built from the row's own UID under discrpagid's domain (never a GERS ID)"
+      },
+      {
+        "name": "country",
+        "type": "varchar",
+        "description": "Country code: US or CA"
+      },
+      {
+        "name": "a1",
+        "type": "varchar",
+        "description": "State or province code"
+      },
+      {
+        "name": "a2",
+        "type": "varchar",
+        "description": "County or census division name"
+      },
+      {
+        "name": "a3",
+        "type": "varchar",
+        "description": "Municipality name, or 'Unincorporated' outside every municipality"
+      },
+      {
+        "name": "add_number",
+        "type": "integer",
+        "description": "Address number"
+      },
+      {
+        "name": "addnum_suf",
+        "type": "varchar",
+        "description": "Address number suffix (e.g. 'B' in 30B)"
+      },
+      {
+        "name": "st_predir",
+        "type": "varchar",
+        "description": "Street name pre-directional, NENA registry word (e.g. North)"
+      },
+      {
+        "name": "st_pretyp",
+        "type": "varchar",
+        "description": "Street name pre-type, NENA registry word (e.g. State Route; Rue in Canada)"
+      },
+      {
+        "name": "st_name",
+        "type": "varchar",
+        "description": "Street name"
+      },
+      {
+        "name": "st_postyp",
+        "type": "varchar",
+        "description": "Street name post-type, NENA registry word (e.g. Street)"
+      },
+      {
+        "name": "st_posdir",
+        "type": "varchar",
+        "description": "Street name post-directional, NENA registry word"
+      },
+      {
+        "name": "unit",
+        "type": "varchar",
+        "description": "Unit, suite or apartment"
+      },
+      {
+        "name": "post_comm",
+        "type": "varchar",
+        "description": "Postal community name"
+      },
+      {
+        "name": "post_code",
+        "type": "varchar",
+        "description": "Postal code or ZIP code"
+      },
+      {
+        "name": "placement",
+        "type": "varchar",
+        "description": "How the point was placed on the site; 'Unknown' where the source doesn't say"
+      },
+      {
+        "name": "geom",
+        "type": "geometry",
+        "description": "Geometry, WGS 84 longitude/latitude"
+      },
+      {
+        "name": "release",
+        "type": "varchar"
+      }
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {
+    "site_structure_address_point": {
+      "href": "./site_structure_address_point.parquet",
+      "type": "application/vnd.apache.parquet",
+      "roles": [
+        "data"
+      ],
+      "title": "SiteStructureAddressPoint GeoParquet",
+      "description": "Every addressed site the Source agency publishes (Records), plus Overture addresses no Record matched (Gap-fill candidates, status = 'gap_fill_candidate').",
+      "file:size": 5238,
+      "file:checksum": "1220c357ba926c0f908a7b33e1ce79623881ea3754d5c4d316dcba36da307bc68986"
+    }
+  }
+}

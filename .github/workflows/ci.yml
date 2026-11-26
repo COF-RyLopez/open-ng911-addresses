@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: uv pip install --system -e ".[dev]"
+      - run: uv pip install --system -e ".[dev,publish]"  # publish: portolan-cli, to validate the catalog
       - run: ruff check src tests
       - run: pytest -q -m "not live"  # offline; live checks run in the build job
 
@@ -54,6 +54,9 @@ jobs:
       - run: python -m open_ng911.build --job ${{ matrix.job }} --out data/output
       # Live checks of the outside sources no enabled job reaches yet (TIGER ADDRFEAT, the road fallback)
       - run: uv pip install --system pytest && pytest -q -m live
+      # The Portolan catalog over this job's Packages (catalog.py): only open-licensed, opted-in Packages carry
+      # data in it; report.json says why each other Package is withheld.
+      - run: python -m open_ng911.catalog --out data/output --catalog data/catalog
       # Only the summaries are uploaded. Package data carries sources whose license is still "unknown" and
       # isn't handed out until an authority opts in (ADR 0003), so it never goes into a public artifact.
       - if: always()
@@ -63,4 +66,5 @@ jobs:
           path: |
             data/output/release=*/${{ matrix.job }}/job.json
             data/output/release=*/${{ matrix.job }}/*/manifest.json
+            data/catalog/report.json
           if-no-files-found: warn

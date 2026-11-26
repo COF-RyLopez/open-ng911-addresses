@@ -1,0 +1,190 @@
+{
+  "package": "ca-pe-1102",
+  "name": "Queens",
+  "job": "ca-pe",
+  "overture_release": "2026-11-18.0",
+  "nena": {
+    "standard": "NENA-STA-006.3-2026",
+    "values": "CLDXF-CA",
+    "layers": [
+      "SiteStructureAddressPoint",
+      "A2Polygon",
+      "A3Polygon",
+      "RoadCenterline"
+    ],
+    "mandatory_fields": [
+      "discrpagid",
+      "dateupdate",
+      "nguid",
+      "country",
+      "a1"
+    ],
+    "rcl_mandatory_fields": [
+      "discrpagid",
+      "dateupdate",
+      "rcl_nguid",
+      "parity_l",
+      "parity_r",
+      "country_l",
+      "country_r",
+      "a1_l",
+      "a1_r",
+      "a2_l",
+      "a2_r"
+    ]
+  },
+  "recipient": "Prince Edward Island 911 Administration (Department of Justice and Public Safety)",
+  "opted_in": false,
+  "nguid_domain": "ca-pe-1102.unclaimed.invalid",
+  "distribution": "built for the public scorecard only; not handed out until the 911 authority opts in (ADR 0003)",
+  "rows": 3,
+  "records": 2,
+  "records_with_gers_id": 1,
+  "gap_fill_candidates": 1,
+  "record_gers_coverage": 0.5,
+  "field_fill": {
+    "discrpagid": 1.0,
+    "dateupdate": 1.0,
+    "nguid": 1.0,
+    "country": 1.0,
+    "a1": 1.0,
+    "a2": 1.0,
+    "a3": 1.0,
+    "add_number": 1.0,
+    "addnum_suf": 0.0,
+    "st_predir": 0.0,
+    "st_pretyp": 0.0,
+    "st_name": 1.0,
+    "st_postyp": 1.0,
+    "st_posdir": 0.0,
+    "unit": 0.3333,
+    "post_comm": 1.0,
+    "post_code": 0.0,
+    "placement": 1.0
+  },
+  "sources": [
+    {
+      "key": "ca-pe-civic-address",
+      "agency": "Government of Prince Edward Island, Civic Addressing",
+      "layer": "addresses",
+      "openaddresses": "ca/pe/province",
+      "license_status": "open",
+      "license_url": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "attribution": "Contains information licensed under the Open Government Licence - Prince Edward Island"
+    }
+  ],
+  "boundaries": {
+    "A2Polygon": {
+      "source": "Statistics Canada census divisions",
+      "license": "Statistics Canada Open Licence",
+      "license_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "features": 1
+    },
+    "A3Polygon": {
+      "source": "Statistics Canada census subdivisions",
+      "license": "Statistics Canada Open Licence",
+      "license_url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "features": 1,
+      "addresses_in_municipality": 2,
+      "addresses_unincorporated": 1,
+      "addresses_without_a3": 0,
+      "record_community_agrees_with_a3": 1.0
+    }
+  },
+  "gap_fill_licenses": {
+    "OGL-CA": 1
+  },
+  "road_centerline": {
+    "rows": 0,
+    "with_gers_id": 0,
+    "gers_coverage": null,
+    "road_source": null,
+    "field_fill": {
+      "discrpagid": null,
+      "dateupdate": null,
+      "rcl_nguid": null,
+      "fromaddr_l": null,
+      "toaddr_l": null,
+      "fromaddr_r": null,
+      "toaddr_r": null,
+      "parity_l": null,
+      "parity_r": null,
+      "st_predir": null,
+      "st_pretyp": null,
+      "st_name": null,
+      "st_postyp": null,
+      "st_posdir": null,
+      "country_l": null,
+      "country_r": null,
+      "a1_l": null,
+      "a1_r": null,
+      "a2_l": null,
+      "a2_r": null,
+      "a3_l": null,
+      "a3_r": null,
+      "postcode_l": null,
+      "postcode_r": null,
+      "roadclass": null,
+      "oneway": null,
+      "speedlimit": null
+    },
+    "sources": [],
+    "gers_ids": {
+      "overture_release": "2026-11-18.0",
+      "theme": "transportation/segment",
+      "note": "GERS IDs only; no Overture geometry or names (ODbL) are in this Package"
+    }
+  },
+  "upstream": {
+    "overture": {
+      "release": "2026-11-18.0",
+      "segments": 0,
+      "not_in_overture": 0,
+      "name_agrees": 0,
+      "name_differs": 0,
+      "overture_unnamed": 0,
+      "source_unnamed": 0,
+      "class_agrees": 0,
+      "class_differs": 0
+    },
+    "national": {
+      "measured": false,
+      "why": "no government roads in this Package"
+    },
+    "upstream_eligible": false,
+    "note": "Counts only. Overture names and classes (ODbL) are compared in memory and not written. Only an open-licensed source can go upstream, and a person proposes it (ADR 0004)."
+  },
+  "odbl_replacement": {
+    "transportation": {
+      "status": "candidate",
+      "read": [],
+      "catalogued": [],
+      "national": "NRCan/StatCan National Road Network (OGL-Canada; loader to come)"
+    },
+    "buildings": {
+      "status": "none",
+      "read": [],
+      "catalogued": [],
+      "national": null
+    },
+    "divisions": {
+      "status": "government_open",
+      "read": [
+        {
+          "source_key": "statcan-census-divisions",
+          "license_status": "open",
+          "what": "A2 / Package area, A3 (1 municipalities)"
+        }
+      ],
+      "catalogued": [],
+      "national": "Statistics Canada boundary files (Statistics Canada Open Licence)"
+    },
+    "base_water": {
+      "status": "candidate",
+      "read": [],
+      "catalogued": [],
+      "national": "NRCan National Hydro Network (OGL-Canada; loader to come)"
+    },
+    "note": "Which government sources could stand in for Overture's ODbL themes here. An inventory, not a claim; only open-licensed sources count, and a person proposes them (ADR 0004)."
+  }
+}

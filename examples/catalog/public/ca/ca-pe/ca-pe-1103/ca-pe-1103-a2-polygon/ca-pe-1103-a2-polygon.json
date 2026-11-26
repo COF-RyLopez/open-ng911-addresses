@@ -1,0 +1,137 @@
+{
+  "type": "Feature",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
+  "id": "ca-pe-1103-a2-polygon",
+  "collection": "ca-pe-1103",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -64.2,
+          46.4
+        ],
+        [
+          -63.6,
+          46.4
+        ],
+        [
+          -63.6,
+          46.9
+        ],
+        [
+          -64.2,
+          46.9
+        ],
+        [
+          -64.2,
+          46.4
+        ]
+      ]
+    ]
+  },
+  "bbox": [
+    -64.2,
+    46.4,
+    -63.6,
+    46.9
+  ],
+  "properties": {
+    "title": "Prince: A2Polygon",
+    "description": "The county or census division the Package covers.",
+    "datetime": "2026-11-26T17:41:51Z",
+    "ng911:layer": "A2Polygon",
+    "table:row_count": 1,
+    "table:primary_geometry": "geom",
+    "table:columns": [
+      {
+        "name": "discrpagid",
+        "type": "varchar",
+        "description": "Agency responsible for the row: the NGUID domain, a .invalid placeholder until the 911 authority opts in"
+      },
+      {
+        "name": "dateupdate",
+        "type": "varchar",
+        "description": "When the build last wrote or changed the row (UTC)"
+      },
+      {
+        "name": "effective",
+        "type": "varchar",
+        "description": "When the boundary takes effect; empty when the source gives no date"
+      },
+      {
+        "name": "expire",
+        "type": "varchar",
+        "description": "When the boundary stops applying; empty when the source gives no date"
+      },
+      {
+        "name": "nguid",
+        "type": "varchar",
+        "description": "NENA globally unique ID, built from the row's own UID under discrpagid's domain (never a GERS ID)"
+      },
+      {
+        "name": "country",
+        "type": "varchar",
+        "description": "Country code: US or CA"
+      },
+      {
+        "name": "a1",
+        "type": "varchar",
+        "description": "State or province code"
+      },
+      {
+        "name": "a2",
+        "type": "varchar",
+        "description": "County or census division name"
+      },
+      {
+        "name": "source_code",
+        "type": "varchar",
+        "description": "The boundary's identifier in its source (Census GEOID or StatCan code)"
+      },
+      {
+        "name": "geom",
+        "type": "geometry",
+        "description": "Geometry, WGS 84 longitude/latitude"
+      },
+      {
+        "name": "release",
+        "type": "varchar"
+      }
+    ]
+  },
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../collection.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "collection",
+      "href": "../collection.json",
+      "type": "application/json"
+    }
+  ],
+  "assets": {
+    "a2_polygon": {
+      "href": "./a2_polygon.parquet",
+      "type": "application/vnd.apache.parquet",
+      "roles": [
+        "data"
+      ],
+      "title": "A2Polygon GeoParquet",
+      "description": "The county or census division the Package covers.",
+      "file:size": 2094,
+      "file:checksum": "1220bf2053f7d6c9870d3bf886b69df42f2d7eb114a60e9d36f9ed2a853f3a7e4753"
+    }
+  }
+}

@@ -62,8 +62,8 @@ def write(c, job, jurisdiction, release, out_dir, national):
             "SELECT geoid, name, domain, opted_in, authority FROM package_area JOIN package_domain USING (geoid) ORDER BY 1").fetchall():
         d = os.path.join(root, geoid)
         os.makedirs(d, exist_ok=True)
-        c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM ssap WHERE geoid = '{geoid}' ORDER BY uid) "
-                  f"TO '{os.path.join(d, 'site_structure_address_point.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
+        db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM ssap WHERE geoid = '{geoid}'",
+                            os.path.join(d, "site_structure_address_point.parquet"), "uid")
         bounds = boundaries.write_package(c, job, geoid, d)
         road = roads.write_package(c, geoid, d, release, road_meta)
         res = c.execute(f"""SELECT count(*) AS rows,

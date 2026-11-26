@@ -1,0 +1,224 @@
+{
+  "type": "Collection",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
+  "id": "scorecard",
+  "title": "Package scorecard",
+  "description": "Every Package built for Overture release 2026-11-18.0, 4 in all and 2 published here: counts, GERS coverage, licence and opt-in state, on each county or census division outline. Withheld Packages appear here with their reasons and no address data.",
+  "license": "other",
+  "updated": "2026-11-26T17:41:51Z",
+  "keywords": [
+    "NG9-1-1",
+    "scorecard",
+    "coverage"
+  ],
+  "providers": [
+    {
+      "name": "Statistics Canada census divisions",
+      "roles": [
+        "producer"
+      ],
+      "url": "https://www.statcan.gc.ca/en/terms-conditions/open-licence"
+    },
+    {
+      "name": "Census TIGER counties",
+      "roles": [
+        "producer"
+      ],
+      "url": "https://www.census.gov/data/developers/about/terms-of-service.html"
+    },
+    {
+      "name": "open-ng911-addresses",
+      "roles": [
+        "processor",
+        "host"
+      ],
+      "url": "https://github.com/COF-RyLopez/open-ng911-addresses"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -73.2,
+          42.8,
+          -63.0,
+          46.9
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          null,
+          null
+        ]
+      ]
+    }
+  },
+  "table:columns": [
+    {
+      "name": "package",
+      "type": "varchar",
+      "description": "Package key: <job>-<county or census division code>"
+    },
+    {
+      "name": "name",
+      "type": "varchar",
+      "description": "County or census division"
+    },
+    {
+      "name": "job",
+      "type": "varchar",
+      "description": "Build job (state or province)"
+    },
+    {
+      "name": "country",
+      "type": "varchar",
+      "description": "US or CA"
+    },
+    {
+      "name": "recipient",
+      "type": "varchar",
+      "description": "The 911 authority it is built for"
+    },
+    {
+      "name": "opted_in",
+      "type": "boolean",
+      "description": "Whether the 911 authority has opted in (ADR 0003)"
+    },
+    {
+      "name": "published",
+      "type": "boolean",
+      "description": "Whether the Package's data is in this catalog"
+    },
+    {
+      "name": "withheld_reasons",
+      "type": "varchar[]",
+      "description": "Why its data isn't: a non-open source licence, an unopen Gap-fill licence, no opt-in yet"
+    },
+    {
+      "name": "overture_release",
+      "type": "varchar",
+      "description": "Overture release the build used"
+    },
+    {
+      "name": "records",
+      "type": "bigint",
+      "description": "The Source agency's address points"
+    },
+    {
+      "name": "gap_fill_candidates",
+      "type": "bigint",
+      "description": "Overture addresses no Record matched"
+    },
+    {
+      "name": "record_gers_coverage",
+      "type": "double",
+      "description": "Share of Records with a GERS ID"
+    },
+    {
+      "name": "road_segments",
+      "type": "bigint",
+      "description": "Road centerline segments"
+    },
+    {
+      "name": "road_gers_coverage",
+      "type": "double",
+      "description": "Share of road segments with a GERS ID"
+    },
+    {
+      "name": "road_source",
+      "type": "varchar",
+      "description": "government (the agency's own) or tiger"
+    },
+    {
+      "name": "collection",
+      "type": "varchar",
+      "description": "Path of its collection.json, if published"
+    },
+    {
+      "name": "geom",
+      "type": "geometry",
+      "description": "The county or census division outline (A2Polygon), WGS 84"
+    }
+  ],
+  "table:row_count": 4,
+  "table:primary_geometry": "geom",
+  "links": [
+    {
+      "rel": "root",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "license",
+      "type": "text/html",
+      "href": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "title": "Licence: Statistics Canada census divisions"
+    },
+    {
+      "rel": "license",
+      "type": "text/html",
+      "href": "https://www.census.gov/data/developers/about/terms-of-service.html",
+      "title": "Licence: Census TIGER counties"
+    },
+    {
+      "rel": "via",
+      "type": "text/html",
+      "href": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "title": "Outlines: Statistics Canada census divisions"
+    },
+    {
+      "rel": "via",
+      "type": "text/html",
+      "href": "https://www.census.gov/data/developers/about/terms-of-service.html",
+      "title": "Outlines: Census TIGER counties"
+    },
+    {
+      "rel": "agents",
+      "href": "./AGENTS.md",
+      "type": "text/markdown",
+      "title": "Agent/LLM usage guide"
+    },
+    {
+      "rel": "describedby",
+      "href": "./README.md",
+      "type": "text/markdown",
+      "title": "Human-readable documentation"
+    }
+  ],
+  "assets": {
+    "data": {
+      "href": "./scorecard.parquet",
+      "type": "application/vnd.apache.parquet",
+      "roles": [
+        "data"
+      ],
+      "title": "Scorecard GeoParquet",
+      "description": "One row per Package.",
+      "file:size": 3706,
+      "file:checksum": "122006e07e615b542c401be710665eeb0b609610ff79111294e87e4ab7f61f6f1c51"
+    },
+    "thumbnail": {
+      "href": "./thumbnail.png",
+      "type": "image/png",
+      "roles": [
+        "thumbnail"
+      ],
+      "title": "Thumbnail",
+      "description": "Package outlines.",
+      "file:size": 629,
+      "file:checksum": "1220c7becbadc621996a570f2b867b67818e43befd1b3bfffce1d24ac004a1112f41"
+    }
+  }
+}

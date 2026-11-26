@@ -9,6 +9,9 @@ dependencies = ["duckdb>=2.0", "pyarrow>=17", "numpy>=2"]  # numpy: DuckDB Pytho
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "pyyaml>=6"]  # pyyaml: scripts/nena_layer_reference.py
+# portolan-cli: `portolan check` validates the catalog (tests/test_catalog.py) and `portolan push` uploads it.
+# Heavy (GeoPandas, rasterio), so it is only for publishing and CI, never for a build.
+publish = ["portolan-cli>=0.9"]
 
 [project.scripts]
 open-ng911 = "open_ng911.build:main"

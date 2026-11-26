@@ -1,0 +1,29 @@
+{
+  "release": "2026-11-18.0",
+  "published": [
+    {
+      "package": "ca-pe-1102",
+      "collection": "ca/ca-pe/ca-pe-1102/collection.json"
+    },
+    {
+      "package": "ca-pe-1103",
+      "collection": "ca/ca-pe/ca-pe-1103/collection.json"
+    }
+  ],
+  "withheld": [
+    {
+      "package": "us-vt-50001",
+      "reasons": [
+        "source_license:us-vt-e911-esite=unknown",
+        "source_license:us-vt-e911-rds=unknown"
+      ]
+    },
+    {
+      "package": "us-vt-50003",
+      "reasons": [
+        "source_license:us-vt-e911-esite=unknown",
+        "source_license:us-vt-e911-rds=unknown"
+      ]
+    }
+  ]
+}

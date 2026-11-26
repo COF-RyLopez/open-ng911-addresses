@@ -1,0 +1,183 @@
+{
+  "type": "Collection",
+  "stac_version": "1.1.0",
+  "stac_extensions": [
+    "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
+    "https://stac-extensions.github.io/table/v1.2.0/schema.json",
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+  ],
+  "id": "ca-pe-1102",
+  "title": "Queens, Prince Edward Island: NG9-1-1 Package",
+  "description": "The NENA NG9-1-1 GIS dataset for Queens (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 1 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety).",
+  "license": "other",
+  "updated": "2026-11-26T17:41:51Z",
+  "keywords": [
+    "NG9-1-1",
+    "NENA",
+    "addresses",
+    "road centerlines",
+    "Prince Edward Island",
+    "Queens"
+  ],
+  "providers": [
+    {
+      "name": "Government of Prince Edward Island, Civic Addressing",
+      "roles": [
+        "producer",
+        "licensor"
+      ]
+    },
+    {
+      "name": "Statistics Canada",
+      "roles": [
+        "producer"
+      ],
+      "url": "https://www.statcan.gc.ca/en/census/geography"
+    },
+    {
+      "name": "Overture Maps Foundation",
+      "roles": [
+        "producer"
+      ],
+      "url": "https://overturemaps.org",
+      "description": "Addresses theme, for the Gap-fill candidates (per-source licences, not ODbL)"
+    },
+    {
+      "name": "open-ng911-addresses",
+      "roles": [
+        "processor",
+        "host"
+      ],
+      "url": "https://github.com/COF-RyLopez/open-ng911-addresses"
+    }
+  ],
+  "extent": {
+    "spatial": {
+      "bbox": [
+        [
+          -63.4,
+          46.1,
+          -63.0,
+          46.4
+        ]
+      ]
+    },
+    "temporal": {
+      "interval": [
+        [
+          "2026-11-26T17:41:51Z",
+          "2026-11-26T17:41:51Z"
+        ]
+      ]
+    }
+  },
+  "ng911:package": "ca-pe-1102",
+  "ng911:job": "ca-pe",
+  "ng911:recipient": "Prince Edward Island 911 Administration (Department of Justice and Public Safety)",
+  "ng911:opted_in": false,
+  "ng911:nguid_domain": "ca-pe-1102.unclaimed.invalid",
+  "ng911:nena_standard": "NENA-STA-006.3-2026",
+  "ng911:value_domains": "CLDXF-CA",
+  "ng911:overture_release": "2026-11-18.0",
+  "ng911:records": 2,
+  "ng911:gap_fill_candidates": 1,
+  "ng911:record_gers_coverage": 0.5,
+  "ng911:road_segments": 0,
+  "ng911:road_gers_coverage": null,
+  "ng911:road_source": null,
+  "links": [
+    {
+      "rel": "root",
+      "href": "../../../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "parent",
+      "href": "../catalog.json",
+      "type": "application/json"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-site-structure-address-point/ca-pe-1102-site-structure-address-point.json",
+      "type": "application/geo+json",
+      "title": "Queens: SiteStructureAddressPoint"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-a2-polygon/ca-pe-1102-a2-polygon.json",
+      "type": "application/geo+json",
+      "title": "Queens: A2Polygon"
+    },
+    {
+      "rel": "item",
+      "href": "./ca-pe-1102-a3-polygon/ca-pe-1102-a3-polygon.json",
+      "type": "application/geo+json",
+      "title": "Queens: A3Polygon"
+    },
+    {
+      "rel": "license",
+      "href": "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island",
+      "type": "text/html",
+      "title": "Licence: Government of Prince Edward Island, Civic Addressing"
+    },
+    {
+      "rel": "license",
+      "href": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
+      "type": "text/html",
+      "title": "Licence: Statistics Canada census divisions"
+    },
+    {
+      "rel": "via",
+      "type": "text/html",
+      "title": "Source: Government of Prince Edward Island, Civic Addressing (addresses)",
+      "href": "https://github.com/openaddresses/openaddresses/blob/master/sources/ca/pe/province.json"
+    },
+    {
+      "rel": "agents",
+      "href": "./AGENTS.md",
+      "type": "text/markdown",
+      "title": "Agent/LLM usage guide"
+    },
+    {
+      "rel": "describedby",
+      "href": "./README.md",
+      "type": "text/markdown",
+      "title": "Human-readable documentation"
+    }
+  ],
+  "assets": {
+    "manifest": {
+      "href": "./manifest.json",
+      "type": "application/json",
+      "roles": [
+        "metadata"
+      ],
+      "title": "Package manifest",
+      "description": "Counts, field fill, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
+      "file:size": 5271,
+      "file:checksum": "1220b758d7ba0001a04fdbc305cb2451e2591a61a6ebe2229cf5fcc33e3b11b603c8"
+    },
+    "domains": {
+      "href": "./domains.json",
+      "type": "application/json",
+      "roles": [
+        "metadata"
+      ],
+      "title": "Value domains",
+      "description": "The value domains the layers use (CLDXF-CA).",
+      "file:size": 10486,
+      "file:checksum": "122055f26b840a9a1a750b1db4bbdb05e64549c8b4746769a780429620421beda850"
+    },
+    "thumbnail": {
+      "href": "./thumbnail.png",
+      "type": "image/png",
+      "roles": [
+        "thumbnail"
+      ],
+      "title": "Thumbnail",
+      "description": "Outline, municipalities, roads and address points.",
+      "file:size": 738,
+      "file:checksum": "12200f2e4f01be3b8f3661cea2d4f284390fc93aaac9976b47ecf698e3d7664527db"
+    }
+  }
+}

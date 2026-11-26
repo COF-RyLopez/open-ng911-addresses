@@ -175,8 +175,8 @@ def write_package(c, geoid, d, release, meta):
     """road_centerline.parquet and road_gers_crosswalk.parquet in the Package folder d; returns the manifest's
     `road_centerline` section. meta: the road_source_meta rows (db.rows)."""
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in nena.RCL_FIELDS)
-    c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM rcl WHERE geoid = '{geoid}' ORDER BY uid) TO "
-              f"'{os.path.join(d, 'road_centerline.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
+    db.write_geoparquet(c, f"SELECT * EXCLUDE (geoid) FROM rcl WHERE geoid = '{geoid}'",
+                        os.path.join(d, "road_centerline.parquet"), "uid")
     c.execute(f"""COPY (SELECT g.uid, r.rcl_nguid, g.gers_id, g.overlap_m, g.rcl_share, g.segment_share,
                                g.is_primary, '{release}' AS overture_release
                         FROM road_gers g JOIN rcl r USING (uid) WHERE r.geoid = '{geoid}'
