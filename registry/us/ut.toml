@@ -65,7 +65,7 @@ mapping = { "Rooftop" = "Structure", "ROOFTOP" = "Structure", "Parcel Centroid" 
 function = "map"
 field = "PtType"
 else = ""
-mapping = { "Residential" = "residence", "Other" = "other", "Unknown" = "unknown" }
+mapping = { "Residential" = "residence", "Industrial" = "industrial", "Other" = "other", "Unknown" = "unknown" }
 
 # Road centerlines: UGRC's statewide roads (the Utah NG911 road layer, 414,592 segments), already in OpenAddresses
 # (us/ut/statewide centerlines) with no licence recorded: unknown (tracker: us-ut-ugrc-ng911). UNIQUE_ID is the
@@ -122,13 +122,15 @@ license_url = ""
 attribution = "Utah 911 Committee, UGRC"
 nena = { dateupdate = "DateUpdate", effective = "Effective", expire = "Expire", agency_id = "Agency_ID", serviceuri = "ServiceURI", serviceurn = "ServiceURN", servicenum = "ServiceNum", avcard_uri = "AVcard_URI", dsplayname = "DsplayName" }
 
+# The law and fire areas are drawn in full detail (one page of them is over 150 MB and fails), so they are read
+# 20 at a time and generalised to about 1 m (`page`, `query`).
 [[source]]
 key = "us-ut-ugrc-law"
 agency = "Utah Department of Public Safety and UGRC (law enforcement boundaries)"
 layer = "police"
 covers = "*"
 id_field = "ES_NGUID"
-endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/LawEnforcementBoundaries/FeatureServer/0", protocol = "ESRI" }
+endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/LawEnforcementBoundaries/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
 license_status = "unknown"
 license_url = ""
 attribution = "Utah Department of Public Safety, UGRC"
@@ -140,7 +142,7 @@ agency = "Utah Division of Forestry, Fire and State Lands and UGRC (fire respons
 layer = "fire"
 covers = "*"
 id_field = "ES_NGUID"
-endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/FireResponseAreas/FeatureServer/0", protocol = "ESRI" }
+endpoint = { data = "https://services1.arcgis.com/99lidPhWCzftIe9K/arcgis/rest/services/FireResponseAreas/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
 license_status = "unknown"
 license_url = ""
 attribution = "Utah FFSL, UGRC"

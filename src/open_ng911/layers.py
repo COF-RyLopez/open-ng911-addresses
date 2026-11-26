@@ -115,7 +115,9 @@ def load_sources(c, job, jurisdiction, work_dir):
         if s.id_field and not has_id:
             print(f"  [WARNING] {s.key}: id_field {s.id_field!r} isn't in the layer; UIDs from geometry instead")
         path = os.path.join(work_dir, f"{s.key}.ndjson")
-        arcgis.fetch(url, path, where=s.endpoint.get("where", "1=1"))
+        # `page` and `query` (extra query parameters, e.g. maxAllowableOffset) for a layer too heavy to page whole
+        arcgis.fetch(url, path, where=s.endpoint.get("where", "1=1"), extra=s.endpoint.get("query"),
+                     page=s.endpoint.get("page"))
         insert_source(c, s, path, has_id)
 
 

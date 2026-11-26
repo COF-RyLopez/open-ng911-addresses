@@ -80,15 +80,16 @@ format = "geojson"
 name = "NAME"
 
 # Service boundaries from the Province's Emergency Service Zones (134 zones), each naming its ESN, PSAP, police, fire
-# and EMS agency, merged by each name into the four layers (layers.py `dissolve`), as for Vermont. Licence as for
-# the roads (tracker: ca-pe-ng911-layers).
+# and EMS agency, merged by each name into the four layers (layers.py `dissolve`), as for Vermont. The zones follow
+# the coastline in full detail (20 zones are 24 MB, and a full page fails on the server), so they are read 20 at a
+# time and generalised to about 1 m (`page`, `query`). Licence as for the roads (tracker: ca-pe-ng911-layers).
 [[source]]
 key = "ca-pe-esz-psap"
 agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
 layer = "psap"
 covers = "*"
 dissolve = "PSAP"
-endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
 license_status = "unknown"
 license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
 attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -100,7 +101,7 @@ agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
 layer = "police"
 covers = "*"
 dissolve = "POLICE"
-endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
 license_status = "unknown"
 license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
 attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -112,7 +113,7 @@ agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
 layer = "fire"
 covers = "*"
 dissolve = "FIRE"
-endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
 license_status = "unknown"
 license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
 attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
@@ -124,7 +125,7 @@ agency = "Prince Edward Island 911 Administration (Emergency Service Zones)"
 layer = "ems"
 covers = "*"
 dissolve = "EMS"
-endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI" }
+endpoint = { data = "https://gis.princeedwardisland.ca/server/rest/services/Emergency_Service_Zones/FeatureServer/0", protocol = "ESRI", page = 20, query = { maxAllowableOffset = "0.00001", geometryPrecision = "7" } }
 license_status = "unknown"
 license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
 attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"

@@ -135,7 +135,9 @@ def normalize_sql(raw, f):
 
 def raw_columns(source, layer, country):
     """`r_<field>` select items: each mapped field's raw value as text (to count rejections)."""
-    return [f"{value_sql(spec)} AS r_{name}" for name, spec in source.nena.items() if name in fields(layer, country)]
+    # a blank value ('' or spaces, or a map's else = "") is no value, not a rejected one
+    return [f"nullif(trim(({value_sql(spec)})::VARCHAR), '') AS r_{name}" for name, spec in source.nena.items()
+            if name in fields(layer, country)]
 
 
 def native_columns(source, layer, country, alias=""):

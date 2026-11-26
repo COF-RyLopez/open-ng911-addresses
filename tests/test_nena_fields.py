@@ -72,7 +72,7 @@ def test_vermont_points_carry_the_source_fields(vt_build):
     cov = s["nena_coverage"]["SiteStructureAddressPoint"]
     assert cov["fields"]["esn"]["status"] == "partial" and cov["fields"]["esn"]["before"] == 0.0
     assert cov["fields"]["esn"]["source"] == ["us-vt-e911-esite: ESN"]
-    assert cov["fields"]["place_type"]["rejected"] == 3
+    assert "rejected" not in cov["fields"]["place_type"], "a site type the map leaves blank is no value, not a rejection"
     assert cov["fields"]["nguid"]["derived"] and cov["fields"]["nguid"]["required"]
     assert cov["before"]["partial"] < cov["partial"] or cov["before"]["no_source"] > cov["no_source"]
 
