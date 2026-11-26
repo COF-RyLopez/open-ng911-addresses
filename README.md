@@ -64,7 +64,8 @@ data/catalog/
         scorecard/               one GeoParquet row per Package, published or not: counts, coverage, licence,
                                  opt-in state, on the county / census division outline
         us/<job>/<package>/      a Collection per published Package: manifest.json, domains.json, a thumbnail,
-                                 and one Item per NENA layer with its GeoParquet
+                                 PMTiles of its layers with a MapLibre style (made with manby), and one Item
+                                 per NENA layer with its GeoParquet
 ```
 
 A Package's data goes public only when every source in it is openly licensed (no `unknown` or `share-alike`

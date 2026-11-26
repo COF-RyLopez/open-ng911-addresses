@@ -6,7 +6,9 @@ with no server and be read with DuckDB over range requests. `catalog.py` writes 
 already produce, as one more step after the builds rather than a separate system; portolan-cli is used only to
 validate and push. The tree is a catalog per country and job, a Collection per Package (manifest.json and
 domains.json as metadata assets) and an Item per NENA layer, because a Package is several distinct files and
-Portolan models those as Items.
+Portolan models those as Items. Each collection's vector tiles (PMTiles, with a MapLibre style) come from manby, which makes
+tippecanoe's tiles from GeoParquet or a DuckDB query in one pip-installable binary (BSD-2-Clause), so the
+build needs no tippecanoe toolchain.
 
 A Package's data is public when every source in it is openly licensed (ADR 0004), including the Overture
 licences of its Gap-fill candidates, and its job passed the gate. Opting in is not required (Ryan, 2026-11-26,

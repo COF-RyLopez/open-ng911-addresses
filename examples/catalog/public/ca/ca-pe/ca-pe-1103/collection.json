@@ -4,13 +4,14 @@
   "stac_extensions": [
     "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
     "https://stac-extensions.github.io/table/v1.2.0/schema.json",
-    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/web-map-links/v1.3.0/schema.json"
   ],
   "id": "ca-pe-1103",
   "title": "Prince, Prince Edward Island: NG9-1-1 Package (unclaimed)",
   "description": "The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1103.unclaimed.invalid until the authority opts in.",
   "license": "other",
-  "updated": "2026-11-26T18:52:35Z",
+  "updated": "2026-11-26T20:26:29Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
@@ -58,8 +59,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T18:52:35Z",
-          "2026-11-26T18:52:35Z"
+          "2026-11-26T20:26:29Z",
+          "2026-11-26T20:26:29Z"
         ]
       ]
     }
@@ -100,6 +101,16 @@
       "href": "./ca-pe-1103-a2-polygon/ca-pe-1103-a2-polygon.json",
       "type": "application/geo+json",
       "title": "Prince: A2Polygon"
+    },
+    {
+      "rel": "pmtiles",
+      "href": "./ca-pe-1103.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "Prince (vector tiles)",
+      "pmtiles:layers": [
+        "a2_polygon",
+        "site_structure_address_point"
+      ]
     },
     {
       "rel": "license",
@@ -165,6 +176,29 @@
       "description": "Outline, municipalities, roads and address points.",
       "file:size": 671,
       "file:checksum": "12208d4b187a57831004ee6245b14be8bd5491bd85435d3257bb10f7dd9e7ef1ba04"
+    },
+    "pmtiles": {
+      "href": "./ca-pe-1103.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "roles": [
+        "visual"
+      ],
+      "title": "Vector tiles",
+      "description": "PMTiles of a2_polygon, site_structure_address_point for web maps, made with manby.",
+      "file:size": 5292,
+      "file:checksum": "1220f2733bb3fdd2c8323c6ece703384a2b602af6e7d19738eb12dcc6f8c7fd3e3cb"
+    },
+    "style-default": {
+      "href": "./styles/default.json",
+      "type": "application/vnd.mapbox.style+json",
+      "roles": [
+        "style",
+        "default"
+      ],
+      "title": "Default style",
+      "description": "MapLibre GL style for the vector tiles.",
+      "file:size": 880,
+      "file:checksum": "1220f6747030df01a96615978d5bca5231394b02d54427a1c1c33015eeba9d93c68c"
     }
   }
 }

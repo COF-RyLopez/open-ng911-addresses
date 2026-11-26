@@ -7,7 +7,7 @@
   "id": "open-ng911-addresses",
   "title": "Open NG9-1-1 address packages",
   "description": "Open-data NENA NG9-1-1 address packages for the 911 authorities of the US and Canada, Overture release 2026-11-18.0. Only Packages whose every source is openly licensed carry data here; one whose 911 authority hasn't opted in is marked unclaimed. The scorecard lists every Package.",
-  "updated": "2026-11-26T18:52:35Z",
+  "updated": "2026-11-26T20:26:29Z",
   "links": [
     {
       "rel": "root",

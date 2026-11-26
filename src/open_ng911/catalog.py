@@ -35,6 +35,7 @@ import shutil
 import struct
 import zlib
 
+import manby
 import numpy as np
 
 from . import db, registry
@@ -42,6 +43,7 @@ from . import db, registry
 PORTOLAN = "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json"
 TABLE = "https://stac-extensions.github.io/table/v1.2.0/schema.json"
 FILE = "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+WEB_MAP_LINKS = "https://stac-extensions.github.io/web-map-links/v1.3.0/schema.json"
 STAC = "1.1.0"
 PARQUET = "application/vnd.apache.parquet"
 HOST = {"name": "open-ng911-addresses", "roles": ["processor", "host"],
@@ -263,6 +265,35 @@ def thumbnail(c, layers, path, size=256):
                 + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
+def visual(c, d, name, layers, title):
+    """The PMTiles rendering derivative Portolan asks for, made with manby (tippecanoe's tiling, BSD-2-Clause),
+    and its default MapLibre style. layers: [(layer name, parquet path, kind, colour)], kind one of fill, line,
+    circle, drawn in order; empty layers are left out. Returns (links, assets) for the collection."""
+    layers = [x for x in layers if c.execute(f"SELECT count(*) FROM read_parquet({db.quote(x[1])})").fetchall()[0][0]]
+    pm = os.path.join(d, f"{name}.pmtiles")
+    manby.tile({n: p for n, p, _, _ in layers}, pm, maximum_zoom="g", largest_maximum_zoom_guess=14,
+               drop_densest_as_needed=True, quiet=True)
+    paint = {"fill": lambda col: {"fill-color": col, "fill-opacity": 0.08, "fill-outline-color": col},
+             "line": lambda col: {"line-color": col, "line-width": 1.5},
+             "circle": lambda col: {"circle-color": col, "circle-radius": 3, "circle-stroke-color": "#ffffff",
+                                    "circle-stroke-width": 0.5}}
+    style = {"version": 8, "name": f"{title}: default", "sources": {"data": {"type": "vector",
+                                                                             "url": f"pmtiles://../{name}.pmtiles"}},
+             "layers": [{"id": "background", "type": "background", "paint": {"background-color": "#ffffff"}}]
+             + [{"id": n, "type": kind, "source": "data", "source-layer": n, "paint": paint[kind](col)}
+                for n, _, kind, col in layers]}
+    write_json(os.path.join(d, "styles", "default.json"), style)
+    names = [n for n, *_ in layers]
+    link = {"rel": "pmtiles", "href": f"./{name}.pmtiles", "type": "application/vnd.pmtiles",
+            "title": f"{title} (vector tiles)", "pmtiles:layers": names}
+    return [link], {
+        "pmtiles": asset(pm, f"./{name}.pmtiles", ["visual"], "Vector tiles",
+                         f"PMTiles of {', '.join(names)} for web maps, made with manby.", "application/vnd.pmtiles"),
+        "style-default": asset(os.path.join(d, "styles", "default.json"), "./styles/default.json", ["style", "default"],
+                               "Default style", "MapLibre GL style for the vector tiles.",
+                               "application/vnd.mapbox.style+json")}
+
+
 # ---- the catalog ---------------------------------------------------------------------------------------------
 
 def license_links(m):
@@ -340,6 +371,11 @@ def write_package(c, m, job, built, src_dir, coll_dir):
                    ("site_structure_address_point", (30, 90, 200)))], os.path.join(coll_dir, "thumbnail.png"))
     ext = [min(e[0] for e in extents), min(e[1] for e in extents), max(e[2] for e in extents),
            max(e[3] for e in extents)]
+    vis_links, vis_assets = visual(c, coll_dir, key, [
+        (s, os.path.join(src_dir, f"{s}.parquet"), kind, col) for s, kind, col in (
+            ("a2_polygon", "fill", "#3c3c3c"), ("a3_polygon", "line", "#a0a0a0"),
+            ("road_centerline", "line", "#e68c28"), ("site_structure_address_point", "circle", "#1e5ac8"))],
+        m["name"])
     rcl = m["road_centerline"]
     title = f"{m['name']}, {job.name}: NG9-1-1 Package" + ("" if m["opted_in"] else " (unclaimed)")
     desc = (f"The NENA NG9-1-1 GIS dataset for {m['name']} ({job.name}), built from the Source agencies' own "
@@ -351,7 +387,8 @@ def write_package(c, m, job, built, src_dir, coll_dir):
                f"{m['recipient'] or 'a 911 authority'}; its NGUIDs use the placeholder domain {m['nguid_domain']} "
                "until the authority opts in."))
     coll = {
-        "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE], "id": key,
+        "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE, WEB_MAP_LINKS],
+        "id": key,
         "title": title, "description": desc, "license": "other", "updated": built,
         "keywords": ["NG9-1-1", "NENA", "addresses", "road centerlines", job.name, m["name"],
                      *([] if m["opted_in"] else ["unclaimed"])],
@@ -365,7 +402,7 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         "ng911:road_segments": rcl["rows"], "ng911:road_gers_coverage": rcl["gers_coverage"],
         "ng911:road_source": rcl["road_source"],
         "links": nav(3) + [{"rel": "item", "href": f"./{i}/{i}.json", "type": "application/geo+json", "title": t}
-                           for i, t in items] + license_links(m) + via_links(m) + doc_links(),
+                           for i, t in items] + vis_links + license_links(m) + via_links(m) + doc_links(),
         "assets": {
             "manifest": asset(os.path.join(coll_dir, "manifest.json"), "./manifest.json", ["metadata"],
                               "Package manifest", "Counts, field fill, every source with its licence and date, "
@@ -375,6 +412,7 @@ def write_package(c, m, job, built, src_dir, coll_dir):
                              "application/json"),
             "thumbnail": asset(os.path.join(coll_dir, "thumbnail.png"), "./thumbnail.png", ["thumbnail"],
                                "Thumbnail", "Outline, municipalities, roads and address points.", "image/png"),
+            **vis_assets,
         },
     }
     write_json(os.path.join(coll_dir, "collection.json"), coll)
@@ -519,12 +557,14 @@ def write_tree(c, pub, release, tree, cards, jobs, updated):
         path = scorecard(c, cards, d)
         ext = bbox(c, [path])
         thumbnail(c, [(path, (60, 60, 60))], os.path.join(d, "thumbnail.png"))
+        vis_links, vis_assets = visual(c, d, "scorecard", [("scorecard", path, "fill", "#3c3c3c")], "Package scorecard")
         n_pub = sum(1 for r in cards if r[6])
         countries = sorted({r[3] for r in cards})
         boundary_links = [{"rel": "license", "type": "text/html", "href": registry.COUNTRIES[k].boundary_license_url,
                            "title": f"Licence: {registry.COUNTRIES[k].a2_source}"} for k in countries]
         coll = {
-            "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE], "id": "scorecard",
+            "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE, WEB_MAP_LINKS],
+            "id": "scorecard",
             "title": "Package scorecard",
             "description": f"Every Package built for Overture release {release}, {len(cards):,} in all and "
                            f"{n_pub:,} published here: counts, GERS coverage, licence and opt-in state, on each "
@@ -537,13 +577,13 @@ def write_tree(c, pub, release, tree, cards, jobs, updated):
             "table:columns": [{**col, **({"description": SCORECARD_COLUMNS[col["name"]]}
                                           if col["name"] in SCORECARD_COLUMNS else {})} for col in columns(c, path)],
             "table:row_count": len(cards), "table:primary_geometry": "geom",
-            "links": nav(1) + boundary_links + [
+            "links": nav(1) + vis_links + boundary_links + [
                 {"rel": "via", "type": "text/html", "href": registry.COUNTRIES[k].boundary_license_url,
                  "title": f"Outlines: {registry.COUNTRIES[k].a2_source}"} for k in countries] + doc_links(),
             "assets": {"data": asset(path, "./scorecard.parquet", ["data"], "Scorecard GeoParquet",
                                      "One row per Package.", PARQUET),
                        "thumbnail": asset(os.path.join(d, "thumbnail.png"), "./thumbnail.png", ["thumbnail"],
-                                          "Thumbnail", "Package outlines.", "image/png")}}
+                                          "Thumbnail", "Package outlines.", "image/png"), **vis_assets}}
         write_json(os.path.join(d, "collection.json"), coll)
         write_md(os.path.join(d, "README.md"), f"""
 # Package scorecard

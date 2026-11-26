@@ -27,7 +27,8 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   sources could stand in for Overture's ODbL themes (docs/standards/upstream-path.md).
 - `catalog.py` the Portolan/STAC catalog over a release's Packages (`python -m open_ng911.catalog`): reads the
   manifests and layer files the jobs wrote, decides public or withheld per Package (ADR 0011), writes
-  `data/catalog/public/` and `report.json`. It never changes a Package; layer files are hard-linked in.
+  `data/catalog/public/` and `report.json`. It never changes a Package; layer files are hard-linked in. Vector
+  tiles come from manby (`catalog.visual`), which tiles the GeoParquet directly; don't add tippecanoe.
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 and CLDXF-CA domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID
   and NGUID, `lineage.py` the ledger that carries UIDs across Overture releases, `package.py` writes every

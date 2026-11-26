@@ -94,6 +94,17 @@ def test_published_packages(builds):
                            "us-vt-50001-road-centerline.json")) as f:
         rcl = json.load(f)
     assert set(rcl["assets"]) == {"road_centerline", "road_gers_crosswalk"}
+
+    # The PMTiles derivative (manby) and its MapLibre style, as Portolan registers them
+    pm = next(lk for lk in coll["links"] if lk["rel"] == "pmtiles")
+    assert pm["href"] == "./us-vt-50001.pmtiles" and pm["pmtiles:layers"] == [
+        "a2_polygon", "a3_polygon", "road_centerline", "site_structure_address_point"]
+    assert coll["assets"]["pmtiles"]["roles"] == ["visual"]
+    assert coll["assets"]["style-default"]["roles"] == ["style", "default"]
+    with open(os.path.join(os.path.dirname(coll_path), "styles", "default.json")) as f:
+        style = json.load(f)
+    assert style["sources"]["data"]["url"] == "pmtiles://../us-vt-50001.pmtiles"
+    assert {lyr["source-layer"] for lyr in style["layers"][1:]} == set(pm["pmtiles:layers"])
     assert rcl["properties"]["table:row_count"] == 3
     cols = {c["name"]: c for c in rcl["properties"]["table:columns"]}
     assert cols["gers_id"]["description"] and cols["geom"]["type"].startswith("geometry")

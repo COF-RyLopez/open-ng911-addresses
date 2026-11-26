@@ -4,13 +4,14 @@
   "stac_extensions": [
     "https://schemas.portolan-sdi.org/portolan/v0.2.0/schema.json",
     "https://stac-extensions.github.io/table/v1.2.0/schema.json",
-    "https://stac-extensions.github.io/file/v2.1.0/schema.json"
+    "https://stac-extensions.github.io/file/v2.1.0/schema.json",
+    "https://stac-extensions.github.io/web-map-links/v1.3.0/schema.json"
   ],
   "id": "scorecard",
   "title": "Package scorecard",
   "description": "Every Package built for Overture release 2026-11-18.0, 4 in all and 2 published here: counts, GERS coverage, licence and opt-in state, on each county or census division outline. Withheld Packages appear here with their reasons and no address data.",
   "license": "other",
-  "updated": "2026-11-26T18:52:35Z",
+  "updated": "2026-11-26T20:26:29Z",
   "keywords": [
     "NG9-1-1",
     "scorecard",
@@ -161,6 +162,15 @@
       "type": "application/json"
     },
     {
+      "rel": "pmtiles",
+      "href": "./scorecard.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "title": "Package scorecard (vector tiles)",
+      "pmtiles:layers": [
+        "scorecard"
+      ]
+    },
+    {
       "rel": "license",
       "type": "text/html",
       "href": "https://www.statcan.gc.ca/en/terms-conditions/open-licence",
@@ -219,6 +229,29 @@
       "description": "Package outlines.",
       "file:size": 629,
       "file:checksum": "1220c7becbadc621996a570f2b867b67818e43befd1b3bfffce1d24ac004a1112f41"
+    },
+    "pmtiles": {
+      "href": "./scorecard.pmtiles",
+      "type": "application/vnd.pmtiles",
+      "roles": [
+        "visual"
+      ],
+      "title": "Vector tiles",
+      "description": "PMTiles of scorecard for web maps, made with manby.",
+      "file:size": 1823,
+      "file:checksum": "12204f0215515d702234f596226d3e712aed19f272f3809393a6ef2c743c490df5d5"
+    },
+    "style-default": {
+      "href": "./styles/default.json",
+      "type": "application/vnd.mapbox.style+json",
+      "roles": [
+        "style",
+        "default"
+      ],
+      "title": "Default style",
+      "description": "MapLibre GL style for the vector tiles.",
+      "file:size": 564,
+      "file:checksum": "122040118b8593aced68147d61368aa6e60806956028086bdffd670b42935673a5a0"
     }
   }
 }
