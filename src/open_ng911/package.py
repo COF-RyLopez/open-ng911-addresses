@@ -1,14 +1,17 @@
 """
 Packages: one per county (in Canada, census division), each the NG9-1-1 dataset for that area (GLOSSARY.md).
 
-This module writes the SiteStructureAddressPoint layer and the A2 and A3 boundary layers (boundaries.py);
-roads.py adds the RoadCenterline layer and its manifest section. Overture's ODbL themes never go into a core
-layer, and the OSM-derived Review layer is built only for opted-in Packages (ADR 0007).
+This module writes every Package: the SiteStructureAddressPoint layer, then each layer module's files and
+manifest section (boundaries.py A2/A3, roads.py RoadCenterline, upstream.py counts, odbl_inventory.py), and the
+manifest once. Overture's ODbL themes never go into a core layer, and the OSM-derived Review layer is built only
+for opted-in Packages (ADR 0007).
 
     <out>/release=<release>/<job>/<geoid>/
         site_structure_address_point.parquet   GeoParquet, NENA-STA-006.3 fields + uid, gers_id, status
         a2_polygon.parquet                     A2Polygon: the county / census division, NENA fields + source_code
         a3_polygon.parquet                     A3Polygon: its municipalities clipped to it, NENA fields + source_code
+        road_centerline.parquet                RoadCenterline: NENA RCL fields + uid, gers_id, road_source
+        road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
         manifest.json                          counts, field fill, sources and their licenses, opt-in state
         domains.json                           the value domains the layers use: NENA's, and CLDXF-CA's in Canada
 """

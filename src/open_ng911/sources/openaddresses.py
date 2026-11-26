@@ -6,7 +6,8 @@ and its field mappings; we don't use its processed output, which is redundant wi
 OpenAddresses conform steps map fields, they don't rewrite values (openaddresses/openaddresses#10085): value
 fixes belong in our parse (street.py), upstream PRs are for wrong field mappings or filters.
 
-Table agency_addr(source_key, source_id, address_uid, number, street, unit, city, postcode, geom).
+Table agency_addr(source_key, source_id, address_uid, number, street, unit, city, postcode, site_type, id_shared,
+geom), and agency_dropped(source_key, reason, site_type, n): every point left out, counted by reason.
 """
 import json
 import os

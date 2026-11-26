@@ -30,7 +30,9 @@ or census division:
 7. Write the RoadCenterline layer: the Source agency's own centerlines (through the OpenAddresses registry), else
    Census TIGER address-range roads for that Package, each segment carrying the GERS IDs of the Overture road
    segments that run along it. Overture's road geometry and names (ODbL) never go in (ADR 0010).
-8. Gate: every NENA mandatory field filled and every NGUID unique, on every layer, or the job fails.
+8. Count where the government roads and Overture / TIGER disagree, and which government sources could stand in
+   for Overture's ODbL themes in each Package (the `upstream` and `odbl_replacement` manifest sections).
+9. Gate: every NENA mandatory field filled and every NGUID unique, on every layer, or the job fails.
 
 ```
 data/output/release=<overture release>/<job>/
@@ -41,7 +43,8 @@ data/output/release=<overture release>/<job>/
     <geoid>/a3_polygon.parquet   A3Polygon, its municipalities
     <geoid>/road_centerline.parquet                GeoParquet: NENA RCL fields + uid, gers_id, road_source
     <geoid>/road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
-    <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date
+    <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date,
+                                 upstream counts, ODbL replacement inventory
     <geoid>/domains.json         the value domains used: NENA-STA-006.3, plus CLDXF-CA in a Canadian Package
 ```
 

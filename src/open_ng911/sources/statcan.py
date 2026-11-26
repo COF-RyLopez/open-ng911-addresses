@@ -1,6 +1,6 @@
 """
 Package areas and municipalities for a Canadian job, from Statistics Canada's 2021 Census digital boundary files
-(Open Government Licence - Canada), read from StatCan's own ArcGIS service (ADR 0006). The digital files, not the
+(Statistics Canada Open Licence), read from StatCan's own ArcGIS service (ADR 0006). The digital files, not the
 cartographic ones: they run out into the water rather than stopping at the shoreline, so a civic address on a
 wharf or a small island still falls inside its census division.
 

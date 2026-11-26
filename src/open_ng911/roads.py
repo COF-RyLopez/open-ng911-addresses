@@ -139,7 +139,7 @@ def assemble_rcl(c, job, updated):
                '{job.country}' AS country_l, '{job.country}' AS country_r,
                '{job.code}' AS a1_l, '{job.code}' AS a1_r,
                p.name AS a2_l, p.name AS a2_r,
-               NULL::VARCHAR AS a3_l, NULL::VARCHAR AS a3_r,  -- from the boundary adapters, not built yet
+               NULL::VARCHAR AS a3_l, NULL::VARCHAR AS a3_r,  -- per side of a segment: not derived yet (it can run along a town line)
                y.zip_l AS postcode_l, y.zip_r AS postcode_r,
                y.road_class AS roadclass, y.oneway, y.speed_mph AS speedlimit,
                y.geoid, y.geom
