@@ -5,9 +5,8 @@ data), so the layout can be read without running a build.
     python scripts/sample_catalog.py
 
 Vermont and Prince Edward Island are built on tests/vt_fixtures.py and tests/pe_fixtures.py with the registry as
-it stands. The opt-in gate is lifted for the sample only (catalog.build(unclaimed=True)), so PEI's open-licensed
-Packages show what a published Package looks like; Vermont stays withheld for its unknown licence. A real build
-keeps the gate (ADR 0003).
+it stands: PEI's open-licensed Packages are published, marked unclaimed since no authority has opted in, and
+Vermont is withheld for its unknown licence (ADR 0011).
 """
 import os
 import shutil
@@ -36,7 +35,7 @@ def main():
             build.run(job, out, loaders=loaders(Path(work)), release=RELEASE, c=db.connect(s3=False))
         if os.path.exists(OUT):
             shutil.rmtree(OUT)
-        r = catalog.build(RELEASE, out, OUT, unclaimed=True)
+        r = catalog.build(RELEASE, out, OUT)
     print(f"{len(r['published'])} published, {len(r['withheld'])} withheld -> {os.path.relpath(OUT, ROOT)}")
 
 

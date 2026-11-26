@@ -80,7 +80,8 @@ def write(c, job, jurisdiction, release, out_dir, national):
                      "mandatory_fields": list(SSAP_REQUIRED), "rcl_mandatory_fields": list(nena.RCL_REQUIRED)},
             "recipient": authority, "opted_in": opted, "nguid_domain": domain,
             "distribution": ("handed to the opted-in 911 authority" if opted else
-                             "built for the public scorecard only; not handed out until the 911 authority opts in (ADR 0003)"),
+                             "published openly as unclaimed when every source is open, under the placeholder domain; "
+                             "handed to the 911 authority once it opts in (ADR 0003, 0011)"),
             "rows": rows, **counts,
             "record_gers_coverage": round(counts["records_with_gers_id"] / counts["records"], 4) if counts["records"] else None,
             "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},

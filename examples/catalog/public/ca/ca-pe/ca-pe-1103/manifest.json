@@ -36,7 +36,7 @@
   "recipient": "Prince Edward Island 911 Administration (Department of Justice and Public Safety)",
   "opted_in": false,
   "nguid_domain": "ca-pe-1103.unclaimed.invalid",
-  "distribution": "built for the public scorecard only; not handed out until the 911 authority opts in (ADR 0003)",
+  "distribution": "published openly as unclaimed when every source is open, under the placeholder domain; handed to the 911 authority once it opts in (ADR 0003, 0011)",
   "rows": 2,
   "records": 2,
   "records_with_gers_id": 2,

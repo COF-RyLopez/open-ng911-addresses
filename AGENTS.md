@@ -57,8 +57,9 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - **Unclear licences go in the tracker** (`registry/remediation/requests.toml`, `docs/license-remediation.md`),
   never into a guess. Agents don't contact agencies; a person does.
 - **Public catalog** (ADR 0011): a Package's data goes into `catalog/public/` only when every source is
-  `open`, every Gap-fill licence is open (`catalog.open_license`), the job's gate passed and the authority opted
-  in. Don't loosen that in code; `unclaimed=True` exists for the fixture sample only.
+  `open`, every Gap-fill licence is open (`catalog.open_license`) and the job's gate passed. A Package whose
+  authority hasn't opted in is published as *unclaimed* (placeholder domain, labelled in its title, description
+  and AGENTS.md); keep that label prominent and never put a real agency domain on it.
 - **Layer files go through `db.write_geoparquet`** (GeoParquet 2.0, Hilbert order, row groups under 150k) so
   Portolan accepts them as they are; `portolan check` runs in the offline tests when portolan-cli is installed.
 - **Licenses**: a source with `license_status = "unknown"` never goes into anything public, including CI

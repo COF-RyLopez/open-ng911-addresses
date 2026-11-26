@@ -6,7 +6,7 @@
 - `uid` is the stable key. `gers_id` is a link to Overture and can change between releases; NGUIDs are built
   from `uid`, never from a GERS ID.
 - Roads: join `road_gers_crosswalk.parquet` on `uid` for every Overture segment along a road segment.
-- `discrpagid` / NGUID domain `ca-pe-1103.unclaimed.invalid`.
+- `discrpagid` / NGUID domain `ca-pe-1103.unclaimed.invalid`. Unclaimed: the 911 authority hasn't opted in, so this is not its dataset and the domain is a placeholder; don't present it as the authority's.
 
 ```sql
 -- DuckDB, from this collection's folder (or its https URL)

@@ -10,7 +10,7 @@
   "title": "Package scorecard",
   "description": "Every Package built for Overture release 2026-11-18.0, 4 in all and 2 published here: counts, GERS coverage, licence and opt-in state, on each county or census division outline. Withheld Packages appear here with their reasons and no address data.",
   "license": "other",
-  "updated": "2026-11-26T17:41:51Z",
+  "updated": "2026-11-26T18:52:35Z",
   "keywords": [
     "NG9-1-1",
     "scorecard",
@@ -89,7 +89,7 @@
     {
       "name": "opted_in",
       "type": "boolean",
-      "description": "Whether the 911 authority has opted in (ADR 0003)"
+      "description": "Whether the 911 authority has opted in; a published Package that hasn't is unclaimed"
     },
     {
       "name": "published",
@@ -99,7 +99,7 @@
     {
       "name": "withheld_reasons",
       "type": "varchar[]",
-      "description": "Why its data isn't: a non-open source licence, an unopen Gap-fill licence, no opt-in yet"
+      "description": "Why its data isn't: a non-open source licence, a Gap-fill licence that isn't open, or a failed gate"
     },
     {
       "name": "overture_release",

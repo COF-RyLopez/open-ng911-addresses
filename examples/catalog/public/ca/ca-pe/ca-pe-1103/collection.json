@@ -7,17 +7,18 @@
     "https://stac-extensions.github.io/file/v2.1.0/schema.json"
   ],
   "id": "ca-pe-1103",
-  "title": "Prince, Prince Edward Island: NG9-1-1 Package",
-  "description": "The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety).",
+  "title": "Prince, Prince Edward Island: NG9-1-1 Package (unclaimed)",
+  "description": "The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1103.unclaimed.invalid until the authority opts in.",
   "license": "other",
-  "updated": "2026-11-26T17:41:51Z",
+  "updated": "2026-11-26T18:52:35Z",
   "keywords": [
     "NG9-1-1",
     "NENA",
     "addresses",
     "road centerlines",
     "Prince Edward Island",
-    "Prince"
+    "Prince",
+    "unclaimed"
   ],
   "providers": [
     {
@@ -57,8 +58,8 @@
     "temporal": {
       "interval": [
         [
-          "2026-11-26T17:41:51Z",
-          "2026-11-26T17:41:51Z"
+          "2026-11-26T18:52:35Z",
+          "2026-11-26T18:52:35Z"
         ]
       ]
     }
@@ -140,8 +141,8 @@
       ],
       "title": "Package manifest",
       "description": "Counts, field fill, every source with its licence and date, opt-in state, upstream counts and the ODbL replacement inventory.",
-      "file:size": 5227,
-      "file:checksum": "1220cfe17a9124ebe62296ff012115ccf2e796d8fbb0a2210b3808c6534f8f7d9d95"
+      "file:size": 5280,
+      "file:checksum": "122064e0e965bc0fd463eae637f761b0b943c253ebb758b179c459e2070812815b04"
     },
     "domains": {
       "href": "./domains.json",

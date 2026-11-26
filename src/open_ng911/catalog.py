@@ -18,9 +18,11 @@ and writes:
                                      metadata assets, a thumbnail, one Item per NENA layer
                     us-me-23001-site-structure-address-point/   Item: the layer's GeoParquet
 
-A Package goes public only when every source it carries is openly licensed (an `unknown` or `share-alike`
-source, or a Gap-fill candidate whose Overture source licence isn't open, keeps it out), its job passed the
-gate, and its 911 authority has opted in (ADR 0003, 0004). A withheld Package is still a scorecard row and a
+A Package goes public when every source it carries is openly licensed (an `unknown` or `share-alike` source,
+or a Gap-fill candidate whose Overture source licence isn't open, keeps it out) and its job passed the gate
+(ADR 0011). Opting in isn't required: a Package whose 911 authority hasn't opted in is published as
+*unclaimed*, under its `.unclaimed.invalid` placeholder domain and labelled as not issued by that authority
+(ADR 0003 as amended). A withheld Package is still a scorecard row and a
 report.json entry, never a data file in public/. Layer files are hard-linked from the build output where the
 filesystem allows it, so the public tree costs no extra disk.
 """
@@ -129,9 +131,9 @@ def open_license(name):
     return n.startswith(OPEN_LICENSE_PREFIXES)
 
 
-def withheld_reasons(m, job_summary, unclaimed=False):
-    """Why a Package can't go public; empty when it can. unclaimed: let a Package whose 911 authority hasn't
-    opted in through (it then carries the .invalid placeholder domain); ADR 0003 says not to."""
+def withheld_reasons(m, job_summary, require_opt_in=False):
+    """Why a Package can't go public; empty when it can. require_opt_in: also hold back a Package whose 911
+    authority hasn't opted in (ADR 0003 before its 2026-11-26 amendment); off by default."""
     reasons = []
     if job_summary.get("gate_failures"):
         reasons.append("job_gate_failed")
@@ -141,7 +143,7 @@ def withheld_reasons(m, job_summary, unclaimed=False):
     for name in m["gap_fill_licenses"]:
         if not open_license(name):
             reasons.append(f"gap_fill_license:{name}")
-    if not m["opted_in"] and not unclaimed:
+    if require_opt_in and not m["opted_in"]:
         reasons.append("not_opted_in")
     return sorted(set(reasons), key=reasons.index)
 
@@ -339,15 +341,20 @@ def write_package(c, m, job, built, src_dir, coll_dir):
     ext = [min(e[0] for e in extents), min(e[1] for e in extents), max(e[2] for e in extents),
            max(e[3] for e in extents)]
     rcl = m["road_centerline"]
-    title = f"{m['name']}, {job.name}: NG9-1-1 Package"
+    title = f"{m['name']}, {job.name}: NG9-1-1 Package" + ("" if m["opted_in"] else " (unclaimed)")
     desc = (f"The NENA NG9-1-1 GIS dataset for {m['name']} ({job.name}), built from the Source agencies' own "
             f"layers and reshaped to {m['nena']['standard']}: {m['records']:,} Records and "
             f"{m['gap_fill_candidates']:,} Gap-fill candidates, {rcl['rows']:,} road segments. Recipient: "
-            f"{m['recipient'] or 'no 911 authority in the registry yet'}.")
+            f"{m['recipient'] or 'no 911 authority in the registry yet'}."
+            + ("" if m["opted_in"] else
+               f" Unclaimed: built from open government sources, not issued or checked by "
+               f"{m['recipient'] or 'a 911 authority'}; its NGUIDs use the placeholder domain {m['nguid_domain']} "
+               "until the authority opts in."))
     coll = {
         "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE], "id": key,
         "title": title, "description": desc, "license": "other", "updated": built,
-        "keywords": ["NG9-1-1", "NENA", "addresses", "road centerlines", job.name, m["name"]],
+        "keywords": ["NG9-1-1", "NENA", "addresses", "road centerlines", job.name, m["name"],
+                     *([] if m["opted_in"] else ["unclaimed"])],
         "providers": providers(m, country),
         "extent": {"spatial": {"bbox": [ext]}, "temporal": {"interval": [[built, built]]}},
         "ng911:package": key, "ng911:job": m["job"], "ng911:recipient": m["recipient"],
@@ -423,7 +430,8 @@ def package_agents(m, items):
 - `uid` is the stable key. `gers_id` is a link to Overture and can change between releases; NGUIDs are built
   from `uid`, never from a GERS ID.
 - Roads: join `road_gers_crosswalk.parquet` on `uid` for every Overture segment along a road segment.
-- `discrpagid` / NGUID domain `{m['nguid_domain']}`.
+- `discrpagid` / NGUID domain `{m['nguid_domain']}`.{"" if m["opted_in"] else " Unclaimed: the 911 authority hasn't "
+  "opted in, so this is not its dataset and the domain is a placeholder; don't present it as the authority's."}
 
 ```sql
 -- DuckDB, from this collection's folder (or its https URL)
@@ -452,9 +460,10 @@ def scorecard(c, rows, d):
 SCORECARD_COLUMNS = {
     "package": "Package key: <job>-<county or census division code>", "name": "County or census division",
     "job": "Build job (state or province)", "country": "US or CA", "recipient": "The 911 authority it is built for",
-    "opted_in": "Whether the 911 authority has opted in (ADR 0003)",
+    "opted_in": "Whether the 911 authority has opted in; a published Package that hasn't is unclaimed",
     "published": "Whether the Package's data is in this catalog",
-    "withheld_reasons": "Why its data isn't: a non-open source licence, an unopen Gap-fill licence, no opt-in yet",
+    "withheld_reasons": "Why its data isn't: a non-open source licence, a Gap-fill licence that isn't open, or a "
+                        "failed gate",
     "overture_release": "Overture release the build used", "records": "The Source agency's address points",
     "gap_fill_candidates": "Overture addresses no Record matched",
     "record_gers_coverage": "Share of Records with a GERS ID", "road_segments": "Road centerline segments",
@@ -465,7 +474,7 @@ SCORECARD_COLUMNS = {
 
 
 def build(release, out_dir="data/output", catalog_dir="data/catalog", registry_dir=registry.REGISTRY_DIR,
-          unclaimed=False, c=None):
+          require_opt_in=False, c=None):
     """Write the catalog for one release; returns report.json's content."""
     rel_dir = os.path.join(out_dir, f"release={release}")
     pub = os.path.join(catalog_dir, "public")
@@ -483,7 +492,7 @@ def build(release, out_dir="data/output", catalog_dir="data/catalog", registry_d
             with open(mpath) as f:
                 m = json.load(f)
             src = os.path.dirname(mpath)
-            reasons = withheld_reasons(m, summary, unclaimed)
+            reasons = withheld_reasons(m, summary, require_opt_in)
             href = None
             if not reasons:
                 coll_dir = os.path.join(pub, job.country.lower(), job.id, m["package"])
@@ -572,8 +581,8 @@ FROM read_parquet('scorecard.parquet') GROUP BY 1 ORDER BY 1;
         children.append((f"{country.lower()}/catalog.json", f"{COUNTRY_NAMES[country]}: NG9-1-1 Packages"))
     sub_catalog(pub, "open-ng911-addresses", "Open NG9-1-1 address packages", 0, updated,
                 f"Open-data NENA NG9-1-1 address packages for the 911 authorities of the US and Canada, Overture "
-                f"release {release}. Only Packages whose every source is openly licensed and whose 911 authority "
-                "has opted in carry data here; the scorecard lists every Package.", children)
+                f"release {release}. Only Packages whose every source is openly licensed carry data here; one whose "
+                "911 authority hasn't opted in is marked unclaimed. The scorecard lists every Package.", children)
 
 
 def sub_catalog(d, cat_id, title, depth, updated, description, children):

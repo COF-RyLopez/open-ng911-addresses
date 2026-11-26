@@ -1,6 +1,6 @@
-# Prince, Prince Edward Island: NG9-1-1 Package
+# Prince, Prince Edward Island: NG9-1-1 Package (unclaimed)
 
-The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety).
+The NENA NG9-1-1 GIS dataset for Prince (Prince Edward Island), built from the Source agencies' own layers and reshaped to NENA-STA-006.3-2026: 2 Records and 0 Gap-fill candidates, 0 road segments. Recipient: Prince Edward Island 911 Administration (Department of Justice and Public Safety). Unclaimed: built from open government sources, not issued or checked by Prince Edward Island 911 Administration (Department of Justice and Public Safety); its NGUIDs use the placeholder domain ca-pe-1103.unclaimed.invalid until the authority opts in.
 
 ## Layers
 

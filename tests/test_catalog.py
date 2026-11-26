@@ -42,34 +42,41 @@ def test_open_license():
         assert not catalog.open_license(name), name
 
 
-def test_default_withholds_every_pilot(builds):
-    """As registered today: Vermont's licence is unknown and no authority has opted in (ADR 0003), so only the
-    scorecard is public and no Package file is in the public tree."""
+def test_pilots_as_registered(builds):
+    """As registered today: PEI's sources are open, so its Packages are published, marked unclaimed (no authority
+    has opted in; ADR 0003 as amended, 0011). Vermont's licence is unknown, so it is a scorecard row only and none
+    of its files are in the public tree. require_opt_in=True restores the stricter gate."""
     tmp, out, _ = builds
     cat = str(tmp / "cat_default")
     r = catalog.build(RELEASE, out, cat)
-    assert r["published"] == []
+    assert [p["package"] for p in r["published"]] == ["ca-pe-1102", "ca-pe-1103"]
     reasons = {w["package"]: w["reasons"] for w in r["withheld"]}
-    assert reasons["ca-pe-1102"] == ["not_opted_in"]
-    assert reasons["us-vt-50001"] == ["source_license:us-vt-e911-esite=unknown",
-                                      "source_license:us-vt-e911-rds=unknown", "not_opted_in"]
+    assert reasons == {p: ["source_license:us-vt-e911-esite=unknown", "source_license:us-vt-e911-rds=unknown"]
+                       for p in ("us-vt-50001", "us-vt-50003")}
     pub = os.path.join(cat, "public")
-    assert sorted(os.listdir(pub)) == ["AGENTS.md", "README.md", "catalog.json", "scorecard"]
-    files = [os.path.basename(p) for p in glob.glob(os.path.join(pub, "**", "*.parquet"), recursive=True)]
-    assert files == ["scorecard.parquet"]
-    res = duckdb.connect().execute(f"SELECT package, published, withheld_reasons, records FROM "
+    assert sorted(os.listdir(pub)) == ["AGENTS.md", "README.md", "ca", "catalog.json", "scorecard"]
+    assert not glob.glob(os.path.join(pub, "**", "*50001*"), recursive=True)
+    with open(os.path.join(pub, "ca", "ca-pe", "ca-pe-1102", "collection.json")) as f:
+        coll = json.load(f)
+    assert coll["title"].endswith("(unclaimed)") and "unclaimed" in coll["keywords"]
+    assert "not issued or checked by" in coll["description"] and coll["ng911:opted_in"] is False
+    res = duckdb.connect().execute(f"SELECT package, published, records FROM "
                                    f"read_parquet('{pub}/scorecard/scorecard.parquet') ORDER BY package").fetchall()
-    assert [(p, pub_) for p, pub_, _, _ in res] == [("ca-pe-1102", False), ("ca-pe-1103", False),
-                                                    ("us-vt-50001", False), ("us-vt-50003", False)]
-    assert res[2][3] == 9
+    assert [(p, pub_) for p, pub_, _ in res] == [("ca-pe-1102", True), ("ca-pe-1103", True),
+                                                 ("us-vt-50001", False), ("us-vt-50003", False)]
+    assert res[2][2] == 9
+
+    strict = catalog.build(RELEASE, out, str(tmp / "cat_strict"), require_opt_in=True)
+    assert strict["published"] == []
+    assert {w["package"]: w["reasons"] for w in strict["withheld"]}["ca-pe-1102"] == ["not_opted_in"]
 
 
 def test_published_packages(builds):
-    """With open sources and the opt-in gate lifted, every Package is a Collection with an Item per non-empty
+    """With every source open, every Package is a Collection with an Item per non-empty
     layer, its files hard-linked, checksums right, every relative link resolving."""
     tmp, _, out_open = builds
     cat = str(tmp / "cat_open")
-    r = catalog.build(RELEASE, out_open, cat, unclaimed=True)
+    r = catalog.build(RELEASE, out_open, cat)
     assert [p["package"] for p in r["published"]] == ["ca-pe-1102", "ca-pe-1103", "us-vt-50001", "us-vt-50003"]
     pub = os.path.join(cat, "public")
 
@@ -124,7 +131,7 @@ def test_published_packages(builds):
 def test_portolan_check(builds):
     tmp, _, out_open = builds
     cat = str(tmp / "cat_check")
-    catalog.build(RELEASE, out_open, cat, unclaimed=True)
+    catalog.build(RELEASE, out_open, cat)
     res = subprocess.run(["portolan", "--format", "json", "check"], check=False, cwd=os.path.join(cat, "public"),
                          capture_output=True, text=True)
     assert res.returncode == 0, res.stdout + res.stderr
