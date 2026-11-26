@@ -20,6 +20,9 @@ import sys
 
 from open_ng911 import db
 
+# Points are embedded only up to this many Records, so the page stays fast; larger open pilots get counts.
+MAX_POINTS = 150_000
+
 SAMPLE_FIELDS = ("uid", "nguid", "gers_id", "status", "source_id", "discrpagid", "dateupdate", "country", "a1",
                  "a2", "a3", "add_number", "addnum_suf", "st_predir", "st_pretyp", "st_name", "st_postyp",
                  "st_posdir", "unit", "post_comm", "post_code", "placement", "source_license")
@@ -132,7 +135,9 @@ def main():
            "a3": {"type": "FeatureCollection", "features": a3},
            "points": None,
            "points_note": "Address points are shown only for open-licensed sources." if not open_sources else None}
-    if open_sources:
+    if open_sources and job["records"] > MAX_POINTS:
+        out["points_note"] = f"{job['records']:,} Records is more than the story map embeds ({MAX_POINTS:,}); counts only."
+    elif open_sources:
         files = sorted(glob.glob(os.path.join(root, "*", "site_structure_address_point.parquet")))
         out["points"] = points(c, files, random.Random(7))
     os.makedirs(a.dest, exist_ok=True)
@@ -140,7 +145,7 @@ def main():
     with open(path, "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False, default=str)
     print(f"{path}: {os.path.getsize(path):,} bytes, {len(packages)} packages, "
-          f"points={'yes' if open_sources else 'no (licence not open)'}")
+          f"points={'yes' if out['points'] else 'no: ' + out['points_note']}")
 
 
 if __name__ == "__main__":

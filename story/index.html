@@ -55,6 +55,8 @@ header.top {
 #map { position: absolute; inset: 0; }
 .overlay { position: absolute; top: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .overlay > * { pointer-events: auto; }
+.left { overflow-y: auto; scrollbar-width: thin; }
+.left > .card { flex: 0 0 auto; }
 .left { left: max(14px, env(safe-area-inset-left, 0px)); width: min(380px, 34vw); }
 .right { right: max(14px, env(safe-area-inset-right, 0px)); width: min(330px, 30vw); }
 .card { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; backdrop-filter: blur(6px); }
@@ -78,7 +80,7 @@ header.top {
 .model h3 { margin: 0 0 2px; font: 700 14px/1.2 var(--display); letter-spacing: .01em; }
 .model .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
 .layers { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.layers li { display: grid; grid-template-columns: 54px 1fr auto; gap: 8px; align-items: center; padding: 5px 6px; border-radius: 4px; transition: background .4s; }
+.layers li { display: grid; grid-template-columns: 54px 1fr auto; gap: 8px; align-items: center; padding: 3px 6px; border-radius: 4px; transition: background .4s; }
 .layers li.on { background: var(--panel-2); }
 .layers .ind { font: 500 11px/1 var(--mono); color: var(--muted); }
 .layers .nm { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -125,7 +127,9 @@ header.top {
 .pop .x { position: absolute; right: 6px; top: 4px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; }
 .pop .tag { display: inline-block; font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 3px; background: var(--c); color: var(--ground); margin-bottom: 6px; }
 
-.recordcard dl { margin: 10px 0 0; display: grid; grid-template-columns: 88px 1fr; gap: 3px 10px; }
+.recordcard dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 10px; }
+.recordcard dl.ids { grid-template-columns: auto 1fr; }
+.recordcard dl + dl { margin-top: 6px; }
 .recordcard dt { font: 400 10.5px/1.5 var(--mono); color: var(--muted); }
 .recordcard dd { margin: 0; font: 400 10.5px/1.5 var(--mono); word-break: break-all; opacity: 0; transform: translateX(-4px); transition: opacity .25s, transform .25s; }
 .recordcard dd.in { opacity: 1; transform: none; }
@@ -272,7 +276,7 @@ function decodePoints(P) {
   let x = 0, y = 0;
   for (let i = 0; i < P.dx.length; i++) {
     x += P.dx[i]; y += P.dy[i];
-    feats[i] = { type: "Feature", id: i, geometry: { type: "Point", coordinates: [x / 1e5, y / 1e5] }, properties: { k: P.kind[i], d: P.a2[i] } };
+    feats[i] = { type: "Feature", id: i, geometry: { type: "Point", coordinates: [x / 1e5, y / 1e5] }, properties: { k: P.kind[i], x: x / 1e5 } };
   }
   return { type: "FeatureCollection", features: feats };
 }
@@ -445,7 +449,7 @@ function applyMap(ch, D) {
     if (show === "sweep") {
       const [x0, , x1] = D.bbox;
       map.setPaintProperty("pts", "circle-opacity", 0.85);
-      tween(2600, k => map.setFilter("pts", ["all", ["!=", ["get", "k"], 2], ["<=", ["at", 0, ["geometry-coordinates"]], x0 + (x1 - x0) * k]]),
+      tween(2600, k => map.setFilter("pts", ["all", ["!=", ["get", "k"], 2], ["<=", ["get", "x"], x0 + (x1 - x0) * k]]),
         () => map.setFilter("pts", ["!=", ["get", "k"], 2]));
     }
   }
@@ -517,15 +521,17 @@ function placePulse(s) {
 }
 map.on("move", () => { if (pulseEl && !pulseEl.hidden && pulseEl._ll) placePulse({ lon: pulseEl._ll[0], lat: pulseEl._ll[1] }); if (popup) placePopup(); });
 function addrLine(s) { return [s.add_number, s.addnum_suf, s.st_predir, s.st_pretyp, s.st_name, s.st_postyp, s.st_posdir].filter(v => v != null && v !== "").join(" "); }
+const LONG = new Set(["uid", "nguid", "gers_id", "discrpagid", "dateupdate"]);
+const dl = (rows, cls) => rows.length ? `<dl class="${cls}">${rows.map(([k, l, v]) => `<dt>${l}</dt><dd class="${["uid", "nguid", "gers_id"].includes(k) ? "hl" : ""}">${esc(v)}</dd>`).join("")}</dl>` : "";
 function renderRecord(ch, D) {
   const card = $("record");
   const samples = D.points?.samples?.filter(s => s.status === "record" && (ch.record !== "ids" || s.gers_id)) || [];
   if (!ch.record || !samples.length || window.innerWidth < 640 && false) { card.hidden = true; placePulse(null); return; }
   const s = samples[(state.sampleN = ((state.sampleN || 0) + 1)) % samples.length];
   card.hidden = false;
-  const rows = ch.record === "ids" ? [["uid", "Address UID"], ["nguid", "NGUID"], ["gers_id", "GERS ID"], ["source_id", "Agency ID"]] : REC_ROWS.filter(([k]) => s[k] != null && s[k] !== "");
+  const rows = (ch.record === "ids" ? [["uid", "Address UID"], ["nguid", "NGUID"], ["gers_id", "GERS ID"], ["source_id", "Agency ID"]] : REC_ROWS.filter(([k]) => s[k] != null && s[k] !== "")).map(([k, l]) => [k, l, s[k]]);
   card.innerHTML = `<div class="hd">${ch.record === "ids" ? "One Record's IDs" : "One Record, field by field"}</div><div class="addr">${esc(addrLine(s))}, ${esc(s.a3 || "")}</div>
-    <dl>${rows.map(([k, l]) => `<dt>${l}</dt><dd class="${["uid", "nguid", "gers_id"].includes(k) ? "hl" : ""}">${esc(s[k])}</dd>`).join("")}</dl>`;
+    ${dl(rows.filter(([k]) => ch.record === "ids" || LONG.has(k)), "ids")}${ch.record === "ids" ? "" : dl(rows.filter(([k]) => !LONG.has(k)), "")}`;
   placePulse(s);
   card.querySelectorAll("dd").forEach((dd, n) => later(() => dd.classList.add("in"), 250 + n * 90));
 }
