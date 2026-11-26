@@ -93,7 +93,6 @@ attribution = "North Dakota GIS Hub"
 name = "state"
 website = "https://gishubdata-ndgov.hub.arcgis.com/"
 data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUBRoadsNG911/FeatureServer/0"
-attribution = "North Dakota GIS Hub"
 protocol = "ESRI"
 note = "NG9-1-1 road centerlines in the NENA NG9-1-1 GIS Data Model schema, compiled by the GIS Hub from local addressing authorities."
 
