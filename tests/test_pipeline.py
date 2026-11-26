@@ -158,3 +158,31 @@ def test_government_roads_only_where_their_source_covers(tmp_path, conn, monkeyp
     loaders["tiger_roads"] = lambda c, job, jur, work: None  # both Packages would fall back; none read here
     s = build.run("us-vt", str(tmp_path / "out"), loaders=loaders, release=RELEASE, c=conn)
     assert s["road_sources"] == {}, "Addison's E911 roads are dropped where the source doesn't cover it"
+
+
+def test_upstream_counts(tmp_path, conn):
+    """Where the government roads and Overture / TIGER disagree: counts only, nothing of Overture's written."""
+    out = str(tmp_path / "out")
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    root = os.path.join(out, f"release={RELEASE}", "us-vt")
+    with open(os.path.join(root, "50001", "manifest.json")) as f:
+        up = json.load(f)["upstream"]
+    # MAIN ST agrees with Overture's "Main Street"; N EIGHTH ST is "Seminary Street" and a trunk road there;
+    # the VT 125 ramp has no Overture segment
+    o = up["overture"]
+    assert (o["segments"], o["not_in_overture"], o["name_agrees"], o["name_differs"]) == (3, 1, 1, 1)
+    assert (o["class_agrees"], o["class_differs"]) == (1, 1)
+    # TIGER has MAIN ST and a road the E911 layer lacks, and lacks N EIGHTH ST and the ramp
+    n = up["national"]
+    assert n["measured"] and n["date"] == "TIGER/Line 2025"
+    assert (n["government_segments"], n["not_in_national"], n["national_segments"],
+            n["national_not_in_government"]) == (3, 2, 2, 1)
+    assert n["not_in_national_km"] > 0 and n["national_not_in_government_km"] > 0
+    assert up["upstream_eligible"] is False, "the E911 roads' licence is unknown"
+    with open(os.path.join(root, "50003", "manifest.json")) as f:
+        benn = json.load(f)["upstream"]
+    assert benn["national"] == {"measured": False, "why": "no government roads in this Package"}
+    assert benn["overture"]["name_agrees"] == 1
+    assert s["upstream"]["overture"]["segments"] == 5 and s["upstream"]["national"]["not_in_national"] == 2
+    # counts only: no names anywhere in the section
+    assert "Seminary" not in json.dumps(up)

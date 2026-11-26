@@ -6,6 +6,8 @@ Build the license-remediation snapshot from the OpenAddresses source registry (d
 Writes, for the US and Canada:
     registry/remediation/oa_sources.csv     every OA source layer: its license as OA records it, and our class
     registry/remediation/oa_coverage.csv    per state/province and layer: statewide source?, counties covered, classes
+    registry/remediation/oa_proposals.csv   endpoints our registry reads (`oa_entry`) that OpenAddresses doesn't list
+                                            yet: each one is an entry to propose upstream
 
 The class is a first read of what OpenAddresses records, not a legal opinion, and it never changes a job's
 `license_status` by itself: that changes by hand, only after the agency confirms (ADR 0004, 0005).
@@ -18,11 +20,13 @@ import json
 import os
 import re
 import tarfile
+import tomllib
 import urllib.request
 
 OA_TARBALL = "https://github.com/openaddresses/openaddresses/archive/refs/heads/master.tar.gz"
 LAYERS = ("addresses", "centerlines", "parcels", "buildings")
-OUT = os.path.join(os.path.dirname(__file__), "..", "registry", "remediation")
+REGISTRY = os.path.join(os.path.dirname(__file__), "..", "registry")
+OUT = os.path.join(REGISTRY, "remediation")
 
 OPEN = re.compile(r"public domain|\bpd\b|pddl|\bcc[ -]?0\b|cc0|cc[ -]by(?![ -]?(sa|nc))|creative commons attribution(?!.*(share|non))"
                   r"|open government licen[cs]e|odc[ -]by|open data commons attribution|\bmit\b|us government work"
@@ -108,10 +112,48 @@ def write_county_gaps(counties_csv, rows, out):
             w.writerow([geoid, c.get("name", ""), state, len(own), len(sw), best, gap])
 
 
+def write_oa_proposals(oa_dir, registry_dir, out):
+    """Every registry source written as an `oa_entry` (OpenAddresses' schema), and whether OA lists it yet."""
+    rows = []
+    for country in ("us", "ca"):
+        d = os.path.join(registry_dir, country)
+        if not os.path.isdir(d):
+            continue
+        for f in sorted(os.listdir(d)):
+            if not f.endswith(".toml"):
+                continue
+            with open(os.path.join(d, f), "rb") as fh:
+                reg = tomllib.load(fh)
+            for src in reg.get("source", []):
+                entry = src.get("oa_entry")
+                if not entry:
+                    continue
+                target = src.get("openaddresses") or ""
+                listed = False
+                path = os.path.join(oa_dir, "sources", target + ".json")
+                if target and os.path.exists(path):
+                    with open(path) as fh:
+                        layers = json.load(fh).get("layers", {})
+                    listed = any(e.get("data") == entry.get("data") for e in layers.get(src.get("layer"), []))
+                rows.append({"job": reg.get("job"), "source_key": src.get("key"), "layer": src.get("layer"),
+                             "oa_source": target, "oa_layer": entry.get("name", ""), "data": entry.get("data", ""),
+                             "website": entry.get("website", ""), "license_status": src.get("license_status"),
+                             "status": "listed" if listed else "to_propose",
+                             "note": "" if src.get("license_status") == "open" else
+                             "OpenAddresses accepts it without a licence; the licence ask is tracked separately"})
+    with open(out, "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=["job", "source_key", "layer", "oa_source", "oa_layer", "data", "website",
+                                           "license_status", "status", "note"])
+        w.writeheader()
+        w.writerows(rows)
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--oa", help="an openaddresses checkout (default: download master)")
     ap.add_argument("--out", default=OUT)
+    ap.add_argument("--registry", default=REGISTRY)
     ap.add_argument("--counties", help="optional CSV of geoid,name (e.g. the Census gazetteer counties file): "
                                        "also writes county_gaps.csv, the counties no OA address source reaches")
     a = ap.parse_args()
@@ -153,6 +195,9 @@ def main():
         for (country, region, layer), k in sorted(cov.items()):
             w.writerow([country, region, layer, k["sources"], k["statewide"], len(k["counties"]), k["open"],
                         k["share-alike"], k["restricted"], k["presumed"], k["stated-unreviewed"], k["unstated"]])
+    props = write_oa_proposals(oa_dir, a.registry, os.path.join(a.out, "oa_proposals.csv"))
+    print(f"oa_entry proposals: {sum(p['status'] == 'to_propose' for p in props)} to propose, "
+          f"{sum(p['status'] == 'listed' for p in props)} already listed")
     if a.counties:
         write_county_gaps(a.counties, rows, os.path.join(a.out, "county_gaps.csv"))
     tally = collections.Counter((r["layer"], r["license_class"]) for r in rows)

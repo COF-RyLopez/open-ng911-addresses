@@ -12,7 +12,8 @@ Steps:
      as Gap-fill candidates (ADR 0001), with NGUIDs built from the Address UID (ADR 0002).
   6. Build the RoadCenterline layer: government centerlines, TIGER where a Package has none, Overture GERS
      IDs attached (roads.py).
-  7. Write one Package per county or census division, the ledger and a job summary; fail the job if a
+  7. Count where the government roads and Overture / the national road layer disagree (upstream.py).
+  8. Write one Package per county or census division, the ledger and a job summary; fail the job if a
      NENA mandatory field isn't filled on every row.
 """
 import argparse
@@ -21,7 +22,7 @@ import json
 import os
 import sys
 
-from . import db, ids, lineage, matcher, nena, overture_release, package, registry, roads, street
+from . import db, ids, lineage, matcher, nena, overture_release, package, registry, roads, street, upstream
 from .sources import centerlines, openaddresses, overture, tiger
 
 LIVE_LOADERS = {
@@ -32,6 +33,8 @@ LIVE_LOADERS = {
     "gov_roads": centerlines.load_government,
     "tiger_roads": centerlines.load_tiger,
     "overture_segment": lambda c, job, jur, work: overture.load_overture_segment(c, jur, work),
+    # upstream counts (upstream.py): the national road layer to compare government roads with
+    "national_roads": centerlines.load_national_reference,
 }
 
 
@@ -133,9 +136,11 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     print(f"[{job.id}] Overture address UIDs by link method: {links}")
     assemble_ssap(c, job, jur, updated)
     roads.build(c, job, jur, work_dir, loaders, updated)
+    national = upstream.build(c, job, jur, work_dir, loaders)
 
     root, summaries = package.write(c, job, jur, release, out_dir)
     road_stats = roads.write(c, job, root, release)
+    up = upstream.write(c, job, jur, root, release, national)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
     fails = gate(c) + roads.gate(c)
@@ -147,6 +152,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "road_segments": sum(r["rows"] for r in road_stats.values()),
                "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
+               "upstream": upstream.job_totals(up.values()),
                "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}

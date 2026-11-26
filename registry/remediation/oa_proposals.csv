@@ -1,0 +1,2 @@
+job,source_key,layer,oa_source,oa_layer,data,website,license_status,status,note
+us-vt,us-vt-e911-rds,centerlines,us/vt/statewide,state,https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_OPENDATA_Emergency_RDS_line_SP_v1/FeatureServer/0,https://geodata.vermont.gov/datasets/VCGI::vt-data-e911-road-centerlines,unknown,to_propose,OpenAddresses accepts it without a licence; the licence ask is tracked separately
