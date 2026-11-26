@@ -78,7 +78,7 @@ def test_vermont_points_carry_the_source_fields(vt_build):
 
 
 def test_zones_merge_into_service_layers(vt_build):
-    out, _ = vt_build
+    out, s = vt_build
     fire = read(out, "us-vt", "50001", "fire_polygon")
     assert [r["dsplayname"] for r in fire] == ["Middlebury FD"], "two zones, one department: one polygon"
     assert fire[0]["serviceurn"] == "urn:emergency:service:responder.fire"
@@ -87,6 +87,7 @@ def test_zones_merge_into_service_layers(vt_build):
     assert sorted(r["dsplayname"] for r in read(out, "us-vt", "50001", "police_polygon")) == [
         "Middlebury PD", "VSP New Haven"]
     assert read(out, "us-vt", "50003", "ems_polygon") == [], "a zone with no EMS name feeds no EMS polygon"
+    assert s["features_dropped"]["EmsPolygon"] == {"no_dissolve_value": 1}, "and is counted"
     psap = read(out, "us-vt", "50003", "psap_polygon")
     assert psap[0]["dsplayname"] == "Rutland PSAP" and psap[0]["dateupdate"] != "1899-12-30T00:00:00Z"
     assert psap[0]["source_license"] == "unknown"

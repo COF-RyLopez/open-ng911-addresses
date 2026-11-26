@@ -118,6 +118,8 @@ def test_road_centerlines(tmp_path, conn):
     assert s["gate_failures"] == []
     assert s["road_sources"] == {"government": 3, "tiger": 2}
     assert s["road_segments"] == 5 and s["road_segments_with_gers_id"] == 3
+    # every segment left out is counted: the "not a road" class and the segment far outside every Package
+    assert s["features_dropped"]["RoadCenterLine"] == {"excluded_by_registry": 1, "outside_packages": 1}
     root = os.path.join(out, f"release={RELEASE}", "us-vt")
 
     # Addison: the E911 Board's own roads; the "not a road" segment (AOTCLASS 98) is left out
@@ -182,6 +184,7 @@ def test_government_roads_only_where_their_source_covers(tmp_path, conn, monkeyp
     loaders["tiger_roads"] = lambda c, job, jur, work: None  # both Packages would fall back; none read here
     s = build.run("us-vt", str(tmp_path / "out"), loaders=loaders, release=RELEASE, c=conn)
     assert s["road_sources"] == {}, "Addison's E911 roads are dropped where the source doesn't cover it"
+    assert s["features_dropped"]["RoadCenterLine"]["outside_source_coverage"] == 3
 
 
 def test_upstream_counts(tmp_path, conn):

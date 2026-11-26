@@ -50,6 +50,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   un-numbered sites on a named road all stay. A point is dropped only for a reason `openaddresses.create_agency_addr`
   names (no geometry, not a point, no street, a true duplicate, outside every Package, or the registry's
   `exclude_site_types`), and every drop is counted in job.json `agency_points_dropped`.
+- **Nothing leaves any other layer uncounted either.** Road segments and the other NENA layers' features go only
+  through `db.drop` (or, for a feature that reached no Package, `layers.build`'s count), which records layer,
+  Source and reason in `feature_dropped`; job.json reports it as `features_dropped`. A new filter is a new
+  `db.drop` reason, never a bare `DELETE` or `WHERE`.
 - **Map what the Source publishes, from its own fields.** A jurisdiction's differences are its registry file's
   `nena` tables, never code. A value that doesn't fit the NENA field is left empty and counted, never guessed.
   Never mapped (registry.validate refuses them): NGUID, RCL_NGUID and DiscrpAgID (ours until opt-in; the agency's

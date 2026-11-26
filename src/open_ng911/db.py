@@ -61,3 +61,38 @@ def gate(c, table, required, nguid, label="", nguid_label=None):
     if dup:
         fails.append(f"{label if nguid_label is None else nguid_label}{nguid}: {dup:,} duplicates")
     return fails
+
+
+# Every feature a build leaves out of a layer, counted by layer, Source and reason (AGENTS.md: nothing is dropped
+# uncounted). job.json reports it as `features_dropped`; the address points keep their own, finer
+# `agency_points_dropped` (by site type too, sources/openaddresses.py).
+DROPPED = "feature_dropped"
+
+
+DROPPED_COLUMNS = "layer VARCHAR, source_key VARCHAR, reason VARCHAR, n BIGINT"
+
+
+def create_dropped(c, replace=True):
+    """An empty feature_dropped (replace) or the one already there; build.run starts every job with an empty one."""
+    c.execute(f"CREATE {'OR REPLACE TABLE' if replace else 'TABLE IF NOT EXISTS'} {DROPPED} ({DROPPED_COLUMNS})")
+
+
+def drop(c, table, where, layer, reason, source_key="source_key"):
+    """Delete the rows of `table` matching `where`, counting them in feature_dropped first, by Source
+    (`source_key`: a column or a SQL literal) and reason. Returns how many went."""
+    create_dropped(c, replace=False)
+    n = c.execute(f"SELECT count(*) FROM {table} WHERE {where}").fetchall()[0][0]
+    if n:
+        c.execute(f"""INSERT INTO {DROPPED} SELECT {quote(layer)}, {source_key}, {quote(reason)}, count(*)
+                      FROM {table} WHERE {where} GROUP BY ALL""")
+        c.execute(f"DELETE FROM {table} WHERE {where}")
+    return n
+
+
+def dropped(c):
+    """{layer: {reason: n}} for job.json."""
+    out = {}
+    for layer, reason, n in c.execute(f"SELECT layer, reason, sum(n)::BIGINT FROM {DROPPED} GROUP BY 1, 2 "
+                                      "ORDER BY 1, 3 DESC, 2").fetchall():
+        out.setdefault(layer, {})[reason] = n
+    return out

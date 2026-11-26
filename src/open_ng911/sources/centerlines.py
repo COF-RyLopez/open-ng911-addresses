@@ -98,11 +98,14 @@ def insert_government(c, source, path, conform, has_id):
                    {openaddresses.conform_sql(conform.get('zip_right'))} AS zip_r,
                    lower({cls}) AS cls, lower({oneway}) AS ow,
                    try_cast({openaddresses.conform_sql(conform.get('speed'))} AS DOUBLE) AS kph,
-                   ST_Force2D(ST_GeomFromGeoJSON(g)) AS geom{raw}
-            FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})
-            WHERE {keep})
-        SELECT *, {native} FROM f
-        WHERE ST_GeometryType(geom) IN ('LINESTRING', 'MULTILINESTRING') AND NOT ST_IsEmpty(geom)""")
+                   ST_Force2D(ST_GeomFromGeoJSON(g)) AS geom, NOT ({keep}) AS _excluded{raw}
+            FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}}))
+        SELECT *, {native} FROM f""")
+    # the registry's `exclude` (not roads a call can be routed along), then anything that isn't a line
+    key = db.quote(source.key)
+    db.drop(c, "_gov", "_excluded", RCL, "excluded_by_registry", key)
+    db.drop(c, "_gov", "geom IS NULL OR ST_GeometryType(geom) NOT IN ('LINESTRING', 'MULTILINESTRING') "
+                       "OR ST_IsEmpty(geom)", RCL, "not_a_line", key)
     fieldmap.record(c, "_gov", source, RCL, country)
     insert = INSERT[:-1] + ", " + ", ".join(ncols) + ")"
     c.execute(f"""{insert}
