@@ -55,6 +55,7 @@ data/output/release=<overture release>/<job>/
     <geoid>/a3_polygon.parquet   A3Polygon, its municipalities
     <geoid>/road_centerline.parquet                GeoParquet: NENA RCL fields + uid, gers_id, road_source
     <geoid>/road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
+    <geoid>/address_range_check.parquet            every Record against the road range on its side of its street
     <geoid>/psap_polygon.parquet, police_polygon.parquet, fire_polygon.parquet, ems_polygon.parquet,
             provisioning_polygon.parquet, distance_marker_point.parquet, location_marker_point.parquet
                                  the other NENA layers, only where they have features

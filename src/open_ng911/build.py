@@ -37,6 +37,7 @@ from . import (
     odbl_inventory,
     overture_release,
     package,
+    ranges,
     registry,
     roads,
     street,
@@ -256,6 +257,8 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     boundaries.create_layers(c, job, updated)
     roads.build(c, job, jur, work_dir, loaders, updated)
     before[roads.RCL] = roads.rcl_before(c, job, updated)
+    checked = ranges.check(c)
+    print(f"[{job.id}] address points against road ranges: {checked}")
     loaders["nena_layers"](c, job, jur, work_dir)
     layers.build(c, job, jur, updated)
     national = upstream.build(c, job, jur, work_dir, loaders)
@@ -288,6 +291,9 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "upstream": upstream.job_totals(s["upstream"] for s in summaries),
                "odbl_replacement": odbl_inventory.job_totals(s["odbl_replacement"] for s in summaries),
                "road_segments_without_range": roads.without_range(c),
+               "address_ranges": {r: sum(s["address_ranges"][r] for s in summaries) for r in ranges.RESULTS}
+               | {"segment_sides_with_derived_range": {k: sum(s["address_ranges"]["segment_sides_with_derived_range"][k]
+                                                             for s in summaries) for k in ("left", "right")}},
                "nena_coverage": cov,
                "nena_required_gaps": required_gaps(cov),
                "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),

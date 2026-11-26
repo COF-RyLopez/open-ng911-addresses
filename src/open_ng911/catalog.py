@@ -122,6 +122,13 @@ COLUMNS = {
     "postcode_l": "Postal code on the left side", "postcode_r": "Postal code on the right side",
     "roadclass": "Road class, NENA registry word", "oneway": "One-way direction: B (both), FT or TF",
     "speedlimit": "Posted speed limit",
+    **{f"derived_{f}_{side}": f"{what} on the {name} side, derived from the address points along it where the "
+                             "agency publishes no range (ranges.py); not the agency's own value"
+       for side, name in (("l", "left"), ("r", "right"))
+       for f, what in (("fromaddr", "First address number"), ("toaddr", "Last address number"),
+                       ("parity", "Parity of the address numbers"))},
+    "range_points_l": "Address points checked against the left side's range",
+    "range_points_r": "Address points checked against the right side's range",
     "overlap_m": "Length in metres along which the Overture segment runs with the road segment",
     "rcl_share": "Share of the road segment's length the overlap covers (0 to 1)",
     "segment_share": "Share of the Overture segment's length the overlap covers (0 to 1)",
