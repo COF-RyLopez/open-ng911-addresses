@@ -1,15 +1,23 @@
 """Offline fixtures for the Prince Edward Island job: two census divisions, PEI civic address points
 (tests/fixtures/pe_agency_points.ndjson, in the provincial layer's fields) and Overture addresses written the
 way Overture writes Canadian ones (spelled-out types, accents), so the whole job runs without the network."""
+import json
 import os
 
-from open_ng911.sources import openaddresses, overture
+from vt_fixtures import write_segment_parquet
+
+from open_ng911.sources import centerlines, openaddresses, overture, statcan
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 
 # StatCan census divisions (CDUID, CDNAME) as squares: Queens around Charlottetown, Prince around Wellington
 PACKAGES = [("1102", "Queens", (-63.4, 46.1, -63.0, 46.4)),
             ("1103", "Prince", (-64.2, 46.4, -63.6, 46.9))]
+
+# StatCan census subdivisions (CSDUID, CSDNAME, CSDTYPE, bbox): Charlottetown is a city (A3); the fire district
+# west of it isn't a local government, so its addresses are 'Unincorporated'
+MUNICIPALITIES = [("1102075", "Charlottetown", "CY", (-63.14, 46.22, -63.10, 46.26)),
+                  ("1102071", "New London", "FD", (-63.20, 46.22, -63.14, 46.30))]
 
 # (id, number, street, lon, lat, source record id)
 OVERTURE = [
@@ -41,6 +49,15 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
                   + ", ".join(f"('{g}', '{n}', ST_MakeEnvelope({b[0]}, {b[1]}, {b[2]}, {b[3]}))" for g, n, b in PACKAGES)
                   + ") t(geoid, name, geom)")
 
+    def municipality(c, job, jur, work):
+        path = tmp_path / "csd.ndjson"
+        with open(path, "w") as f:
+            for geoid, name, kind, (x0, y0, x1, y1) in MUNICIPALITIES:
+                ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]
+                f.write(json.dumps({"p": {"CSDUID": geoid, "CSDNAME": name, "CSDTYPE": kind},
+                                    "g": json.dumps({"type": "Polygon", "coordinates": [ring]})}) + "\n")
+        statcan.create_municipality(c, str(path))
+
     def agency_addr(c, job, jur, work):
         entry = {"number": "STREET_NO", "street": "STREET_NM", "unit": "APT_NO", "city": "COMM_NM",
                  "district": "COUNTY"}  # the conform in ca/pe/province.json
@@ -51,4 +68,12 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
         write_overture_parquet(c, overture_rows, path)
         overture.create_overture_addr(c, path)
 
-    return {"package_area": package_area, "agency_addr": agency_addr, "overture_addr": overture_addr}
+    def overture_segment(c, job, jur, work):
+        path = str(tmp_path / "segments_pe.parquet")
+        write_segment_parquet(c, [("p1", "road", "LINESTRING (-63.135 46.24, -63.125 46.24)")], path)
+        overture.create_overture_segment(c, path)
+
+    # PEI has no centerlines Source yet and TIGER doesn't cover Canada: every Package has an empty RoadCenterline
+    return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr,
+            "overture_addr": overture_addr, "gov_roads": lambda c, job, jur, work: None,
+            "tiger_roads": centerlines.load_tiger, "overture_segment": overture_segment}

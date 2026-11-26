@@ -15,9 +15,13 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   911 authorities (opt-in, domain) and Source agencies (OpenAddresses source, ID field, license status,
   sharing-path status). Edited by hand, and statuses change only after the agency confirms (ADR 0004, 0005).
 - `src/open_ng911/build.py` one job end to end; `python -m open_ng911.build --job us-vt`.
-- `sources/` one table each: `package_area` (TIGER counties; StatCan census divisions in Canada, `statcan.py`,
-  which also reads census subdivisions as `municipality`), `agency_addr` (OpenAddresses registry →
-  the agency's own endpoint), `overture_addr` (Overture addresses theme only).
+- `sources/` one table each: `package_area` (TIGER counties; StatCan census divisions in Canada, `statcan.py`),
+  `municipality` (TIGER county subdivisions or places; StatCan census subdivisions in Canada), `agency_addr`
+  (OpenAddresses registry → the agency's own endpoint), `overture_addr` (Overture addresses theme only),
+  `road_seg` (`centerlines.py`: government centerlines through the registry, TIGER ADDRFEAT as the fallback),
+  `overture_segment` (GERS IDs only, see below).
+- `boundaries.py` the A2Polygon and A3Polygon layers and every address point's A3 (ADR 0009).
+- `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID and NGUID,
   `lineage.py` the ledger that carries UIDs across Overture releases, `package.py` Package output.
@@ -25,13 +29,18 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 
 ## Rules
 
+- **Keep every addressed site.** A NENA SSAP is any addressed site: public phones, call boxes, towers and
+  un-numbered sites on a named road all stay. A point is dropped only for a reason `openaddresses.create_agency_addr`
+  names (no geometry, not a point, no street, a true duplicate, outside every Package, or the registry's
+  `exclude_site_types`), and every drop is counted in job.json `agency_points_dropped`.
 - **Records win** (ADR 0001): an agency point is a Record; Overture fills in only as `gap_fill_candidate`.
 - **NGUIDs come from the Address UID, never a GERS ID** (ADR 0002). Changing `ids.NAMESPACE` or the UID
   recipe changes every published NGUID: don't.
 - **No real agency domain until opt-in** (ADR 0003, 0004). Non-opted-in Packages use
   `<package>.unclaimed.invalid`. Never invent ESN, MSAG names or an agency domain.
 - **No OSM geometry or names in core layers.** Read only Overture's addresses theme here; Overture
-  transportation, buildings, divisions and base are ODbL. The Review layer is private per opted-in agency (ADR 0007).
+  transportation, buildings, divisions and base are ODbL. The one exception is `overture_segment`, read only to
+  attach GERS IDs to government roads (ADR 0010): nothing but the ID and overlap numbers leaves that table. The Review layer is private per opted-in agency (ADR 0007).
 - **Licenses**: a source with `license_status = "unknown"` never goes into anything public, including CI
   artifacts (CI uploads only `job.json` and manifests).
 - **Fix open data on our side**: OpenAddresses conform maps fields, it doesn't rewrite values; value fixes go
@@ -44,7 +53,10 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 
 ## Running things
 
-- Python 3.12+, `uv pip install -e ".[dev]"`, then `ruff check src tests && pytest -q`.
+- Python 3.12+, `uv pip install -e ".[dev]"`, then `ruff check src tests && pytest -q -m "not live"`.
+  `pytest -m live` checks outside sources (CI's build job runs it).
+- A centerline layer OpenAddresses doesn't list yet goes in the registry as `oa_entry`, in OpenAddresses' own
+  schema, so it can be proposed upstream unchanged.
 - Overture release: `$OVERTURE_RELEASE` or the newest (STAC, then the S3 listing). Pin one to reproduce a
   build. Overture is read anonymously (`db.connect` sets an empty S3 secret, so AWS credentials in the
   environment don't break it).

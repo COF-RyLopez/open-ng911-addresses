@@ -44,6 +44,14 @@ FRENCH_PRETYPE_ABBR = {"CH": "Chemin", "BOUL": "Boulevard", "CROIS": "Croissant"
 # NENA-STA-006.3 mandatory SiteStructureAddressPoint fields (the build gates on 100% fill)
 SSAP_REQUIRED = ("discrpagid", "dateupdate", "nguid", "country", "a1")
 
+# RoadCenterline: the NENA fields the build writes, and the mandatory ones it gates on (100% fill)
+RCL_FIELDS = ("discrpagid", "dateupdate", "rcl_nguid", "fromaddr_l", "toaddr_l", "fromaddr_r", "toaddr_r",
+              "parity_l", "parity_r", "st_predir", "st_pretyp", "st_name", "st_postyp", "st_posdir",
+              "country_l", "country_r", "a1_l", "a1_r", "a2_l", "a2_r", "a3_l", "a3_r", "postcode_l",
+              "postcode_r", "roadclass", "oneway", "speedlimit")
+RCL_REQUIRED = ("discrpagid", "dateupdate", "rcl_nguid", "parity_l", "parity_r", "country_l", "country_r",
+                "a1_l", "a1_r", "a2_l", "a2_r")
+
 
 def domains():
     with open(DOMAINS_FILE) as f:

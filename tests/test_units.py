@@ -42,7 +42,8 @@ def test_registry_jobs():
     jobs = registry.jobs()
     assert len(jobs) == 65  # 50 states, DC, Puerto Rico, 13 provinces and territories
     assert len({j.id for j in jobs}) == 65
-    assert {"us-vt", "ca-pe"} <= {j.id for j in jobs if j.enabled}
+    # the pilots (other jobs turn on as their registries are written)
+    assert {"us-vt", "us-me", "us-ut", "us-nd", "ca-pe"} <= {j.id for j in jobs if j.enabled}
     for j in jobs:
         if j.enabled:
             registry.jurisdiction(j)  # every enabled job has a valid jurisdiction registry
@@ -59,3 +60,24 @@ def test_conform_sql():
     assert conform_sql("A") == "nullif(trim(p->>'A'), '')"
     assert "concat_ws" in conform_sql(["A", "B"])
     assert conform_sql({"function": "regexp"}) == "NULL"
+
+
+def test_conform_functions(conn):
+    """The centerline conform functions, as OpenAddresses' centerline sources write them."""
+    oneway = conform_sql({"function": "map", "field": "ONEWAY", "mapping": {"Y": "yes", "X": "reverse"}, "else": "no"})
+    cls = conform_sql({"function": "map", "field": "C", "mapping": {"1": "motorway"}})  # unmapped values pass through
+    kph = conform_sql({"function": "mph_to_kph", "field": "S"})
+    name = conform_sql({"function": "join", "fields": ["A", "B"], "separator": "-"})
+    got = conn.execute(f"SELECT {oneway}, {cls}, {kph}, {name} FROM (SELECT ?::JSON AS p)",
+                       ['{"ONEWAY": "X", "C": "7", "S": 25, "A": "x", "B": "y"}']).fetchall()[0]
+    assert got == ("reverse", "7", "40", "x-y")
+
+
+def test_road_helpers(conn):
+    import datetime
+
+    from open_ng911 import roads
+    from open_ng911.sources import centerlines
+    conn.execute("CREATE TABLE package_area AS SELECT ST_MakeEnvelope(-73.4, 42.7, -71.5, 45.0) AS geom")
+    assert roads.utm_epsg(conn) == "EPSG:32618"  # Vermont
+    assert centerlines.tiger_vintages(datetime.date(2026, 11, 26)) == [2026, 2025, 2024]

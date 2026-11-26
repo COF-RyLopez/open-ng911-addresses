@@ -45,6 +45,9 @@ def test_pei_job(tmp_path, conn):
     t = queens["5753504"]
     assert t["gers_id"] is None and t["st_postyp"] == "Avenue" and t["unit"] == "2"
     assert queens["s4"]["status"] == "gap_fill_candidate"
+    assert (q["a3"], queens["s4"]["a3"]) == ("Charlottetown", "Charlottetown")
+    assert t["a3"] == "Unincorporated", "a fire district isn't a local government"
+    assert s["road_sources"] == {}, "no Canadian road source yet, and TIGER never stands in for one"
 
     uid = ids.agency_uid("ca-pe-civic-address", "5753470")
     assert q["uid"] == uid
