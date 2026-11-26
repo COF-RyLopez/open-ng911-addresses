@@ -64,6 +64,9 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   own NGUID goes in as `id_field`) and the fields the boundary layers own (Country, A1-A3, the RCL's sides).
   Agency_ID, ServiceURI and AVcard_URI are filled only where the Source publishes them. The OpenAddresses conform
   stays as it is: it feeds the street match and is what we propose upstream.
+- **The gate is the schema.** `build.gate` holds every built layer to `nena.gated`: the vendored schema's Required
+  fields minus `nena.AGENCY_OWNED` and `nena.FROM_DATA`, which are reported in `nena_required_gaps`. No hand-kept
+  list of mandatory fields; a new layer is gated by being in `build.coverage_spec`.
 - **Records win** (ADR 0001): an agency point is a Record; Overture fills in only as `gap_fill_candidate`.
 - **NGUIDs come from the Address UID, never a GERS ID** (ADR 0002). Changing `ids.NAMESPACE` or the UID
   recipe changes every published NGUID: don't.

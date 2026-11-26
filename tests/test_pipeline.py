@@ -6,7 +6,7 @@ import os
 import duckdb
 from vt_fixtures import FIXTURES, OVERTURE, fixture_loaders
 
-from open_ng911 import build, fieldmap, ids, nena, street
+from open_ng911 import build, fieldmap, ids, nena, registry, street
 from open_ng911.sources import openaddresses
 
 RELEASE = "2026-11-18.0"
@@ -133,6 +133,9 @@ def test_road_centerlines(tmp_path, conn):
     assert (main["st_name"], main["st_postyp"], main["roadclass"], main["oneway"], main["speedlimit"]) == (
         "MAIN", "Street", "Secondary", "B", 25)
     eighth = addison["5002"]
+    # no range on a side: 0 (NENA's convention), its parity still 'Z', and counted
+    assert (eighth["fromaddr_l"], eighth["toaddr_l"], eighth["fromaddr_r"]) == (0, 0, 3)
+    assert s["road_segments_without_range"] == {"left": 2, "right": 2}
     assert (eighth["st_predir"], eighth["oneway"], eighth["parity_l"], eighth["speedlimit"]) == ("North", "FT", "Z", None)
     ramp = addison["5004"]
     assert (ramp["st_pretyp"], ramp["st_name"], ramp["roadclass"], ramp["parity_l"]) == ("State Route", "125", "Ramp", "B")
@@ -232,3 +235,23 @@ def test_odbl_replacement_inventory(tmp_path, conn):
     # nothing read for water; the national layer is a candidate
     assert addison["base_water"]["status"] == "candidate" and "USGS" in addison["base_water"]["national"]
     assert s["odbl_replacement"]["divisions"] == {"government_open": len(s["by_package"])}
+
+
+def test_gate_covers_every_built_layer(tmp_path, conn):
+    """Every layer is gated on the Required fields the build always fills; the agency's own fields and the ones
+    only the data has are reported instead (ADR 0004)."""
+    out = str(tmp_path / "out")
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    assert s["gate_failures"] == []
+    assert set(s["nena_required_gaps"]["PsapPolygon"]) == {"agency_id", "serviceuri", "avcard_uri"}
+    assert s["nena_required_gaps"]["PsapPolygon"]["agency_id"] == {"fill": 0.0, "owner": "agency"}
+    assert nena.gated("PsapPolygon") == ["discrpagid", "dateupdate", "nguid", "serviceurn"]
+    assert {"fromaddr_l", "st_name"} <= set(nena.required("RoadCenterLine"))
+    assert "fromaddr_l" in nena.gated("RoadCenterLine") and "st_name" not in nena.gated("RoadCenterLine")
+
+    # a service layer with an empty gated field and a repeated NGUID now fails the job
+    conn.execute("UPDATE fire_polygon SET dateupdate = NULL")
+    conn.execute("INSERT INTO fire_polygon SELECT * FROM fire_polygon")
+    fails = build.gate(conn, registry.job("us-vt"), build.coverage_spec(conn, registry.job("us-vt"),
+                                                                         registry.jurisdiction(registry.job("us-vt"))))
+    assert "FirePolygon.dateupdate: 4 rows empty" in fails and "FirePolygon.nguid: 2 duplicates" in fails

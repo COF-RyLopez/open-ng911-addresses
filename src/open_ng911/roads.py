@@ -126,9 +126,10 @@ RCL_DERIVED = {
     "discrpagid": "the Package's NGUID domain (a placeholder until the authority opts in, ADR 0003)",
     "dateupdate": "build time, where the Source maps no edit date",
     "rcl_nguid": "segment UID under the Package's domain (ADR 0002)",
+    **{f: "OpenAddresses centerline conform / TIGER ADDRFEAT; 0 where the side has no range (NENA)" for f in (
+        "fromaddr_l", "toaddr_l", "fromaddr_r", "toaddr_r")},
     **{f: "OpenAddresses centerline conform / TIGER ADDRFEAT" for f in (
-        "fromaddr_l", "toaddr_l", "fromaddr_r", "toaddr_r", "postcode_l", "postcode_r", "roadclass", "oneway",
-        "speedlimit")},
+        "postcode_l", "postcode_r", "roadclass", "oneway", "speedlimit")},
     "parity_l": "the address range", "parity_r": "the address range",
     **{p: "street name, parsed (street.py)" for p in ("st_predir", "st_pretyp", "st_name", "st_postyp", "st_posdir")},
     "country_l": "the job", "country_r": "the job", "a1_l": "the job", "a1_r": "the job",
@@ -155,8 +156,9 @@ def assemble_rcl(c, job, updated, table="rcl", native=True):
         "discrpagid": "d.domain",
         "dateupdate": f"coalesce(y.n_dateupdate, '{updated}')",
         "rcl_nguid": "build_nguid('RCL', y.uid, d.domain)",
-        "fromaddr_l": "coalesce(y.n_fromaddr_l, y.from_l)", "toaddr_l": "coalesce(y.n_toaddr_l, y.to_l)",
-        "fromaddr_r": "coalesce(y.n_fromaddr_r, y.from_r)", "toaddr_r": "coalesce(y.n_toaddr_r, y.to_r)",
+        # no range on a side is 0 in NENA (counted: without_range); parity reads the range before the 0
+        "fromaddr_l": "coalesce(y.n_fromaddr_l, y.from_l, 0)", "toaddr_l": "coalesce(y.n_toaddr_l, y.to_l, 0)",
+        "fromaddr_r": "coalesce(y.n_fromaddr_r, y.from_r, 0)", "toaddr_r": "coalesce(y.n_toaddr_r, y.to_r, 0)",
         "parity_l": f"coalesce(y.n_parity_l, {_parity('coalesce(y.n_fromaddr_l, y.from_l)', 'coalesce(y.n_toaddr_l, y.to_l)')})",
         "parity_r": f"coalesce(y.n_parity_r, {_parity('coalesce(y.n_fromaddr_r, y.from_r)', 'coalesce(y.n_toaddr_r, y.to_r)')})",
         # ESN and MSAG community come only from the Source's own fields (AGENTS.md): never made up here
@@ -211,8 +213,11 @@ def build(c, job, jurisdiction, work_dir, loaders, updated):
     print(f"[{job.id}] road centerlines by source: {by}; {linked:,} with a GERS ID")
 
 
-def gate(c):
-    return db.gate(c, "rcl", nena.RCL_REQUIRED, "rcl_nguid", "rcl ", nguid_label="")
+def without_range(c, where="true"):
+    """Segments with no address range on a side (parity 'Z'), whose ranges are written as 0 (NENA's convention)."""
+    left, right = c.execute(f"SELECT count(*) FILTER (parity_l = 'Z'), count(*) FILTER (parity_r = 'Z') FROM rcl "
+                            f"WHERE {where}").fetchall()[0]
+    return {"left": int(left), "right": int(right)}
 
 
 def write_package(c, geoid, d, release, meta):
@@ -231,7 +236,7 @@ def write_package(c, geoid, d, release, meta):
     rows, with_gers = int(stats.pop("rows")), int(stats.pop("with_gers_id"))
     per_source = dict(c.execute(f"SELECT source, count(*) FROM rcl WHERE geoid = '{geoid}' GROUP BY 1").fetchall())
     return {
-        "rows": rows, "with_gers_id": with_gers,
+        "rows": rows, "with_gers_id": with_gers, "without_range": without_range(c, f"geoid = '{geoid}'"),
         "gers_coverage": round(with_gers / rows, 4) if rows else None,
         "road_source": "government" if any(m["road_source"] == "government" and m["source_key"] in per_source
                                            for m in meta) else ("tiger" if rows else None),

@@ -54,16 +54,19 @@ UNIT_TYPES = {"APT": "Apartment", "APARTMENT": "Apartment", "STE": "Suite", "SUI
               "PH": "Penthouse", "SLIP": "Slip", "PIER": "Pier", "BSMT": "Basement", "FRNT": "Front",
               "LBBY": "Lobby", "LOWR": "Lower", "UPPR": "Upper", "REAR": "Rear", "SIDE": "Side"}
 
-# NENA-STA-006.3 mandatory SiteStructureAddressPoint fields (the build gates on 100% fill)
-SSAP_REQUIRED = ("discrpagid", "dateupdate", "nguid", "country", "a1")
+# The gate (build.gate): every NENA-STA-006.3 Required field of every built layer, from the schema's own flags,
+# except the two kinds no build can promise. Those are reported, never gated (job.json `nena_required_gaps`):
+#   AGENCY_OWNED  only the 911 authority can fill them; never ours to make up (ADR 0004)
+#   FROM_DATA     only the Source's data has them: an unnamed road, a zone with no display name, a marker with
+#                 no route; left empty and counted, never guessed (AGENTS.md)
+AGENCY_OWNED = ("agency_id", "serviceuri", "avcard_uri")
+FROM_DATA = ("st_name", "dsplayname", "dm_unit", "dm_value", "dm_rte", "dm_ind", "lm_label", "lm_ind")
 
 # RoadCenterline: the NENA fields the build writes, and the mandatory ones it gates on (100% fill)
 RCL_FIELDS = ("discrpagid", "dateupdate", "rcl_nguid", "fromaddr_l", "toaddr_l", "fromaddr_r", "toaddr_r",
               "parity_l", "parity_r", "st_predir", "st_pretyp", "st_name", "st_postyp", "st_posdir",
               "country_l", "country_r", "a1_l", "a1_r", "a2_l", "a2_r", "a3_l", "a3_r", "postcode_l",
               "postcode_r", "roadclass", "oneway", "speedlimit")
-RCL_REQUIRED = ("discrpagid", "dateupdate", "rcl_nguid", "parity_l", "parity_r", "country_l", "country_r",
-                "a1_l", "a1_r", "a2_l", "a2_r")
 
 
 def domains():
@@ -163,3 +166,18 @@ def install(c, country="US"):
                      regexp_replace(upper(trim(u)), '^({units})\\b[.]?', ''), '^ *#? *', '')), '')""")
     c.execute("""CREATE OR REPLACE MACRO nena_st_name(n, pre_raw) AS
                      CASE WHEN pre_raw IS NULL THEN n ELSE trim(n[length(pre_raw) + 1:]) END""")
+
+
+def required(name, country="US"):
+    """A layer's Required fields, in NENA's order."""
+    return [f["name"] for f in layer_fields(name, country) if f["required"]]
+
+
+def gated(name, country="US"):
+    """The Required fields the build fills on every feature, so the gate holds it to 100%."""
+    return [n for n in required(name, country) if n not in AGENCY_OWNED + FROM_DATA]
+
+
+# What a manifest lists as the layers' mandatory fields (the same in both countries)
+SSAP_REQUIRED = tuple(gated("SiteStructureAddressPoint"))
+RCL_REQUIRED = tuple(gated("RoadCenterLine"))

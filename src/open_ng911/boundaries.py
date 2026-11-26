@@ -23,17 +23,13 @@ import uuid
 
 import duckdb
 
-from . import db, ids, registry
+from . import db, ids, registry  # noqa: F401  db: write_geoparquet once PR #11 (catalog) lands
 
 UNINCORPORATED = "Unincorporated"
 SNAP_DEG = 0.00005  # about 5 m
 # A clipped piece of a municipality smaller than this share of it is a sliver from the county edge, unless an
 # address in the Package falls in it
 SLIVER_SHARE = 0.001
-
-REQUIRED = {"A2Polygon": ("discrpagid", "dateupdate", "nguid", "country", "a1", "a2"),
-            "A3Polygon": ("discrpagid", "dateupdate", "nguid", "country", "a1", "a3")}
-
 
 def boundary_uid(source, code):
     """'us-a3', '5000710675' -> uuid5(NS, 'boundary:us-a3:5000710675')"""
@@ -113,12 +109,6 @@ def install(c):
     with contextlib.suppress(duckdb.Error):
         c.remove_function("boundary_uid")
     c.create_function("boundary_uid", boundary_uid, ["VARCHAR", "VARCHAR"], "VARCHAR", side_effects=False)
-
-
-def gate(c):
-    """NENA mandatory boundary fields filled on every row, and one NGUID per boundary."""
-    return [f for table, layer in (("a2_polygon", "A2Polygon"), ("a3_polygon", "A3Polygon"))
-            for f in db.gate(c, table, REQUIRED[layer], "nguid", f"{layer}.")]
 
 
 def write_package(c, job, geoid, out):
