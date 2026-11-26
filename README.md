@@ -1,2 +1,64 @@
 # open-ng911-addresses
-Open NG911 addresses
+
+Open-data NENA NG9-1-1 address datasets for the 911 authorities of the US and Canada, built mostly from each
+area's own government sources and handed back NENA-ready to the agencies that opt in.
+
+**Status: Phase 1 scaffold.** One state (Vermont) runs end to end in CI. The plan behind it, with its 25 settled
+decisions, is the "NG911 Address Pipeline: US + Canada Infrastructure Plan"; the terms are in
+[GLOSSARY.md](GLOSSARY.md) and the decisions in [docs/adr](docs/adr). The California prototype is
+[ng911-pipeline](https://github.com/COF-RyLopez/ng911-pipeline).
+
+## How a build works
+
+One DuckDB job per state or province (`registry/jobs.toml`, 65 jobs), each writing one **Package** per county
+or census division:
+
+1. Resolve the Overture release (`$OVERTURE_RELEASE`, else the newest on STAC or S3).
+2. Read the Package areas (Census TIGER counties; StatCan census divisions for Canada, to come), the Source
+   agency's own address points through the [OpenAddresses](https://github.com/openaddresses/openaddresses)
+   source registry, and Overture's addresses.
+3. Parse every street the same way and match agency Records to Overture one to one (same number, within
+   15 m, a same-street pair ahead of a nearer one).
+4. Give each address its **Address UID**: from the agency's own ID where it has one, else minted at first
+   sight and carried across Overture releases by the lineage ledger when Overture re-issues the GERS ID.
+5. Write the SiteStructureAddressPoint layer: every Record (with the GERS ID it matched, published alongside
+   the UID) plus unmatched Overture addresses as Gap-fill candidates. NGUIDs are built from the Address UID,
+   under the agency's own domain once it opts in and a `.invalid` placeholder until then.
+6. Gate: every NENA mandatory field filled and every NGUID unique, or the job fails.
+
+```
+data/output/release=<overture release>/<job>/
+    job.json                     summary: counts, link methods, gate result, per-package numbers
+    address_lineage.parquet      the ledger: address_uid × gers_id, first/last release, link method
+    <geoid>/site_structure_address_point.parquet   GeoParquet
+    <geoid>/manifest.json        recipient, opt-in state, field fill, sources and their license status
+```
+
+## Run it
+
+```sh
+uv pip install -e ".[dev]"
+pytest -q                                   # offline, on fixtures
+python -m open_ng911.build --job us-vt      # live: TIGERweb, Vermont's E911 service, Overture on S3
+OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <previous address_lineage.parquet>
+```
+
+## Adding a state or province
+
+1. Write `registry/<country>/<code>.toml`: its 911 authorities and Source agencies (see `registry/us/vt.toml`).
+2. Set `enabled = true` for the job in `registry/jobs.toml`. CI builds every enabled job in a matrix.
+
+## What's next (Phase 1)
+
+- Boundary adapters for A3/A4 (TIGER places and county subdivisions; StatCan census subdivisions), and the
+  StatCan census-division Package areas for the pilot province.
+- Road centerlines: government centerlines from the OpenAddresses registry, TIGER ADDRFEAT as the fallback,
+  with a GERS crosswalk (no Overture geometry).
+- Two or three more pilot states of different shapes, several address sources per job, parcels for Placement.
+- Phase 2: changelog-driven reruns, `exact_rematch` / `near_rematch` in the ledger, the churn table.
+
+## Licensing
+
+Code: MIT. Data keeps its sources' licenses: each manifest lists every source with its license status, and a
+source marked `unknown` stays out of anything published openly. Overture addresses carry their per-source
+licenses (not ODbL); no OpenStreetMap-derived geometry goes into a Package's core layers.

@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Lint and offline tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: uv pip install --system -e ".[dev]"
+      - run: ruff check src tests
+      - run: pytest -q
+
+  plan:
+    name: List enabled jobs
+    runs-on: ubuntu-24.04
+    outputs:
+      jobs: ${{ steps.jobs.outputs.jobs }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - id: jobs
+        run: echo "jobs=$(PYTHONPATH=src python -m open_ng911.jobs)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.job }}
+    needs: [test, plan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false  # one state's source outage must not cancel the others
+      matrix:
+        job: ${{ fromJSON(needs.plan.outputs.jobs) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: uv pip install --system -e .
+      # Overture release: latest from STAC/S3 unless OVERTURE_RELEASE is set (overture_release.py)
+      - run: python -m open_ng911.build --job ${{ matrix.job }} --out data/output
+      # Only the summaries are uploaded. Package data carries sources whose license is still "unknown" and
+      # isn't handed out until an authority opts in (ADR 0003), so it never goes into a public artifact.
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: summary-${{ matrix.job }}
+          path: |
+            data/output/release=*/${{ matrix.job }}/job.json
+            data/output/release=*/${{ matrix.job }}/*/manifest.json
+          if-no-files-found: warn
