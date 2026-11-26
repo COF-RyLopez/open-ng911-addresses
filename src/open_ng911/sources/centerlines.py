@@ -19,11 +19,9 @@ data_url): one row per source read, for the manifests.
 """
 import datetime
 import os
-import time
-import urllib.request
 import zipfile
 
-from .. import ids
+from .. import db, ids
 from . import arcgis, openaddresses
 
 ROAD_SEG_COLUMNS = ("source_key VARCHAR, road_source VARCHAR, source_id VARCHAR, uid VARCHAR, street VARCHAR, "
@@ -46,14 +44,6 @@ MTFCC_CLASS = {"S1100": "Primary", "S1200": "Secondary", "S1400": "Local", "S150
                "S1820": "Walkway/Pedestrian Trail", "S1830": "Walkway/Pedestrian Trail"}
 
 TIGER_ADDRFEAT = "https://www2.census.gov/geo/tiger/TIGER{year}/ADDRFEAT/tl_{year}_{county}_addrfeat.zip"
-
-
-def _now():
-    return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _case(expr, mapping, default="NULL"):
-    return f"CASE {expr} " + " ".join(f"WHEN '{k}' THEN '{v}'" for k, v in mapping.items()) + f" ELSE {default} END"
 
 
 def create_tables(c):
@@ -80,7 +70,7 @@ def insert_government(c, source, path, conform, has_id):
     sid = openaddresses.conform_sql(conform.get("id")) if has_id else "NULL"
     ex = source.exclude
     keep = (f"coalesce(p->>'{ex['field']}', '') NOT IN ("
-            + ", ".join("'" + str(v).replace("'", "''") + "'" for v in ex["values"]) + ")") if ex else "true"
+            + ", ".join(db.quote(v) for v in ex["values"]) + ")") if ex else "true"
     c.execute(f"""{INSERT}
         WITH f AS (
             SELECT {sid} AS source_id,
@@ -101,7 +91,7 @@ def insert_government(c, source, path, conform, has_id):
                -- only while the segment is unedited)
                agency_uid('{source.key}', coalesce(source_id, md5(ST_AsWKB(geom)::VARCHAR))),
                street, from_l, to_l, from_r, to_r, zip_l, zip_r,
-               {_case('cls', OA_CLASS, "CASE WHEN cls LIKE '%\\_link' ESCAPE '\\' THEN 'Ramp' ELSE 'Local' END")},
+               {db.case('cls', OA_CLASS, "CASE WHEN cls LIKE '%\\_link' ESCAPE '\\' THEN 'Ramp' ELSE 'Local' END")},
                CASE ow WHEN 'yes' THEN 'FT' WHEN 'reverse' THEN 'TF' WHEN 'no' THEN 'B' END,
                nullif(round(kph / 1.609344), 0)::INTEGER,
                geom
@@ -123,7 +113,7 @@ def load_government(c, job, jurisdiction, work_dir):
         if id_field and not has_id:
             print(f"  [WARNING] {s.key}: id field {id_field!r} isn't in the layer; UIDs from geometry instead")
         path = os.path.join(work_dir, f"{s.key}.ndjson")
-        fetched = _now()
+        fetched = db.now()
         arcgis.fetch(entry["data"], path)
         insert_government(c, s, path, conform, has_id)
         edit = (info.get("editingInfo") or {}).get("lastEditDate") or (info.get("editingInfo") or {}).get("dataLastEditDate")
@@ -149,28 +139,19 @@ def insert_tiger(c, shp, vintage, into="road_seg"):
                nullif(trim(FULLNAME), ''),
                {_int('LFROMHN')}, {_int('LTOHN')}, {_int('RFROMHN')}, {_int('RTOHN')},
                nullif(ZIPL, ''), nullif(ZIPR, ''),
-               {_case(mtfcc, MTFCC_CLASS, "'Local'")}, NULL, NULL,
+               {db.case(mtfcc, MTFCC_CLASS, "'Local'")}, NULL, NULL,
                ST_Force2D(geom)
         FROM ST_Read('{shp}')
         WHERE {mtfcc} LIKE 'S%'""")
 
 
 def _download(url, path, tries=4):
-    for i in range(tries):
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": arcgis.USER_AGENT})
-            with urllib.request.urlopen(req, timeout=180) as r, open(path, "wb") as f:
-                f.write(r.read())
-            return True
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                return False
-            if i == tries - 1:
-                raise
-        except OSError:
-            if i == tries - 1:
-                raise
-        time.sleep(5 * 2 ** i)
+    data = arcgis.get(url, tries=tries, missing_ok=True)
+    if data is None:
+        return False
+    with open(path, "wb") as f:
+        f.write(data)
+    return True
 
 
 def tiger_vintages(today=None):
@@ -207,7 +188,7 @@ def load_tiger(c, job, jurisdiction, work_dir):
         print(f"  [tiger] no road fallback for {job.country}: {len(counties)} Package(s) without government roads")
         return
     vintage = _tiger_vintage(counties, work_dir)
-    fetched = _now()
+    fetched = db.now()
     _insert_counties(c, counties, vintage, work_dir, "road_seg")
     add_meta(c, {"source_key": f"tiger-addrfeat-{vintage}", "road_source": "tiger",
                  "agency": "U.S. Census Bureau (TIGER/Line address range features)", "license_status": "open",

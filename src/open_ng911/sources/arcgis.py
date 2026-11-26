@@ -5,6 +5,7 @@ Government endpoints flake (AGENTS.md): each page is retried with backoff before
 """
 import json
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -12,12 +13,29 @@ from concurrent.futures import ThreadPoolExecutor
 USER_AGENT = "open-ng911-addresses"
 
 
-def _get_json(url, tries=4):
+def get(url, timeout=180, tries=4, missing_ok=False):
+    """GET a government or Overture endpoint, retrying with backoff (they're sometimes down for minutes).
+    missing_ok: a 404 returns None instead of raising."""
     for i in range(tries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-            with urllib.request.urlopen(req, timeout=180) as r:
-                d = json.load(r)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if missing_ok and e.code == 404:
+                return None
+            if i == tries - 1:
+                raise
+        except OSError:
+            if i == tries - 1:
+                raise
+        time.sleep(5 * 2 ** i)
+
+
+def _get_json(url, tries=4):
+    for i in range(tries):
+        try:
+            d = json.loads(get(url, tries=1))
             if "error" in d:
                 raise OSError(f"ArcGIS error: {d['error']}")
             return d

@@ -24,7 +24,7 @@ import json
 import math
 import os
 
-from . import nena, package
+from . import db, nena, package
 
 ROAD_MATCH_M = 20.0  # how far an Overture segment may sit from the government line and still run along it
 MAX_ANGLE = 30.0     # degrees between the two shared stretches: more is a road crossing, not running along
@@ -180,17 +180,11 @@ def gate(c):
     return fails
 
 
-def _rows(c, sql):
-    res = c.execute(sql)
-    cols = [d[0] for d in res.description]
-    return [dict(zip(cols, r)) for r in res.fetchall()]
-
-
 def write(c, job, root, release):
     """road_centerline.parquet and road_gers_crosswalk.parquet in every Package, and the manifest's road section.
     Returns the road section of each Package's manifest, by Package key."""
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in nena.RCL_FIELDS)
-    meta = _rows(c, "SELECT * FROM road_source_meta ORDER BY source_key")
+    meta = db.rows(c, "SELECT * FROM road_source_meta ORDER BY source_key")
     out = {}
     for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
         d = os.path.join(root, geoid)
@@ -202,7 +196,7 @@ def write(c, job, root, release):
                             FROM road_gers g JOIN rcl r USING (uid) WHERE r.geoid = '{geoid}'
                             ORDER BY g.uid, g.is_primary DESC, g.gers_id)
                       TO '{os.path.join(d, 'road_gers_crosswalk.parquet')}' (FORMAT parquet)""")
-        stats = _rows(c, f"SELECT count(*) AS rows, count(gers_id) AS with_gers_id, {fill_sql} FROM rcl "
+        stats = db.rows(c, f"SELECT count(*) AS rows, count(gers_id) AS with_gers_id, {fill_sql} FROM rcl "
                          f"WHERE geoid = '{geoid}'")[0]
         rows, with_gers = int(stats.pop("rows")), int(stats.pop("with_gers_id"))
         per_source = dict(c.execute(f"SELECT source, count(*) FROM rcl WHERE geoid = '{geoid}' GROUP BY 1").fetchall())

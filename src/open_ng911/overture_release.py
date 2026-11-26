@@ -11,13 +11,13 @@ Ported from ng911-pipeline scripts/overture_release.py (PR #84).
 """
 import os
 import re
-import urllib.request
+
+from .sources import arcgis
 
 BUCKET = "s3://overturemaps-us-west-2"
 STAC_CATALOG = "https://stac.overturemaps.org/catalog.json"
 S3_LISTING = "https://overturemaps-us-west-2.s3.us-west-2.amazonaws.com/?list-type=2&prefix=release/&delimiter=/"
 RELEASE_ID = re.compile(r"\d{4}-\d{2}-\d{2}\.\d+")
-USER_AGENT = "open-ng911-addresses"
 
 
 def newest(text):
@@ -27,9 +27,7 @@ def newest(text):
 
 
 def _get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.read().decode()
+    return arcgis.get(url, timeout=30, tries=1).decode()
 
 
 def release_id():

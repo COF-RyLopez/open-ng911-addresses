@@ -9,6 +9,8 @@ import json
 import os
 import unicodedata
 
+from .. import db
+
 DOMAINS_FILE = os.path.join(os.path.dirname(__file__), "nena_sta006_3_domains.json")
 # Canada's values for the same fields (ADR 0006): street types in English and French, provinces, A2 kinds
 CLDXF_CA_FILE = os.path.join(os.path.dirname(__file__), "cldxf_ca_domains.json")
@@ -82,10 +84,6 @@ def french_pretypes():
     return {**words, **FRENCH_PRETYPE_ABBR}
 
 
-def _case(col, mapping):
-    return "CASE upper(" + col + ") " + " ".join(f"WHEN '{k}' THEN '{v}'" for k, v in mapping.items()) + " END"
-
-
 def install(c, country="US"):
     """Registry tables and macros the package layers map through (with Canada's values for a Canadian job)."""
     c.execute("CREATE OR REPLACE TABLE nena_type AS SELECT unnest(?::VARCHAR[]) AS word", [street_types(country)])
@@ -94,7 +92,7 @@ def install(c, country="US"):
     c.execute("""CREATE OR REPLACE MACRO nena_type_word(t) AS coalesce(
                      (SELECT word FROM nena_type_abbr WHERE abbr = upper(t)),
                      (SELECT word FROM nena_type WHERE upper(word) = upper(t)))""")
-    c.execute(f"CREATE OR REPLACE MACRO nena_dir_word(d) AS {_case('d', NENA_DIR)}")
+    c.execute(f"CREATE OR REPLACE MACRO nena_dir_word(d) AS {db.case('upper(d)', NENA_DIR)}")
     english = "|".join(k for k in sorted(NENA_PRETYPE, key=len, reverse=True) if k not in SPANISH_PRETYPES)
     spanish = "|".join(SPANISH_PRETYPES)
     pretypes = dict(NENA_PRETYPE)
@@ -111,6 +109,6 @@ def install(c, country="US"):
                      WHEN postyp IS NULL AND regexp_matches(n, '^({spanish}) +[A-Z0-9]') THEN regexp_extract(n, '^({spanish}) +', 1)
                      {french_when}
                   END""")
-    c.execute(f"CREATE OR REPLACE MACRO nena_pretype_word(raw) AS {_case('raw', pretypes)}")
+    c.execute(f"CREATE OR REPLACE MACRO nena_pretype_word(raw) AS {db.case('upper(raw)', pretypes)}")
     c.execute("""CREATE OR REPLACE MACRO nena_st_name(n, pre_raw) AS
                      CASE WHEN pre_raw IS NULL THEN n ELSE trim(n[length(pre_raw) + 1:]) END""")
