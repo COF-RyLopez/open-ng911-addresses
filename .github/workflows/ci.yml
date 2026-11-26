@@ -19,7 +19,7 @@ jobs:
           python-version: "3.12"
       - run: uv pip install --system -e ".[dev]"
       - run: ruff check src tests
-      - run: pytest -q
+      - run: pytest -q -m "not live"  # offline; live checks run in the build job
 
   plan:
     name: List enabled jobs
@@ -52,6 +52,8 @@ jobs:
       - run: uv pip install --system -e .
       # Overture release: latest from STAC/S3 unless OVERTURE_RELEASE is set (overture_release.py)
       - run: python -m open_ng911.build --job ${{ matrix.job }} --out data/output
+      # Live checks of the outside sources no enabled job reaches yet (TIGER ADDRFEAT, the road fallback)
+      - run: uv pip install --system pytest && pytest -q -m live
       # Only the summaries are uploaded. Package data carries sources whose license is still "unknown" and
       # isn't handed out until an authority opts in (ADR 0003), so it never goes into a public artifact.
       - if: always()

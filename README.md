@@ -24,21 +24,26 @@ or census division:
 5. Write the SiteStructureAddressPoint layer: every Record (with the GERS ID it matched, published alongside
    the UID) plus unmatched Overture addresses as Gap-fill candidates. NGUIDs are built from the Address UID,
    under the agency's own domain once it opts in and a `.invalid` placeholder until then.
-6. Gate: every NENA mandatory field filled and every NGUID unique, or the job fails.
+6. Write the RoadCenterline layer: the Source agency's own centerlines (through the OpenAddresses registry), else
+   Census TIGER address-range roads for that Package, each segment carrying the GERS IDs of the Overture road
+   segments that run along it. Overture's road geometry and names (ODbL) never go in (ADR 0010).
+7. Gate: every NENA mandatory field filled and every NGUID unique, on both layers, or the job fails.
 
 ```
 data/output/release=<overture release>/<job>/
     job.json                     summary: counts, link methods, gate result, per-package numbers
     address_lineage.parquet      the ledger: address_uid × gers_id, first/last release, link method
     <geoid>/site_structure_address_point.parquet   GeoParquet
-    <geoid>/manifest.json        recipient, opt-in state, field fill, sources and their license status
+    <geoid>/road_centerline.parquet                GeoParquet: NENA RCL fields + uid, gers_id, road_source
+    <geoid>/road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
+    <geoid>/manifest.json        recipient, opt-in state, field fill, sources with license status and date
 ```
 
 ## Run it
 
 ```sh
 uv pip install -e ".[dev]"
-pytest -q                                   # offline, on fixtures
+pytest -q -m "not live"                     # offline, on fixtures
 python -m open_ng911.build --job us-vt      # live: TIGERweb, Vermont's E911 service, Overture on S3
 OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <previous address_lineage.parquet>
 ```
@@ -52,8 +57,6 @@ OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <p
 
 - Boundary adapters for A3/A4 (TIGER places and county subdivisions; StatCan census subdivisions), and the
   StatCan census-division Package areas for the pilot province.
-- Road centerlines: government centerlines from the OpenAddresses registry, TIGER ADDRFEAT as the fallback,
-  with a GERS crosswalk (no Overture geometry).
 - Two or three more pilot states of different shapes, several address sources per job, parcels for Placement.
 - Phase 2: changelog-driven reruns, `exact_rematch` / `near_rematch` in the ledger, the churn table.
 

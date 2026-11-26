@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 REGISTRY_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "registry")
 LICENSE_STATUSES = ("open", "share-alike", "unknown")
+LAYERS = ("addresses", "centerlines")  # OpenAddresses layer names
 SHARING_STATUSES = ("not_started", "offered", "in_progress", "done", "not_applicable")
 
 
@@ -47,6 +48,14 @@ class Source:
     license_url: str = ""
     attribution: str = ""
     sharing: dict = field(default_factory=dict)
+    # A layer entry in OpenAddresses' own schema, for an endpoint OpenAddresses doesn't list yet. It is used
+    # in place of the registry's entry and is written so it can go upstream as is (sources/openaddresses.py).
+    oa_entry: dict = field(default_factory=dict)
+    # Features to leave out, by the raw value of one field: {field = "AOTCLASS", values = ["98"]}
+    exclude: dict = field(default_factory=dict)
+
+    def covers_package(self, geoid):
+        return self.covers == "*" or geoid in self.covers
 
 
 @dataclass
@@ -94,5 +103,7 @@ def validate(r, j):
         assert a.opted_in or not a.domain, f"{a.key}: a domain is set only once the authority opts in (ADR 0003)"
     for s in r.sources:
         assert s.license_status in LICENSE_STATUSES, f"{s.key}: license_status {s.license_status!r}"
+        assert s.layer in LAYERS, f"{s.key}: layer {s.layer!r} (one of {LAYERS})"
+        assert not s.exclude or set(s.exclude) == {"field", "values"}, f"{s.key}: exclude needs field and values"
         for path, status in s.sharing.items():
             assert status in SHARING_STATUSES, f"{s.key}: sharing.{path} = {status!r}"

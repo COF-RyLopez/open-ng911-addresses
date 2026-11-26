@@ -1,9 +1,9 @@
 """
 Packages: one per county (in Canada, census division), each the NG9-1-1 dataset for that area (GLOSSARY.md).
 
-Phase 1 writes the SiteStructureAddressPoint layer. Road centerlines (government centerlines through the
-OpenAddresses registry, TIGER as the fallback) and boundaries follow; Overture's ODbL themes never go into
-a core layer, and the OSM-derived Review layer is built only for opted-in Packages (ADR 0007).
+This module writes the SiteStructureAddressPoint layer; roads.py adds the RoadCenterline layer and its manifest
+section. Boundaries follow; Overture's ODbL themes never go into a core layer, and the OSM-derived Review layer is
+built only for opted-in Packages (ADR 0007).
 
     <out>/release=<release>/<job>/<geoid>/
         site_structure_address_point.parquet   GeoParquet, NENA-STA-006.3 fields + uid, gers_id, status
