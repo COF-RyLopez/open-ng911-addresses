@@ -27,6 +27,16 @@ Package area), and gap 3 is closed where a Source publishes service zones (Vermo
 and fire; North Dakota fire and law). Every build reports per-field coverage before and after:
 [nena-coverage.md](nena-coverage.md), with the open fields in `registry/remediation/nena_field_gaps.csv`.
 
+First pilot builds (PR #10 CI, Overture 2026-11-18.0), SSAP fields with any value before -> after: North Dakota
+21 -> 40 and Maine 21 -> 34 (both publish NENA's own schema), Utah 21 -> 24, Vermont 19 -> 22, PEI 20 -> 21. RCL:
+North Dakota 25 -> 47, Utah 25 -> 34, Vermont 25 -> 29; Maine's E911 roads are restricted (tracker) and PEI's
+centrelines carry names only. New layers: PSAP/police/fire/EMS for Vermont and PEI (zones merged by agency name),
+PSAP/police/fire for Utah, police/fire for North Dakota, mile markers for Maine and North Dakota, and a
+ProvisioningPolygon in every Package. What stays open is mostly the agency's to publish: Agency_ID, ServiceURI and
+AVcard_URI on every service layer, and MSAG communities outside Maine and North Dakota. North Dakota's ServiceURN
+values (382) don't match NENA's domain, so NENA's URN for the layer is used; 17,391 of its address dates are
+outside 1990-2100 and are left as build time.
+
 ## Ranked gaps
 
 1. **US units use the wrong field.** We write `unit`; the US template removes `Unit` and uses
