@@ -136,12 +136,13 @@ def load_government(c, job, jurisdiction, work_dir):
         print(f"  [centerlines] {s.key}: {n:,} segments")
 
 
-def insert_tiger(c, shp, vintage):
-    """road_seg rows from one county's ADDRFEAT shapefile (a path GDAL reads: a .shp or /vsizip/...)."""
+def insert_tiger(c, shp, vintage, into="road_seg"):
+    """road_seg rows (or rows of another table with road_seg's columns) from one county's ADDRFEAT shapefile (a path
+    GDAL reads: a .shp or /vsizip/...)."""
     ids.install(c)
     key = f"tiger-addrfeat-{vintage}"
     mtfcc = "coalesce(nullif(ROAD_MTFCC, ''), EDGE_MTFCC)"
-    c.execute(f"""{INSERT}
+    c.execute(f"""{INSERT.replace('INTO road_seg', f'INTO {into}')}
         SELECT '{key}', 'tiger', concat_ws(':', TLID, ARIDL, ARIDR),
                -- TLID (the edge) plus the address-range IDs on each side: one ADDRFEAT row each
                agency_uid('tiger-addrfeat', concat_ws(':', TLID, ARIDL, ARIDR)),
@@ -178,6 +179,25 @@ def tiger_vintages(today=None):
     return [y, y - 1, y - 2]
 
 
+def _tiger_vintage(counties, work_dir):
+    for vintage in tiger_vintages():
+        z = os.path.join(work_dir, f"tl_{vintage}_{counties[0]}_addrfeat.zip")
+        if os.path.exists(z) or _download(TIGER_ADDRFEAT.format(year=vintage, county=counties[0]), z):
+            return vintage
+    raise SystemExit(f"No TIGER ADDRFEAT found for {counties[0]} in {tiger_vintages()}")
+
+
+def _insert_counties(c, counties, vintage, work_dir, into):
+    for county in counties:
+        z = os.path.join(work_dir, f"tl_{vintage}_{county}_addrfeat.zip")
+        if not os.path.exists(z) and not _download(TIGER_ADDRFEAT.format(year=vintage, county=county), z):
+            print(f"  [WARNING] no TIGER {vintage} ADDRFEAT for {county}")
+            continue
+        with zipfile.ZipFile(z) as zf:
+            shp = next(n for n in zf.namelist() if n.endswith(".shp"))
+        insert_tiger(c, f"/vsizip/{z}/{shp}", vintage, into)
+
+
 def load_tiger(c, job, jurisdiction, work_dir):
     """ADDRFEAT for every Package roads.py marked as needing the fallback (table road_fallback)."""
     counties = [g for g, in c.execute("SELECT geoid FROM road_fallback ORDER BY 1").fetchall()]
@@ -186,21 +206,9 @@ def load_tiger(c, job, jurisdiction, work_dir):
     if job.country != "US":  # TIGER is US only; a Canadian fallback (NRN / Road Network File) isn't wired yet
         print(f"  [tiger] no road fallback for {job.country}: {len(counties)} Package(s) without government roads")
         return
-    for vintage in tiger_vintages():
-        z = os.path.join(work_dir, f"tl_{vintage}_{counties[0]}_addrfeat.zip")
-        if _download(TIGER_ADDRFEAT.format(year=vintage, county=counties[0]), z):
-            break
-    else:
-        raise SystemExit(f"No TIGER ADDRFEAT found for {counties[0]} in {tiger_vintages()}")
+    vintage = _tiger_vintage(counties, work_dir)
     fetched = _now()
-    for county in counties:
-        z = os.path.join(work_dir, f"tl_{vintage}_{county}_addrfeat.zip")
-        if not os.path.exists(z) and not _download(TIGER_ADDRFEAT.format(year=vintage, county=county), z):
-            print(f"  [WARNING] no TIGER {vintage} ADDRFEAT for {county}")
-            continue
-        with zipfile.ZipFile(z) as zf:
-            shp = next(n for n in zf.namelist() if n.endswith(".shp"))
-        insert_tiger(c, f"/vsizip/{z}/{shp}", vintage)
+    _insert_counties(c, counties, vintage, work_dir, "road_seg")
     add_meta(c, {"source_key": f"tiger-addrfeat-{vintage}", "road_source": "tiger",
                  "agency": "U.S. Census Bureau (TIGER/Line address range features)", "license_status": "open",
                  "license_url": "https://www.census.gov/data/developers/about/terms-of-service.html",
@@ -208,3 +216,25 @@ def load_tiger(c, job, jurisdiction, work_dir):
                  "fetched": fetched, "data_url": TIGER_ADDRFEAT.format(year=vintage, county="<county>")})
     n = c.execute(f"SELECT count(*) FROM road_seg WHERE source_key = 'tiger-addrfeat-{vintage}'").fetchall()[0][0]
     print(f"  [tiger] {n:,} ADDRFEAT segments for {len(counties)} Package(s) with no government centerlines")
+
+
+def create_national_table(c):
+    c.execute(f"CREATE OR REPLACE TABLE national_seg ({ROAD_SEG_COLUMNS})")
+
+
+def load_national_reference(c, job, jurisdiction, work_dir):
+    """national_seg: the national road layer for every Package that has government roads, to count where the
+    agency's network and the national one differ (upstream.py). US: TIGER ADDRFEAT. Canada: none yet (the National
+    Road Network loader is still to come). Returns the layer's name and date, or None when there isn't one."""
+    create_national_table(c)
+    if job.country != "US":
+        return None
+    counties = [g for g, in c.execute("SELECT DISTINCT geoid FROM road_seg WHERE road_source = 'government' "
+                                      "ORDER BY 1").fetchall()]
+    if not counties:
+        return None
+    vintage = _tiger_vintage(counties, work_dir)
+    _insert_counties(c, counties, vintage, work_dir, "national_seg")
+    n = c.execute("SELECT count(*) FROM national_seg").fetchall()[0][0]
+    print(f"  [tiger] {n:,} ADDRFEAT segments read to compare with {len(counties)} Package(s) of government roads")
+    return {"layer": "TIGER/Line ADDRFEAT", "date": f"TIGER/Line {vintage}"}

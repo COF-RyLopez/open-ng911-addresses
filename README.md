@@ -68,8 +68,16 @@ OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <p
   file download rather than an ArcGIS service.
 - Phase 2: changelog-driven reruns, `exact_rematch` / `near_rematch` in the ledger, the churn table.
 
+## Standards
+
+`docs/standards/` summarizes NENA-STA-006.3 (GIS Data Model), CLDXF-US and CLDXF-CA with links to the official
+documents, lists every NENA layer and field, and ranks what Packages still miss ([gap review](docs/standards/gap-review.md)).
+
 ## Licensing
 
 Code: MIT. Data keeps its sources' licenses: each manifest lists every source with its license status, and a
 source marked `unknown` stays out of anything published openly. Overture addresses carry their per-source
 licenses (not ODbL); no OpenStreetMap-derived geometry goes into a Package's core layers.
+
+Sources with a missing or unclear licence, and areas with no usable source, are tracked in
+[docs/license-remediation.md](docs/license-remediation.md) so the agencies can be asked.

@@ -2,6 +2,7 @@
 
 Guidance for coding agents working in this repo. Keep it short and true; update it when something here
 stops being right. Terms are defined in `GLOSSARY.md`; decisions are in `docs/adr/`. Read both first.
+What the NENA standards ask of each layer and field, and the ranked gaps: `docs/standards/`.
 
 ## What this is
 
@@ -41,6 +42,8 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - **No OSM geometry or names in core layers.** Read only Overture's addresses theme here; Overture
   transportation, buildings, divisions and base are ODbL. The one exception is `overture_segment`, read only to
   attach GERS IDs to government roads (ADR 0010): nothing but the ID and overlap numbers leaves that table. The Review layer is private per opted-in agency (ADR 0007).
+- **Unclear licences go in the tracker** (`registry/remediation/requests.toml`, `docs/license-remediation.md`),
+  never into a guess. Agents don't contact agencies; a person does.
 - **Licenses**: a source with `license_status = "unknown"` never goes into anything public, including CI
   artifacts (CI uploads only `job.json` and manifests).
 - **Fix open data on our side**: OpenAddresses conform maps fields, it doesn't rewrite values; value fixes go

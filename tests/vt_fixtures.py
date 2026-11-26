@@ -75,14 +75,15 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
             **road_loaders(tmp_path)}
 
 
-# Overture road segments (GERS ID, subtype, WKT). Only their IDs may reach a Package.
+# Overture road segments (GERS ID, subtype, name, class, WKT). Only their IDs, and counts, may reach a Package.
 SEGMENTS = [
-    ("s1", "road", "LINESTRING (-73.1062 44.10024, -73.0995 44.10024)"),   # along MAIN ST 5001, west part
-    ("s2", "road", "LINESTRING (-73.0995 44.10024, -73.0938 44.10024)"),   # along MAIN ST 5001, east part
-    ("s3", "road", "LINESTRING (-73.098 44.099, -73.098 44.101)"),         # crosses MAIN ST: no link
-    ("s4", "road", "LINESTRING (-73.10104 44.1003, -73.10104 44.1081)"),   # along N EIGHTH ST 5002
-    ("s5", "rail", "LINESTRING (-73.106 44.1002, -73.094 44.1002)"),       # a railway on MAIN ST: not a road
-    ("s7", "road", "LINESTRING (-73.15 42.90003, -73.05 42.90003)"),       # along the TIGER segment in Bennington
+    ("s1", "road", "Main Street", "secondary", "LINESTRING (-73.1062 44.10024, -73.0995 44.10024)"),  # MAIN ST 5001, west
+    ("s2", "road", "Main Street", "secondary", "LINESTRING (-73.0995 44.10024, -73.0938 44.10024)"),  # MAIN ST 5001, east
+    ("s3", "road", "Cross Street", "residential", "LINESTRING (-73.098 44.099, -73.098 44.101)"),     # crosses: no link
+    # along N EIGHTH ST 5002, under another name and as a highway: one name and one class disagreement
+    ("s4", "road", "Seminary Street", "trunk", "LINESTRING (-73.10104 44.1003, -73.10104 44.1081)"),
+    ("s5", "rail", None, "standard_gauge", "LINESTRING (-73.106 44.1002, -73.094 44.1002)"),          # railway
+    ("s7", "road", "Vermont Route 9", "secondary", "LINESTRING (-73.15 42.90003, -73.05 42.90003)"),  # Bennington TIGER
 ]
 
 # TIGER ADDRFEAT for the Bennington fixture Package, which has no government centerlines
@@ -96,11 +97,12 @@ ADDRFEAT = [  # TLID, ARIDL, ARIDR, FULLNAME, LFROMHN, LTOHN, RFROMHN, RTOHN, ZI
 
 
 def write_segment_parquet(c, rows, path):
-    values = ", ".join(f"('{i}', '{t}', ST_GeomFromText('{w}'))" for i, t, w in rows)
-    c.execute(f"""COPY (SELECT id, subtype, geometry,
+    values = ", ".join(f"('{i}', '{t}', {{'primary': {repr(n) if n else 'NULL::VARCHAR'}}}, '{k}', NULL::VARCHAR, "
+                       f"ST_GeomFromText('{w}'))" for i, t, n, k, w in rows)
+    c.execute(f"""COPY (SELECT id, subtype, names, class, subclass, geometry,
                          {{'xmin': ST_XMin(geometry), 'xmax': ST_XMax(geometry),
                            'ymin': ST_YMin(geometry), 'ymax': ST_YMax(geometry)}} AS bbox
-                  FROM (VALUES {values}) t(id, subtype, geometry)) TO '{path}' (FORMAT parquet)""")
+                  FROM (VALUES {values}) t(id, subtype, names, class, subclass, geometry)) TO '{path}' (FORMAT parquet)""")
 
 
 def write_addrfeat(c, rows, path):
@@ -109,6 +111,16 @@ def write_addrfeat(c, rows, path):
     c.execute(f"""COPY (SELECT * FROM (VALUES {values}) t(TLID, ARIDL, ARIDR, FULLNAME, LFROMHN, LTOHN, RFROMHN,
                                                           RTOHN, ZIPL, ZIPR, ROAD_MTFCC, EDGE_MTFCC, geom))
                   TO '{path}' (FORMAT GDAL, DRIVER 'ESRI Shapefile')""")
+
+
+# TIGER ADDRFEAT for Addison, read only to compare with the E911 roads (upstream.py): it has MAIN ST and a road the
+# E911 layer doesn't, and lacks N EIGHTH ST and the VT 125 ramp
+ADDISON_ADDRFEAT = [
+    (700001, "B1", "B2", "Main St", "1", "99", "2", "98", "05753", "05753", "S1200", "S1200",
+     "LINESTRING (-73.106 44.10022, -73.094 44.10022)"),
+    (700002, "B3", "", "Gone Rd", "", "", "", "", "", "", "S1400", "S1400",
+     "LINESTRING (-73.05 44.05, -73.04 44.05)"),
+]
 
 
 def road_loaders(tmp_path, segments=SEGMENTS):
@@ -135,4 +147,12 @@ def road_loaders(tmp_path, segments=SEGMENTS):
         write_segment_parquet(c, segments, path)
         overture.create_overture_segment(c, path)
 
-    return {"gov_roads": gov_roads, "tiger_roads": tiger_roads, "overture_segment": overture_segment}
+    def national_roads(c, job, jur, work):
+        centerlines.create_national_table(c)
+        path = str(tmp_path / "tl_2025_50001_addrfeat.shp")
+        write_addrfeat(c, ADDISON_ADDRFEAT, path)
+        centerlines.insert_tiger(c, path, 2025, "national_seg")
+        return {"layer": "TIGER/Line ADDRFEAT", "date": "TIGER/Line 2025"}
+
+    return {"gov_roads": gov_roads, "tiger_roads": tiger_roads, "overture_segment": overture_segment,
+            "national_roads": national_roads}

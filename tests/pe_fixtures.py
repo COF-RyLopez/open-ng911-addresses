@@ -70,10 +70,11 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
 
     def overture_segment(c, job, jur, work):
         path = str(tmp_path / "segments_pe.parquet")
-        write_segment_parquet(c, [("p1", "road", "LINESTRING (-63.135 46.24, -63.125 46.24)")], path)
+        write_segment_parquet(c, [("p1", "road", "Queens Road", "secondary", "LINESTRING (-63.135 46.24, -63.125 46.24)")], path)
         overture.create_overture_segment(c, path)
 
     # PEI has no centerlines Source yet and TIGER doesn't cover Canada: every Package has an empty RoadCenterline
     return {"package_area": package_area, "municipality": municipality, "agency_addr": agency_addr,
             "overture_addr": overture_addr, "gov_roads": lambda c, job, jur, work: None,
-            "tiger_roads": centerlines.load_tiger, "overture_segment": overture_segment}
+            "tiger_roads": centerlines.load_tiger, "overture_segment": overture_segment,
+            "national_roads": centerlines.load_national_reference}

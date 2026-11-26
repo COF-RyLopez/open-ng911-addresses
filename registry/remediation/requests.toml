@@ -1,0 +1,77 @@
+# License remediation worklist (docs/license-remediation.md). Edited by hand.
+#
+# One [[request]] per source or jurisdiction we would like to ask about. This file records what we found on public
+# pages and what we would ask. It never says what an agency allows until the agency has answered in writing
+# (ADR 0004). A person sends every request; no agent contacts an agency.
+#
+# issue:  unstated | presumed | stated_unreviewed | share_alike | restricted | no_source
+# status: found | ready | asked | answered | resolved | declined
+# contact: a public contact page, never a personal address.
+
+[[request]]
+key = "us-vt-e911-sites"
+job = "us-vt"
+publisher = "VCGI, for the Vermont Enhanced 9-1-1 Board"
+layers = ["addresses", "centerlines"]
+sources = ["us/vt/statewide (addresses)", "VCGI EmergencyE911_RDS (centerlines, PR #5 oa_entry)"]
+issue = "stated_unreviewed"
+found = "The only licence text is VCGI's 2013 warranty and copyright notice, which disclaims warranty but grants no reuse terms we can read as open."
+evidence = "https://vcgi.vermont.gov/sites/vcgi/files/warehouse/VCGI_Warranty_Copyright_Notice_2013.pdf"
+ask = "Whether the E911 site points and road centerlines may be redistributed, with attribution, under an open licence (for example CC BY 4.0 or public domain)."
+contact = "https://vcgi.vermont.gov/"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "us-nd-ssap"
+job = "us-nd"
+publisher = "North Dakota GIS Hub (NG911 SiteStructureAddressPoint)"
+layers = ["addresses"]
+sources = ["us/nd/statewide"]
+issue = "unstated"
+found = "OpenAddresses records no licence, and the pilot-states work (PR #2) found none stated on the layer."
+evidence = "https://gishubdata-ndgov.hub.arcgis.com/datasets/GOcSXpzwBHyk2nog::ndgishub-site-structure-address-points/about"
+ask = "Which licence applies to the statewide NG911 SSAP layer, and whether redistribution with attribution is allowed."
+contact = "https://gishubdata-ndgov.hub.arcgis.com/"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "oa-centerlines-unstated"
+job = "*"
+publisher = "187 county and city publishers (see oa_sources.csv, layer = centerlines, license_class = unstated)"
+layers = ["centerlines"]
+sources = ["registry/remediation/oa_sources.csv"]
+issue = "unstated"
+found = "187 of the 211 US centerline sources in OpenAddresses record no licence. Until asked, Packages in those counties use TIGER ADDRFEAT."
+ask = "Per publisher, as their job is enabled: the licence of the road centerline layer."
+contact = "per publisher"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "us-nationwide-nad"
+job = "*"
+publisher = "USDOT National Address Database"
+layers = ["addresses"]
+sources = ["us/countrywide"]
+issue = "stated_unreviewed"
+found = "OA links the NAD disclaimer page; NAD aggregates state contributions, each with its own terms. Not read yet."
+evidence = "https://www.transportation.gov/mission/open/gis/national-address-database/national-address-database-nad-disclaimer"
+ask = "Read the NAD terms; ask only if they are unclear. Prefer each state's own source anyway."
+contact = "https://www.transportation.gov/gis/national-address-database"
+status = "found"
+last_checked = "2026-11-26"
+
+[[request]]
+key = "ca-nu-no-territorial-source"
+job = "ca-nu"
+publisher = "Government of Nunavut"
+layers = ["addresses", "centerlines"]
+sources = []
+issue = "no_source"
+found = "No territorial address or road layer in OpenAddresses; only the StatCan National Address Register reaches Nunavut. Not yet searched on territorial sites."
+ask = "Whether civic address points or road centerlines are published, and under what licence."
+contact = ""
+status = "found"
+last_checked = "2026-11-26"

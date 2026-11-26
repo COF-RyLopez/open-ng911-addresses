@@ -69,8 +69,12 @@ def utm_epsg(c):
     return f"EPSG:{32600 + zone if lat >= 0 else 32700 + zone}"
 
 
-def crosswalk(c, max_m=ROAD_MATCH_M):
+def crosswalk(c, max_m=ROAD_MATCH_M, left="road_seg", right="overture_segment", right_id="gers_id",
+              out="road_gers"):
     """road_gers(uid, gers_id, overlap_m, rcl_share, segment_share, is_primary).
+
+    The same test links any two line tables: `left` (uid, geom) to `right` (`right_id`, geom), into `out` with
+    the right-hand ID column named `right_id` (upstream.py uses it for government roads against TIGER).
 
     An Overture segment runs along a government segment when, within max_m of each other, it covers at least
     half of the government segment or the government segment covers at least half of it (one line is often cut
@@ -80,13 +84,13 @@ def crosswalk(c, max_m=ROAD_MATCH_M):
     epsg = utm_epsg(c)
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _g AS
         SELECT uid, m, ST_Buffer(m, {max_m}) AS buf, ST_Length(m) AS len FROM (
-            SELECT uid, ST_LineMerge(ST_Transform(geom, 'EPSG:4326', '{epsg}')) AS m FROM road_seg)""")
+            SELECT uid, ST_LineMerge(ST_Transform(geom, 'EPSG:4326', '{epsg}')) AS m FROM {left})""")
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _o AS
-        SELECT gers_id, m, ST_Buffer(m, {max_m}) AS buf, ST_Length(m) AS len FROM (
-            SELECT gers_id, ST_Transform(geom, 'EPSG:4326', '{epsg}') AS m FROM overture_segment)""")
-    c.execute(f"""CREATE OR REPLACE TABLE road_gers AS
+        SELECT rid, m, ST_Buffer(m, {max_m}) AS buf, ST_Length(m) AS len FROM (
+            SELECT {right_id} AS rid, ST_Transform(geom, 'EPSG:4326', '{epsg}') AS m FROM {right})""")
+    c.execute(f"""CREATE OR REPLACE TABLE {out} AS
         WITH pairs AS (
-            SELECT g.uid, o.gers_id, g.len AS glen, o.len AS olen,
+            SELECT g.uid, o.rid, g.len AS glen, o.len AS olen,
                    ST_Intersection(g.m, o.buf) AS gp, ST_Intersection(o.m, g.buf) AS op,
                    ST_Distance(road_midpoint(g.m), o.m) AS mid_m
             FROM _g g JOIN _o o ON ST_Intersects(g.buf, o.m)),
@@ -100,13 +104,13 @@ def crosswalk(c, max_m=ROAD_MATCH_M):
             WHERE glen > 0 AND olen > 0 AND greatest(g_in, o_in) >= least(5, 0.9 * glen)  -- not a junction crumb
               AND (g_in >= 0.5 * glen OR o_in >= 0.5 * olen)
               AND coalesce(degrees(least(d, pi() - d)) <= {MAX_ANGLE}, true))  -- no single stretch: can't tell
-        SELECT uid, gers_id, round(g_in, 1) AS overlap_m, round(least(g_in / glen, 1), 3) AS rcl_share,
+        SELECT uid, rid AS {right_id}, round(g_in, 1) AS overlap_m, round(least(g_in / glen, 1), 3) AS rcl_share,
                round(least(o_in / olen, 1), 3) AS segment_share,
-               row_number() OVER (PARTITION BY uid ORDER BY g_in DESC, mid_m, gers_id) = 1 AS is_primary
+               row_number() OVER (PARTITION BY uid ORDER BY g_in DESC, mid_m, rid) = 1 AS is_primary
         FROM links""")
     c.execute("DROP TABLE _g")
     c.execute("DROP TABLE _o")
-    return c.execute("SELECT count(DISTINCT uid) FROM road_gers").fetchall()[0][0]
+    return c.execute(f"SELECT count(DISTINCT uid) FROM {out}").fetchall()[0][0]
 
 
 def _parity(f, t):
