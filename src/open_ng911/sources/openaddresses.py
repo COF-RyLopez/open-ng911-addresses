@@ -49,6 +49,8 @@ def create_agency_addr(c, source, path, conform, has_id):
     ids.install(c)
     excluded = ", ".join("'" + t.replace("'", "''") + "'" for t in source.exclude_site_types) or "NULL"
     site_type = conform_sql(conform.get("addrtype"))
+    # an empty list keeps everything (NOT IN (NULL) would keep nothing)
+    keep = f"(site_type IS NULL OR site_type NOT IN ({excluded}))" if source.exclude_site_types else "true"
     sid = f"nullif(trim(p->>'{source.id_field}'), '')" if has_id else "NULL"
     c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS
             SELECT {sid} AS source_id,
@@ -60,7 +62,7 @@ def create_agency_addr(c, source, path, conform, has_id):
                    upper({site_type}) AS site_type,
                    ST_GeomFromGeoJSON(g) AS geom
             FROM read_json('{path}', columns = {{p: 'JSON', g: 'VARCHAR'}})""")
-    # Points the registry's exclude_site_types drops (public phones, call boxes...), counted for job.json
+    # Points the registry's exclude_site_types drops (sites that aren't addressed), counted for job.json
     c.execute(f"""CREATE OR REPLACE TABLE agency_excluded AS
         SELECT '{source.key}' AS source_key, site_type, count(*) AS n FROM agency_raw
         WHERE site_type IN ({excluded}) GROUP BY ALL""")
@@ -74,7 +76,7 @@ def create_agency_addr(c, source, path, conform, has_id):
                number, street, unit, city, postcode, site_type, geom
         FROM agency_raw
         WHERE number IS NOT NULL AND street IS NOT NULL AND ST_GeometryType(geom) = 'POINT'
-          AND (site_type IS NULL OR site_type NOT IN ({excluded}))""")
+          AND {keep}""")
     c.execute("DROP TABLE agency_raw")
     for key, site_type, n in c.execute("SELECT * FROM agency_excluded ORDER BY n DESC").fetchall():
         print(f"  [openaddresses] {key}: dropped {n:,} {site_type} points (exclude_site_types)")

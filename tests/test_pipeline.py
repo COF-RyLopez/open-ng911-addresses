@@ -1,11 +1,13 @@
 """The Vermont job end to end on fixtures: matching, statuses, UIDs, NGUIDs, packages and the ledger."""
+import dataclasses
 import json
 import os
 
 import duckdb
-from vt_fixtures import OVERTURE, fixture_loaders
+from vt_fixtures import FIXTURES, OVERTURE, fixture_loaders
 
 from open_ng911 import build, ids
+from open_ng911.sources import openaddresses
 
 RELEASE = "2026-11-18.0"
 
@@ -23,8 +25,8 @@ def test_vermont_job(tmp_path, conn):
     s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
     assert s["gate_failures"] == []
     assert s["packages"] == 2
-    assert s["agency_points_excluded"] == {"PUBLIC TELEPHONE": 1}
-    assert s["records"] == 5  # the public phone and the point outside every Package are dropped
+    assert s["agency_points_excluded"] == {}
+    assert s["records"] == 6  # the public phone stays (an addressed site); the point outside every Package is dropped
     assert s["gap_fill_candidates"] == 2  # o3 (lost to o4 on street key) and o5; o7 is outside
 
     addison = rows(out, "50001")
@@ -32,6 +34,7 @@ def test_vermont_job(tmp_path, conn):
     assert addison["1002"]["gers_id"] == "o2" and addison["1002"]["street_key_match"]
     assert addison["1003"]["gers_id"] == "o4", "a same-street pair beats a nearer pair on another street"
     assert addison["1004"]["gers_id"] is None
+    assert addison["1005"]["source_site_type"] == "PUBLIC TELEPHONE" and addison["1005"]["status"] == "record"
     assert addison["1004"]["add_number"] == 30 and addison["1004"]["addnum_suf"] == "B"
     assert addison["r5"]["status"] == "gap_fill_candidate" and addison["r5"]["link_method"] == "minted"
     assert addison["r5"]["source_license"] == "Public Domain"
@@ -52,7 +55,7 @@ def test_vermont_job(tmp_path, conn):
     with open(os.path.join(out, f"release={RELEASE}", "us-vt", "50001", "manifest.json")) as f:
         m = json.load(f)
     assert m["opted_in"] is False and m["recipient"] == "Vermont Enhanced 9-1-1 Board"
-    assert m["records"] == 4 and m["records_with_gers_id"] == 3
+    assert m["records"] == 5 and m["records_with_gers_id"] == 3
     assert m["field_fill"]["nguid"] == 1.0
     assert m["sources"][0]["license_status"] == "unknown"
 
@@ -81,3 +84,12 @@ def test_ledger_carries_uids_across_releases(tmp_path, conn):
 def duckdb_conn():
     from open_ng911 import db
     return db.connect(s3=False)
+
+
+def test_exclude_site_types_drops_and_counts(conn, vt):
+    _, jur = vt
+    source = dataclasses.replace(jur.sources[0], exclude_site_types=["PUBLIC TELEPHONE"])
+    conform = {"number": "HOUSE_NUMBER", "street": ["PD", "PT", "SN", "ST", "SD"], "addrtype": "SITETYPE"}
+    openaddresses.create_agency_addr(conn, source, os.path.join(FIXTURES, "vt_agency_points.ndjson"), conform, True)
+    assert conn.execute("SELECT site_type, n FROM agency_excluded").fetchall() == [("PUBLIC TELEPHONE", 1)]
+    assert conn.execute("SELECT count(*) FROM agency_addr WHERE source_id = '1005'").fetchall()[0][0] == 0

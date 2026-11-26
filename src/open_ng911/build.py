@@ -46,13 +46,14 @@ def assemble_ssap(c, job, jurisdiction, updated):
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
                    a.source_id, '{source.license_status}' AS source_license, 'agency_record' AS link_method,
-                   m.distance_m AS match_distance_m, m.street_key_match,
+                   m.distance_m AS match_distance_m, m.street_key_match, a.site_type AS source_site_type,
                    a.number, a.ps, a.unit, a.city, a.postcode, a.geom, a.geoid
             FROM agency_addr a LEFT JOIN address_match m USING (address_uid)),
         gap AS (
             SELECT u.address_uid AS uid, o.gers_id, 'gap_fill_candidate' AS status, 'overture' AS source,
                    o.source_record_id AS source_id, o.source_license, u.link_method,
                    NULL::DOUBLE AS match_distance_m, NULL::BOOLEAN AS street_key_match,
+                   NULL::VARCHAR AS source_site_type,
                    o.number, o.ps, o.unit, o.postal_city AS city, o.postcode, o.geom, o.geoid
             FROM overture_addr o JOIN overture_uid u USING (gers_id)
             WHERE o.gers_id NOT IN (SELECT gers_id FROM address_match)
@@ -63,7 +64,7 @@ def assemble_ssap(c, job, jurisdiction, updated):
             WHERE uid NOT IN (SELECT uid FROM rec) OR status = 'record'),
         y AS (SELECT *, nena_pretype_raw(ps.name, postyp) AS pre_raw FROM x)
         SELECT y.uid, y.gers_id, y.status, y.source, y.source_id, y.source_license, y.link_method,
-               y.match_distance_m, y.street_key_match,
+               y.match_distance_m, y.street_key_match, y.source_site_type,
                d.domain AS discrpagid,
                '{updated}' AS dateupdate,
                build_nguid('SSAP', y.uid, d.domain) AS nguid,
