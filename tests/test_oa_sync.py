@@ -54,7 +54,11 @@ def test_read_pin():
     assert oa_sync.read_pin(oa_sync.pin_text("abc", "2026-11-26")) == "abc"
 
 
-def test_registry_paths_stand_in():
-    vt = registry.job("us-vt")
-    assert "us/vt/statewide" in oa_sync._registry_paths(vt)
-    assert oa_sync._registry_paths(registry.job("us-oh")) == []
+def test_source_paths_of_a_job_without_a_registry_file():
+    assert "us/vt/statewide" in oa_sync.source_paths(registry.job("us-vt"))
+    assert oa_sync.source_paths(registry.job("us-oh")) == []
+
+
+def test_pin_text_keeps_the_comments():
+    text = "# pinned\n[openaddresses]\ncommit = \"old\"\ndate = \"2026-11-01\"\n"
+    assert oa_sync.pin_text("new", "2026-11-26", text) == "# pinned\n[openaddresses]\ncommit = \"new\"\ndate = \"2026-11-26\"\n"

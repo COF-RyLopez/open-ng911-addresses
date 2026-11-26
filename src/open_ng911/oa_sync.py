@@ -19,6 +19,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import subprocess
 import tomllib
 
@@ -45,10 +46,11 @@ def read_pin(text):
     return (tomllib.loads(text).get("openaddresses") or {}).get("commit")
 
 
-def pin_text(commit, date):
-    return ("# The OpenAddresses commit the build reads source files at (docs/openaddresses-upstream.md). Moved by\n"
-            "# the scheduled OpenAddresses sync (oa_sync.py bump); the jobs that read a changed source rebuild.\n"
-            f'[openaddresses]\ncommit = "{commit}"\ndate = "{date}"\n')
+def pin_text(commit, date, text=None):
+    """registry/openaddresses.toml moved to `commit`, keeping the file's own comments."""
+    text = text or "[openaddresses]\ncommit = \"\"\ndate = \"\"\n"
+    text = re.sub(r'(?m)^commit = ".*"$', f'commit = "{commit}"', text)
+    return re.sub(r'(?m)^date = ".*"$', f'date = "{date}"', text)
 
 
 def _git(*args, cwd=None):
@@ -61,18 +63,12 @@ def changed_paths(oa_git, old, new):
     return sorted(p[len("sources/"):-len(".json")] for p in out.split() if p.endswith(".json"))
 
 
-def _registry_paths(job, commit=None):
-    """Stand-in for openaddresses.source_paths until the per-state listing lands: the registry Sources'
-    OpenAddresses paths (the same set for today's one-source jobs)."""
-    try:
-        jur = registry.jurisdiction(job)
-    except SystemExit:  # no registry file yet: the job reads nothing
-        return []
-    return sorted({s.openaddresses for s in jur.sources if s.openaddresses})
-
-
 def source_paths(job, commit=None):
-    return getattr(openaddresses, "source_paths", _registry_paths)(job, commit)
+    """The OpenAddresses paths a job reads at a commit; a job with no registry file yet reads none."""
+    try:
+        return openaddresses.source_paths(job, commit)
+    except SystemExit:
+        return []
 
 
 def affected_jobs(changed, old, new, jobs=None):
@@ -111,8 +107,12 @@ def bump(oa_git, pin_file=PIN_FILE):
         p[len("sources/"):-len(".json")] for p in _git("ls-tree", "-r", "--name-only", new, "sources/",
                                                        cwd=oa_git).split() if p.endswith(".json"))
     affected = affected_jobs(changed, old, new)
+    text = None
+    if os.path.exists(pin_file):
+        with open(pin_file) as fh:
+            text = fh.read()
     with open(pin_file, "w") as fh:
-        fh.write(pin_text(new, date))
+        fh.write(pin_text(new, date, text))
     return old, new, changed, affected
 
 
