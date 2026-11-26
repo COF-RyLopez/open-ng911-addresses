@@ -5,11 +5,12 @@ One build job: a state or province, end to end, on one DuckDB connection.
 
 Steps:
   1. Resolve the Overture release (overture_release.py) and read the job's registry.
-  2. Load the Package areas, the Source agency's address points and Overture's addresses (sources/).
+  2. Load the Package areas and municipalities, the Source agency's address points and Overture's addresses (sources/).
   3. Parse every street the same way (street.py) and match Records to Overture one to one (matcher.py).
   4. Give each Overture address an Address UID through the lineage ledger (lineage.py).
   5. Assemble the SiteStructureAddressPoint layer: every Record, plus Overture addresses no Record matched
-     as Gap-fill candidates (ADR 0001), with NGUIDs built from the Address UID (ADR 0002).
+     as Gap-fill candidates (ADR 0001), with NGUIDs built from the Address UID (ADR 0002), and give each its
+     A3 from the municipality boundaries; build the A2 and A3 boundary layers (boundaries.py).
   6. Build the RoadCenterline layer: government centerlines, TIGER where a Package has none, Overture GERS
      IDs attached (roads.py).
   7. Write one Package per county or census division, the ledger and a job summary; fail the job if a
@@ -21,11 +22,12 @@ import json
 import os
 import sys
 
-from . import db, ids, lineage, matcher, nena, overture_release, package, registry, roads, street
+from . import boundaries, db, ids, lineage, matcher, nena, overture_release, package, registry, roads, street
 from .sources import centerlines, openaddresses, overture, tiger
 
 LIVE_LOADERS = {
     "package_area": lambda c, job, jur, work: tiger.load_package_area(c, job, work),
+    "municipality": lambda c, job, jur, work: boundaries.load_municipality(c, job, work),
     "agency_addr": lambda c, job, jur, work: openaddresses.load_agency_addr(c, jur, work),
     "overture_addr": lambda c, job, jur, work: overture.load_overture_addr(c, jur, work),
     # RoadCenterline (roads.py)
@@ -87,9 +89,7 @@ def assemble_ssap(c, job, jurisdiction, updated):
                '{job.country}' AS country,
                '{job.code}' AS a1,
                p.name AS a2,
-               -- A3 (municipality) comes from a boundary adapter (TIGER places and county subdivisions,
-               -- StatCan subdivisions): not built yet, so left empty rather than guessed from the city field
-               NULL::VARCHAR AS a3,
+               NULL::VARCHAR AS a3,  -- set from the municipality boundaries (boundaries.assign_a3)
                try_cast(nullif(regexp_extract(y.number, '^[0-9]+'), '') AS INTEGER) AS add_number,
                nullif(trim(regexp_replace(y.number, '^[0-9]+', '')), '') AS addnum_suf,
                nena_dir_word(y.ps.predir) AS st_predir,
@@ -130,10 +130,11 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     street.install(c)
     nena.install(c)
     ids.install(c)
+    boundaries.install(c)
     updated = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     print(f"[{job.id}] {job.name}, Overture {release}")
-    for table in ("package_area", "agency_addr", "overture_addr"):  # overture_addr reads package_area's extent
+    for table in ("package_area", "municipality", "agency_addr", "overture_addr"):  # overture_addr reads package_area's extent
         loaders[table](c, job, jur, work_dir)
     prepare(c)
     package.create_domains(c, job, jur)
@@ -143,13 +144,15 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     links = lineage.link(c, release)
     print(f"[{job.id}] Overture address UIDs by link method: {links}")
     assemble_ssap(c, job, jur, updated)
+    boundaries.assign_a3(c)
+    boundaries.create_layers(c, job, updated)
     roads.build(c, job, jur, work_dir, loaders, updated)
 
     root, summaries = package.write(c, job, jur, release, out_dir)
     road_stats = roads.write(c, job, root, release)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
-    fails = gate(c) + roads.gate(c)
+    fails = gate(c) + boundaries.gate(c) + roads.gate(c)
     summary = {"job": job.id, "overture_release": release, "built": updated, "packages": len(summaries),
                "rows": sum(s["rows"] for s in summaries), "records": sum(s["records"] for s in summaries),
                "records_with_gers_id": sum(s["records_with_gers_id"] for s in summaries),
@@ -163,7 +166,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                    "ORDER BY n DESC LIMIT 25").fetchall()},
                "agency_points_id_shared": c.execute(
                    "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
-               "overture_link_methods": links,
+               "overture_link_methods": links, "a3": boundaries.summary(c),
                "road_segments": sum(r["rows"] for r in road_stats.values()),
                "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),

@@ -152,7 +152,7 @@ def test_road_centerlines(tmp_path, conn):
 
     with open(os.path.join(root, "50001", "manifest.json")) as f:
         m = json.load(f)
-    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "RoadCenterline"]
+    assert m["nena"]["layers"] == ["SiteStructureAddressPoint", "A2Polygon", "A3Polygon", "RoadCenterline"]
     rc = m["road_centerline"]
     assert rc["rows"] == 3 and rc["road_source"] == "government" and rc["gers_coverage"] == round(2 / 3, 4)
     (src,) = rc["sources"]

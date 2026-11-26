@@ -15,10 +15,11 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   911 authorities (opt-in, domain) and Source agencies (OpenAddresses source, ID field, license status,
   sharing-path status). Edited by hand, and statuses change only after the agency confirms (ADR 0004, 0005).
 - `src/open_ng911/build.py` one job end to end; `python -m open_ng911.build --job us-vt`.
-- `sources/` one table each: `package_area` (TIGER counties), `agency_addr` (OpenAddresses registry →
-  the agency's own endpoint), `overture_addr` (Overture addresses theme only), `road_seg` (`centerlines.py`:
-  government centerlines through the registry, TIGER ADDRFEAT as the fallback), `overture_segment` (GERS IDs
-  only, see below).
+- `sources/` one table each: `package_area` (TIGER counties), `municipality` (TIGER county subdivisions or
+  places; StatCan subdivisions in Canada), `agency_addr` (OpenAddresses registry → the agency's own
+  endpoint), `overture_addr` (Overture addresses theme only), `road_seg` (`centerlines.py`: government
+  centerlines through the registry, TIGER ADDRFEAT as the fallback), `overture_segment` (GERS IDs only, see below).
+- `boundaries.py` the A2Polygon and A3Polygon layers and every address point's A3 (ADR 0009).
 - `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID and NGUID,
