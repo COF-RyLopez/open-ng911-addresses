@@ -19,7 +19,6 @@ Steps:
      NENA mandatory field isn't filled on every row.
 """
 import argparse
-import datetime
 import json
 import os
 import sys
@@ -39,19 +38,20 @@ from . import (
     street,
     upstream,
 )
-from .sources import centerlines, openaddresses, overture, statcan, tiger
+from .sources import centerlines, openaddresses, overture
 
+# Every loader is loader(c, job, jurisdiction, work_dir) and creates or fills one table; tests swap in fixtures.
 LIVE_LOADERS = {
-    # counties from TIGER in the US, census divisions from StatCan in Canada (ADR 0006)
-    "package_area": lambda c, job, jur, work: (statcan if job.country == "CA" else tiger).load_package_area(c, job, work),
-    "municipality": lambda c, job, jur, work: boundaries.load_municipality(c, job, work),
-    "agency_addr": lambda c, job, jur, work: openaddresses.load_agency_addr(c, jur, work),
-    "overture_addr": lambda c, job, jur, work: overture.load_overture_addr(c, jur, work),
-    # RoadCenterline (roads.py)
+    # the country's boundaries (registry.COUNTRIES): TIGER in the US, StatCan in Canada (ADR 0006)
+    "package_area": boundaries.load_package_area,
+    "municipality": boundaries.load_municipality,
+    "agency_addr": openaddresses.load_agency_addr,
+    "overture_addr": overture.load_overture_addr,
+    # RoadCenterline (roads.py): road_seg from the government sources, then TIGER where a Package has none
     "gov_roads": centerlines.load_government,
     "tiger_roads": centerlines.load_tiger,
-    "overture_segment": lambda c, job, jur, work: overture.load_overture_segment(c, jur, work),
-    # upstream counts (upstream.py): the national road layer to compare government roads with
+    "overture_segment": overture.load_overture_segment,
+    # upstream counts (upstream.py): national_seg, the national road layer to compare government roads with
     "national_roads": centerlines.load_national_reference,
 }
 
@@ -78,7 +78,7 @@ def prepare(c):
 
 
 def assemble_ssap(c, job, jurisdiction, updated):
-    source = next(s for s in jurisdiction.sources if s.layer == "addresses")
+    source = jurisdiction.sources_for("addresses")[0]
     c.execute(f"""CREATE OR REPLACE TABLE ssap AS
         WITH rec AS (
             SELECT a.address_uid AS uid, m.gers_id, 'record' AS status, a.source_key AS source,
@@ -126,15 +126,7 @@ def assemble_ssap(c, job, jurisdiction, updated):
 
 def gate(c):
     """NENA mandatory fields filled on every row; returns the failures."""
-    fails = []
-    for f in nena.SSAP_REQUIRED:
-        missing = c.execute(f"SELECT count(*) FROM ssap WHERE {f} IS NULL").fetchall()[0][0]
-        if missing:
-            fails.append(f"{f}: {missing:,} rows empty")
-    dup = c.execute("SELECT count(*) - count(DISTINCT nguid) FROM ssap").fetchall()[0][0]
-    if dup:
-        fails.append(f"nguid: {dup:,} duplicates")
-    return fails
+    return db.gate(c, "ssap", nena.SSAP_REQUIRED, "nguid")
 
 
 def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry_dir=registry.REGISTRY_DIR,
@@ -150,7 +142,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     nena.install(c, job.country)
     ids.install(c)
     boundaries.install(c)
-    updated = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    updated = db.now()
 
     print(f"[{job.id}] {job.name}, Overture {release}")
     for table in ("package_area", "municipality", "agency_addr", "overture_addr"):  # overture_addr reads package_area's extent
@@ -168,10 +160,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     roads.build(c, job, jur, work_dir, loaders, updated)
     national = upstream.build(c, job, jur, work_dir, loaders)
 
-    root, summaries = package.write(c, job, jur, release, out_dir)
-    road_stats = roads.write(c, job, root, release)
-    up = upstream.write(c, job, jur, root, release, national)
-    odbl = odbl_inventory.write(c, job, root)
+    root, summaries = package.write(c, job, jur, release, out_dir, national)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
     fails = gate(c) + boundaries.gate(c) + roads.gate(c)
@@ -189,15 +178,15 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "agency_points_id_shared": c.execute(
                    "SELECT count(*) FROM agency_addr WHERE id_shared").fetchall()[0][0],
                "overture_link_methods": links, "a3": boundaries.summary(c),
-               "road_segments": sum(r["rows"] for r in road_stats.values()),
-               "road_segments_with_gers_id": sum(r["with_gers_id"] for r in road_stats.values()),
+               "road_segments": sum(s["road_centerline"]["rows"] for s in summaries),
+               "road_segments_with_gers_id": sum(s["road_centerline"]["with_gers_id"] for s in summaries),
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
-               "upstream": upstream.job_totals(up.values()),
-               "odbl_replacement": odbl_inventory.job_totals(odbl.values()),
+               "upstream": upstream.job_totals(s["upstream"] for s in summaries),
+               "odbl_replacement": odbl_inventory.job_totals(s["odbl_replacement"] for s in summaries),
                "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
-                              | roads.package_summary(road_stats[s["package"]]) for s in summaries}}
+                              | roads.package_summary(s["road_centerline"]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
         json.dump(summary, f, indent=2)
     print(json.dumps({k: v for k, v in summary.items() if k != "by_package"}, indent=2))

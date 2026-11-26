@@ -30,7 +30,7 @@ def create_overture_addr(c, parquet):
     print(f"  [overture] {c.execute('SELECT count(*) FROM overture_addr').fetchall()[0][0]:,} addresses in the job's packages")
 
 
-def load_overture_addr(c, jurisdiction, work_dir):
+def load_overture_addr(c, job, jurisdiction, work_dir):
     create_overture_addr(c, overture_release.addresses_glob())
 
 
@@ -51,5 +51,5 @@ def create_overture_segment(c, parquet):
           "(GERS IDs only)")
 
 
-def load_overture_segment(c, jurisdiction, work_dir):
+def load_overture_segment(c, job, jurisdiction, work_dir):
     create_overture_segment(c, overture_release.segments_glob())

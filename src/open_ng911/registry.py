@@ -12,6 +12,37 @@ LAYERS = ("addresses", "centerlines")  # OpenAddresses layer names
 SHARING_STATUSES = ("not_started", "offered", "in_progress", "done", "not_applicable")
 
 
+@dataclass(frozen=True)
+class Country:
+    """What differs between the US and Canada, in one place (ADR 0006): a new country is a row here, a boundary
+    module in sources/, and its value domains in nena/ (nena.install(c, country))."""
+    packages: str              # what one Package is: the registry's `packages` value
+    boundaries: str            # module in sources/ with load_package_area and load_municipality
+    a2_source: str
+    a3_source: str
+    boundary_license: str
+    boundary_license_url: str
+    boundary_key: str          # the boundary source's key in the ODbL inventory
+    values: str                # the value domains the layers use (NENA's; Canada adds CLDXF-CA's)
+    tiger_roads: bool          # TIGER ADDRFEAT is the road fallback and the national road layer
+
+
+COUNTRIES = {
+    "US": Country("county", "tiger", "Census TIGER counties",
+                  "Census TIGER county subdivisions or incorporated places", "public domain",
+                  "https://www.census.gov/data/developers/about/terms-of-service.html", "tiger-counties",
+                  "NENA-STA-006.3", tiger_roads=True),
+    "CA": Country("census_division", "statcan", "Statistics Canada census divisions",
+                  "Statistics Canada census subdivisions", "Statistics Canada Open Licence",
+                  "https://www.statcan.gc.ca/en/terms-conditions/open-licence", "statcan-census-divisions",
+                  "CLDXF-CA", tiger_roads=False),
+}
+
+
+def country(j):
+    return COUNTRIES[j.country]
+
+
 @dataclass
 class Job:
     id: str
@@ -68,6 +99,10 @@ class Jurisdiction:
     def authority_for(self, geoid):
         return next((a for a in self.authorities if a.covers_package(geoid)), None)
 
+    def sources_for(self, layer):
+        """The Source agencies of one OpenAddresses layer ('addresses', 'centerlines')."""
+        return [s for s in self.sources if s.layer == layer]
+
 
 def jobs(registry_dir=REGISTRY_DIR):
     with open(os.path.join(registry_dir, "jobs.toml"), "rb") as f:
@@ -96,7 +131,7 @@ def jurisdiction(j, registry_dir=REGISTRY_DIR):
 
 def validate(r, j):
     assert r.job == j.id, f"{j.id}: registry says job {r.job!r}"
-    assert r.packages == ("county" if j.country == "US" else "census_division"), (
+    assert r.packages == country(j).packages, (
         f"{j.id}: packages are per county in the US and per census division in Canada (ADR 0006)")
     for a in r.authorities:
         assert not (a.opted_in and not a.domain), f"{a.key}: opted in without a confirmed domain (ADR 0004)"

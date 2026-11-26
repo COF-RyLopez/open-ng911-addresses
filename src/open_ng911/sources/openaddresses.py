@@ -6,22 +6,20 @@ and its field mappings; we don't use its processed output, which is redundant wi
 OpenAddresses conform steps map fields, they don't rewrite values (openaddresses/openaddresses#10085): value
 fixes belong in our parse (street.py), upstream PRs are for wrong field mappings or filters.
 
-Table agency_addr(source_key, source_id, address_uid, number, street, unit, city, postcode, geom).
+Table agency_addr(source_key, source_id, address_uid, number, street, unit, city, postcode, site_type, id_shared,
+geom), and agency_dropped(source_key, reason, site_type, n): every point left out, counted by reason.
 """
 import json
 import os
-import urllib.request
 
-from .. import ids
+from .. import db, ids
 from . import arcgis
 
 OA_RAW = "https://raw.githubusercontent.com/openaddresses/openaddresses/master/sources/{path}.json"
 
 
 def source_definition(path):
-    req = urllib.request.Request(OA_RAW.format(path=path), headers={"User-Agent": arcgis.USER_AGENT})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.load(r)
+    return json.loads(arcgis.get(OA_RAW.format(path=path), timeout=60, tries=1))
 
 
 def layer_entry(definition, layer, name):
@@ -29,10 +27,6 @@ def layer_entry(definition, layer, name):
         if entry.get("name") == name:
             return entry
     raise SystemExit(f"OpenAddresses source has no {layer} layer named {name!r}")
-
-
-def _quote(v):
-    return "'" + str(v).replace("'", "''") + "'"
 
 
 def entry_for(source):
@@ -51,16 +45,16 @@ def conform_sql(spec):
     if spec is None:
         return "NULL"
     if isinstance(spec, str):
-        return f"nullif(trim(p->>{_quote(spec)}), '')"
+        return f"nullif(trim(p->>{db.quote(spec)}), '')"
     if isinstance(spec, list) and all(isinstance(s, str) for s in spec):
         return "nullif(trim(concat_ws(' ', " + ", ".join(conform_sql(s) for s in spec) + ")), '')"
     fn = spec.get("function") if isinstance(spec, dict) else None
     if fn == "join" and all(isinstance(s, str) for s in spec.get("fields", [])):
-        sep = _quote(spec.get("separator", " "))
+        sep = db.quote(spec.get("separator", " "))
         return f"nullif(trim(concat_ws({sep}, " + ", ".join(conform_sql(s) for s in spec["fields"]) + ")), '')"
     if fn == "map" and isinstance(spec.get("field"), str):
-        whens = " ".join(f"WHEN {_quote(k)} THEN {_quote(v)}" for k, v in spec.get("mapping", {}).items())
-        default = _quote(spec["else"]) if "else" in spec else conform_sql(spec["field"])
+        whens = " ".join(f"WHEN {db.quote(k)} THEN {db.quote(v)}" for k, v in spec.get("mapping", {}).items())
+        default = db.quote(spec["else"]) if "else" in spec else conform_sql(spec["field"])
         return f"CASE {conform_sql(spec['field'])} {whens} ELSE {default} END" if whens else default
     if fn == "mph_to_kph" and isinstance(spec.get("field"), str):
         return f"round(try_cast({conform_sql(spec['field'])} AS DOUBLE) * 1.609344)::INTEGER::VARCHAR"
@@ -83,7 +77,7 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
     from the ID plus the address so each stays distinct (`id_shared` in job.json).
     """
     ids.install(c)
-    excluded = ", ".join("'" + t.replace("'", "''") + "'" for t in source.exclude_site_types) or "NULL"
+    excluded = ", ".join(db.quote(t) for t in source.exclude_site_types) or "NULL"
     site_type = conform_sql(conform.get("addrtype"))
     sid = f"nullif(trim(p->>'{source.id_field}'), '')" if has_id else "NULL"
     c.execute(f"""CREATE OR REPLACE TABLE agency_raw AS
@@ -141,8 +135,8 @@ def create_agency_addr(c, source, path, conform, has_id, no_geometry=0):
     print(f"  [openaddresses] {source.key}: {c.execute('SELECT count(*) FROM agency_addr').fetchall()[0][0]:,} address points")
 
 
-def load_agency_addr(c, jurisdiction, work_dir):
-    sources = [s for s in jurisdiction.sources if s.layer == "addresses"]
+def load_agency_addr(c, job, jurisdiction, work_dir):
+    sources = jurisdiction.sources_for("addresses")
     assert len(sources) == 1, "Phase 1 scaffold reads one address source per job"  # several: union per package
     s = sources[0]
     entry = entry_for(s)

@@ -10,6 +10,7 @@ street_type_suffix_regex, street_match_key) and models/staging/stg_overture_addr
       -> {predir: N, name: EIGHTH, type: ST, posdir: W}
     SELECT street_key('N EIGHTH ST')  -> ' N 8TH ST '
 """
+from . import db
 
 DIRECTIONS = {
     "NORTH": "N", "SOUTH": "S", "EAST": "E", "WEST": "W",
@@ -49,11 +50,6 @@ KEY_WORDS = [("ROUTE", "RTE"), ("CHEMIN", "CH"), ("SAINT", "ST"), ("MOUNT", "MT"
              ("SOUTHEAST", "SE"), ("SOUTHWEST", "SW"), ("NORTH", "N"), ("SOUTH", "S"), ("EAST", "E"), ("WEST", "W")]
 
 
-def _case(expr, mapping, default="NULL"):
-    whens = " ".join(f"WHEN '{k}' THEN '{v}'" for k, v in mapping.items())
-    return f"CASE {expr} {whens} ELSE {default} END"
-
-
 def _ordinal(n):
     return f"{n}{'TH' if n in (11, 12, 13) else {1: 'ST', 2: 'ND', 3: 'RD'}.get(n % 10, 'TH')}"
 
@@ -72,9 +68,9 @@ def key_sql(expr):
 
 def install(c):
     """Create the street macros on a connection."""
-    c.execute(f"CREATE OR REPLACE MACRO normalize_direction(d) AS {_case('upper(trim(d))', DIRECTIONS)}")
+    c.execute(f"CREATE OR REPLACE MACRO normalize_direction(d) AS {db.case('upper(trim(d))', DIRECTIONS)}")
     c.execute("CREATE OR REPLACE MACRO normalize_street_type(t) AS "
-              + _case("rtrim(upper(trim(t)), '.')", STREET_TYPES, "rtrim(upper(trim(t)), '.')"))
+              + db.case("rtrim(upper(trim(t)), '.')", STREET_TYPES, "rtrim(upper(trim(t)), '.')"))
     # s0: upper case, single spaces, trailing periods dropped ('SHASTA ST.'), zero-padded ordinals unpadded
     # ('05TH ST' -> '5TH ST', San Francisco and San Diego), and a route number written after the street's name
     # dropped ('QUEENS RD - RTE 210', PEI): the named street is the address's street

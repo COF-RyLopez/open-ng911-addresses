@@ -15,21 +15,30 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - `registry/jobs.toml` every job; `enabled = true` jobs run in CI. `registry/<country>/<code>.toml` a job's
   911 authorities (opt-in, domain) and Source agencies (OpenAddresses source, ID field, license status,
   sharing-path status). Edited by hand, and statuses change only after the agency confirms (ADR 0004, 0005).
-- `src/open_ng911/build.py` one job end to end; `python -m open_ng911.build --job us-vt`.
-- `sources/` one table each: `package_area` (TIGER counties; StatCan census divisions in Canada, `statcan.py`),
-  `municipality` (TIGER county subdivisions or places; StatCan census subdivisions in Canada), `agency_addr`
-  (OpenAddresses registry → the agency's own endpoint), `overture_addr` (Overture addresses theme only),
-  `road_seg` (`centerlines.py`: government centerlines through the registry, TIGER ADDRFEAT as the fallback),
-  `overture_segment` (GERS IDs only, see below).
+- `src/open_ng911/build.py` one job end to end; `python -m open_ng911.build --job us-vt`. `LIVE_LOADERS` maps
+  each input table to `loader(c, job, jurisdiction, work_dir)`; tests pass fixture loaders instead.
+- `registry.py` jobs, jurisdictions and `COUNTRIES`: everything that differs between the US and Canada.
+- `sources/` one table each (the table list is in `sources/__init__.py`): boundaries from `tiger.py` or
+  `statcan.py`, agency points through the OpenAddresses registry (`openaddresses.py`, `arcgis.py`), government
+  roads and TIGER ADDRFEAT (`centerlines.py`), Overture addresses and road-segment IDs (`overture.py`).
 - `boundaries.py` the A2Polygon and A3Polygon layers and every address point's A3 (ADR 0009).
 - `roads.py` the RoadCenterline layer: Package assignment, TIGER fallback, GERS crosswalk, NENA fields (ADR 0010).
+- `upstream.py` where government roads and Overture / TIGER disagree; `odbl_inventory.py` which government
+  sources could stand in for Overture's ODbL themes (docs/standards/upstream-path.md).
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
-  vendored NENA-STA-006.3 domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID and NGUID,
-  `lineage.py` the ledger that carries UIDs across Overture releases, `package.py` Package output.
-- `tests/` run offline on fixtures (`tests/vt_fixtures.py`); no test touches the network.
+  vendored NENA-STA-006.3 and CLDXF-CA domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID
+  and NGUID, `lineage.py` the ledger that carries UIDs across Overture releases, `package.py` writes every
+  Package and its manifest (each layer module returns its section), `db.py` the connection and shared SQL
+  helpers (`case`, `quote`, `rows`, `gate`).
+- `tests/` run offline on fixtures (`tests/vt_fixtures.py`, `tests/pe_fixtures.py`); only `-m live` tests
+  touch the network.
 
 ## Rules
 
+- **One pipeline.** This is meant to be a reference pipeline others (Overture) can adopt, so keep it one code
+  path: a new state is a registry file, a new country is a `registry.COUNTRIES` row plus a boundary module, a
+  new layer is one module that returns its manifest section to `package.write`. No per-state or per-country
+  copies of a step, no second helper for something `db.py` or `arcgis.py` already does.
 - **Keep every addressed site.** A NENA SSAP is any addressed site: public phones, call boxes, towers and
   un-numbered sites on a named road all stay. A point is dropped only for a reason `openaddresses.create_agency_addr`
   names (no geometry, not a point, no street, a true duplicate, outside every Package, or the registry's

@@ -81,3 +81,13 @@ def test_road_helpers(conn):
     conn.execute("CREATE TABLE package_area AS SELECT ST_MakeEnvelope(-73.4, 42.7, -71.5, 45.0) AS geom")
     assert roads.utm_epsg(conn) == "EPSG:32618"  # Vermont
     assert centerlines.tiger_vintages(datetime.date(2026, 11, 26)) == [2026, 2025, 2024]
+
+
+def test_every_country_has_one_row_and_its_boundary_loaders():
+    """What differs by country lives in registry.COUNTRIES: every job's country has a row, and its boundary
+    module has the two loaders boundaries.py dispatches to."""
+    import importlib
+    for j in registry.jobs():
+        k = registry.country(j)
+        module = importlib.import_module(f"open_ng911.sources.{k.boundaries}")
+        assert callable(module.load_package_area) and callable(module.load_municipality)

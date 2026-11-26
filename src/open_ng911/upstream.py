@@ -17,7 +17,7 @@ Each Package's manifest gets an `upstream` section; job.json gets the totals. Wh
 is a separate question: only a source whose licence is open (`upstream_eligible`), and only a person proposes it
 (ADR 0004).
 """
-from . import roads
+from . import db, roads
 
 # NENA RoadClass and Overture segment class, each into the same coarse group; a value in neither isn't compared
 NENA_GROUP = {"Primary": "highway", "Secondary": "arterial", "Local": "local", "Service Drive": "local",
@@ -28,10 +28,6 @@ OVERTURE_GROUP = {"motorway": "highway", "trunk": "highway", "primary": "arteria
                   "tertiary": "local", "residential": "local", "living_street": "local", "unclassified": "local",
                   "service": "local", "track": "trail", "path": "trail", "footway": "trail", "pedestrian": "trail",
                   "steps": "trail", "cycleway": "trail", "bridleway": "trail"}
-
-
-def _case(expr, mapping):
-    return f"CASE {expr} " + " ".join(f"WHEN '{k}' THEN '{v}'" for k, v in mapping.items()) + " END"
 
 
 def _keys(c, table, col, out):
@@ -56,8 +52,8 @@ def compare_overture(c):
     _keys(c, "_ln", "o_name", "_ok")
     c.execute(f"""CREATE OR REPLACE TABLE upstream_overture AS
         WITH keyed AS (
-            SELECT l.*, k.k, ok.k AS ok, {_case('l.roadclass', NENA_GROUP)} AS g,
-                   CASE WHEN l.o_sub = 'link' THEN 'ramp' ELSE {_case('l.o_class', OVERTURE_GROUP)} END AS og
+            SELECT l.*, k.k, ok.k AS ok, {db.case('l.roadclass', NENA_GROUP)} AS g,
+                   CASE WHEN l.o_sub = 'link' THEN 'ramp' ELSE {db.case('l.o_class', OVERTURE_GROUP)} END AS og
             FROM _l l JOIN _k k USING (uid) JOIN _ok ok USING (uid))
         SELECT uid, geoid,
                CASE WHEN gers_id IS NULL THEN 'no_link'
@@ -99,13 +95,13 @@ def build(c, job, jurisdiction, work_dir, loaders):
     return national
 
 
-def _one(c, sql):
-    res = c.execute(sql)
-    return dict(zip([d[0] for d in res.description], res.fetchall()[0]))
-
-
-def package_section(c, geoid, national, release, eligible):
-    o = _one(c, f"""SELECT count(*) AS segments,
+def package_section(c, jurisdiction, geoid, national, release):
+    """The `upstream` section of one Package's manifest."""
+    licences = {s.key: s.license_status for s in jurisdiction.sources_for("centerlines")}
+    keys = [k for k, in c.execute(f"SELECT DISTINCT source_key FROM road_seg WHERE road_source = 'government' "
+                                  f"AND geoid = '{geoid}'").fetchall()]
+    eligible = bool(keys) and all(licences.get(k) == "open" for k in keys)
+    o = db.one(c, f"""SELECT count(*) AS segments,
             count(*) FILTER (name_check = 'no_link') AS not_in_overture,
             count(*) FILTER (name_check = 'agrees') AS name_agrees,
             count(*) FILTER (name_check = 'differs') AS name_differs,
@@ -122,7 +118,7 @@ def package_section(c, geoid, national, release, eligible):
     elif not national:
         section["national"] = {"measured": False, "why": "no national road layer loader for this country yet"}
     else:
-        n = _one(c, f"""SELECT
+        n = db.one(c, f"""SELECT
                 count(*) FILTER (side = 'government') AS government_segments,
                 count(*) FILTER (side = 'government' AND NOT linked) AS not_in_national,
                 round(coalesce(sum(km) FILTER (side = 'government' AND NOT linked), 0), 2) AS not_in_national_km,
@@ -136,29 +132,6 @@ def package_section(c, geoid, national, release, eligible):
     section["note"] = ("Counts only. Overture names and classes (ODbL) are compared in memory and not written. "
                        "Only an open-licensed source can go upstream, and a person proposes it (ADR 0004).")
     return section
-
-
-def write(c, job, jurisdiction, root, release, national):
-    """The `upstream` section of every Package's manifest; returns them by Package key."""
-    import json
-    import os
-
-    from . import package
-    licences = {s.key: s.license_status for s in jurisdiction.sources if s.layer == "centerlines"}
-    out = {}
-    for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
-        keys = [k for k, in c.execute(f"SELECT DISTINCT source_key FROM road_seg WHERE road_source = 'government' "
-                                      f"AND geoid = '{geoid}'").fetchall()]
-        eligible = bool(keys) and all(licences.get(k) == "open" for k in keys)
-        section = package_section(c, geoid, national, release, eligible)
-        mpath = os.path.join(root, geoid, "manifest.json")
-        with open(mpath) as f:
-            manifest = json.load(f)
-        manifest["upstream"] = section
-        with open(mpath, "w") as f:
-            json.dump(manifest, f, indent=2)
-        out[package.package_key(job, geoid)] = section
-    return out
 
 
 def job_totals(sections):

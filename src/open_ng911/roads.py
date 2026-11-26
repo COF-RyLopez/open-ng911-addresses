@@ -20,18 +20,17 @@ Package files, next to the address points:
 
 and a `road_centerline` section in manifest.json naming every road source with its license and date.
 """
-import json
 import math
 import os
 
-from . import nena, package
+from . import db, nena
 
 ROAD_MATCH_M = 20.0  # how far an Overture segment may sit from the government line and still run along it
 MAX_ANGLE = 30.0     # degrees between the two shared stretches: more is a road crossing, not running along
 
 
 def _sources_covering(jurisdiction):
-    return {s.key: s for s in jurisdiction.sources if s.layer == "centerlines"}
+    return {s.key: s for s in jurisdiction.sources_for("centerlines")}
 
 
 def install(c):
@@ -140,7 +139,7 @@ def assemble_rcl(c, job, updated):
                '{job.country}' AS country_l, '{job.country}' AS country_r,
                '{job.code}' AS a1_l, '{job.code}' AS a1_r,
                p.name AS a2_l, p.name AS a2_r,
-               NULL::VARCHAR AS a3_l, NULL::VARCHAR AS a3_r,  -- from the boundary adapters, not built yet
+               NULL::VARCHAR AS a3_l, NULL::VARCHAR AS a3_r,  -- per side of a segment: not derived yet (it can run along a town line)
                y.zip_l AS postcode_l, y.zip_r AS postcode_r,
                y.road_class AS roadclass, y.oneway, y.speed_mph AS speedlimit,
                y.geoid, y.geom
@@ -169,70 +168,36 @@ def build(c, job, jurisdiction, work_dir, loaders, updated):
 
 
 def gate(c):
-    fails = []
-    for f in nena.RCL_REQUIRED:
-        missing = c.execute(f"SELECT count(*) FROM rcl WHERE {f} IS NULL").fetchall()[0][0]
-        if missing:
-            fails.append(f"rcl {f}: {missing:,} rows empty")
-    dup = c.execute("SELECT count(*) - count(DISTINCT rcl_nguid) FROM rcl").fetchall()[0][0]
-    if dup:
-        fails.append(f"rcl_nguid: {dup:,} duplicates")
-    return fails
+    return db.gate(c, "rcl", nena.RCL_REQUIRED, "rcl_nguid", "rcl ", nguid_label="")
 
 
-def _rows(c, sql):
-    res = c.execute(sql)
-    cols = [d[0] for d in res.description]
-    return [dict(zip(cols, r)) for r in res.fetchall()]
-
-
-def write(c, job, root, release):
-    """road_centerline.parquet and road_gers_crosswalk.parquet in every Package, and the manifest's road section.
-    Returns the road section of each Package's manifest, by Package key."""
+def write_package(c, geoid, d, release, meta):
+    """road_centerline.parquet and road_gers_crosswalk.parquet in the Package folder d; returns the manifest's
+    `road_centerline` section. meta: the road_source_meta rows (db.rows)."""
     fill_sql = ", ".join(f"count({f}) AS {f}" for f in nena.RCL_FIELDS)
-    meta = _rows(c, "SELECT * FROM road_source_meta ORDER BY source_key")
-    out = {}
-    for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
-        d = os.path.join(root, geoid)
-        os.makedirs(d, exist_ok=True)
-        c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM rcl WHERE geoid = '{geoid}' ORDER BY uid) TO "
-                  f"'{os.path.join(d, 'road_centerline.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
-        c.execute(f"""COPY (SELECT g.uid, r.rcl_nguid, g.gers_id, g.overlap_m, g.rcl_share, g.segment_share,
-                                   g.is_primary, '{release}' AS overture_release
-                            FROM road_gers g JOIN rcl r USING (uid) WHERE r.geoid = '{geoid}'
-                            ORDER BY g.uid, g.is_primary DESC, g.gers_id)
-                      TO '{os.path.join(d, 'road_gers_crosswalk.parquet')}' (FORMAT parquet)""")
-        stats = _rows(c, f"SELECT count(*) AS rows, count(gers_id) AS with_gers_id, {fill_sql} FROM rcl "
-                         f"WHERE geoid = '{geoid}'")[0]
-        rows, with_gers = int(stats.pop("rows")), int(stats.pop("with_gers_id"))
-        per_source = dict(c.execute(f"SELECT source, count(*) FROM rcl WHERE geoid = '{geoid}' GROUP BY 1").fetchall())
-        section = {
-            "rows": rows, "with_gers_id": with_gers,
-            "gers_coverage": round(with_gers / rows, 4) if rows else None,
-            "road_source": "government" if any(m["road_source"] == "government" and m["source_key"] in per_source
-                                               for m in meta) else ("tiger" if rows else None),
-            "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},
-            # every source of this Package's roads, with its license and its date (when the publisher last
-            # edited it, or the TIGER vintage) and when we read it
-            "sources": [{**m, "segments": per_source[m["source_key"]]} for m in meta if m["source_key"] in per_source],
-            "gers_ids": {"overture_release": release, "theme": "transportation/segment",
-                         "note": "GERS IDs only; no Overture geometry or names (ODbL) are in this Package"},
-        }
-        mpath = os.path.join(d, "manifest.json")
-        manifest = {}
-        if os.path.exists(mpath):
-            with open(mpath) as f:
-                manifest = json.load(f)
-        nena_section = manifest.setdefault("nena", {})
-        layers = nena_section.setdefault("layers", [])
-        if "RoadCenterline" not in layers:
-            layers.append("RoadCenterline")
-        nena_section["rcl_mandatory_fields"] = list(nena.RCL_REQUIRED)
-        manifest["road_centerline"] = section
-        with open(mpath, "w") as f:
-            json.dump(manifest, f, indent=2)
-        out[package.package_key(job, geoid)] = section
-    return out
+    c.execute(f"COPY (SELECT * EXCLUDE (geoid) FROM rcl WHERE geoid = '{geoid}' ORDER BY uid) TO "
+              f"'{os.path.join(d, 'road_centerline.parquet')}' (FORMAT parquet, COMPRESSION zstd)")
+    c.execute(f"""COPY (SELECT g.uid, r.rcl_nguid, g.gers_id, g.overlap_m, g.rcl_share, g.segment_share,
+                               g.is_primary, '{release}' AS overture_release
+                        FROM road_gers g JOIN rcl r USING (uid) WHERE r.geoid = '{geoid}'
+                        ORDER BY g.uid, g.is_primary DESC, g.gers_id)
+                  TO '{os.path.join(d, 'road_gers_crosswalk.parquet')}' (FORMAT parquet)""")
+    stats = db.one(c, f"SELECT count(*) AS rows, count(gers_id) AS with_gers_id, {fill_sql} FROM rcl "
+                      f"WHERE geoid = '{geoid}'")
+    rows, with_gers = int(stats.pop("rows")), int(stats.pop("with_gers_id"))
+    per_source = dict(c.execute(f"SELECT source, count(*) FROM rcl WHERE geoid = '{geoid}' GROUP BY 1").fetchall())
+    return {
+        "rows": rows, "with_gers_id": with_gers,
+        "gers_coverage": round(with_gers / rows, 4) if rows else None,
+        "road_source": "government" if any(m["road_source"] == "government" and m["source_key"] in per_source
+                                           for m in meta) else ("tiger" if rows else None),
+        "field_fill": {k: round(int(v) / rows, 4) if rows else None for k, v in stats.items()},
+        # every source of this Package's roads, with its license and its date (when the publisher last
+        # edited it, or the TIGER vintage) and when we read it
+        "sources": [{**m, "segments": per_source[m["source_key"]]} for m in meta if m["source_key"] in per_source],
+        "gers_ids": {"overture_release": release, "theme": "transportation/segment",
+                     "note": "GERS IDs only; no Overture geometry or names (ODbL) are in this Package"},
+    }
 
 
 def package_summary(section):

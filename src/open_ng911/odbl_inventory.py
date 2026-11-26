@@ -20,6 +20,8 @@ decide, and only open-licensed sources count (ADR 0004).
 import csv
 import os
 
+from . import registry
+
 OA_SOURCES = os.path.join(os.path.dirname(__file__), "..", "..", "registry", "remediation", "oa_sources.csv")
 
 # Overture theme -> (OpenAddresses layer that could replace it, national open layer by country)
@@ -34,7 +36,7 @@ THEMES = {
 }
 
 
-def _catalogue(path=OA_SOURCES):
+def catalogue(path=OA_SOURCES):
     if not os.path.exists(path):
         return []
     with open(path, newline="") as f:
@@ -67,7 +69,7 @@ def package_section(c, job, geoid, catalogue):
                  FROM road_seg s LEFT JOIN road_source_meta m USING (source_key)
                  WHERE s.geoid = '{geoid}' GROUP BY ALL ORDER BY 1""").fetchall()]
     a3 = c.execute(f"SELECT count(*) FROM a3_polygon WHERE geoid = '{geoid}'").fetchall()[0][0]
-    division = [{"source_key": "tiger-counties" if job.country == "US" else "statcan-census-divisions",
+    division = [{"source_key": registry.country(job).boundary_key,
                  "license_status": "open", "covers": True,
                  "what": "A2 / Package area" + (f", A3 ({a3} municipalities)" if a3 else "")}]
     read_by_theme = {"transportation": roads, "buildings": [], "divisions": division, "base_water": []}
@@ -81,26 +83,11 @@ def package_section(c, job, geoid, catalogue):
     return out
 
 
-def write(c, job, root):
-    """The `odbl_replacement` section of every Package's manifest; returns them by Package key."""
-    import json
-
-    from . import package
-    catalogue = _catalogue()
-    out = {}
-    for geoid, in c.execute("SELECT geoid FROM package_area ORDER BY 1").fetchall():
-        section = package_section(c, job, geoid, catalogue)
-        mpath = os.path.join(root, geoid, "manifest.json")
-        with open(mpath) as f:
-            manifest = json.load(f)
-        manifest["odbl_replacement"] = {
-            **section,
+def manifest_section(c, job, geoid, catalogue):
+    """The `odbl_replacement` section of one Package's manifest. catalogue: catalogue() once per job."""
+    return {**package_section(c, job, geoid, catalogue),
             "note": "Which government sources could stand in for Overture's ODbL themes here. An inventory, not a "
                     "claim; only open-licensed sources count, and a person proposes them (ADR 0004)."}
-        with open(mpath, "w") as f:
-            json.dump(manifest, f, indent=2)
-        out[package.package_key(job, geoid)] = section
-    return out
 
 
 def job_totals(sections):
@@ -108,6 +95,8 @@ def job_totals(sections):
     tot = {}
     for s in sections:
         for theme, v in s.items():
+            if theme == "note":
+                continue
             tot.setdefault(theme, {})
             tot[theme][v["status"]] = tot[theme].get(v["status"], 0) + 1
     return tot
