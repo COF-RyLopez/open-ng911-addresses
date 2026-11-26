@@ -106,6 +106,20 @@ python -m open_ng911.catalog                # the Portolan catalog over everythi
 OVERTURE_RELEASE=2026-11-18.0 python -m open_ng911.build --job us-vt --ledger <previous address_lineage.parquet>
 ```
 
+### A statewide NENA GeoPackage
+
+```sh
+uv pip install -e ".[export]"
+python -m open_ng911.export data/output/release=<r>/us-vt us-vt.gpkg
+```
+
+`export.py` writes every Package of a job into a copy of NENA's own v3.0 GeoPackage template (vendored from
+NENA911/NG911GISDataModel, Apache-2.0): NENA's layer and field names, types and length checks. Polygons the build
+clipped at county seams are merged back into one feature. Values too long for a NENA field stop the export, and
+values outside a NENA domain are listed; nothing is cut or changed to fit (`us-vt.gpkg.report.json`). Agency_ID,
+ServiceURI and AVcard_URI are left empty and listed as owed by the agency. Only Records go in, not Gap-fill
+candidates.
+
 ## Adding a state or province
 
 1. Write `registry/<country>/<code>.toml`: its 911 authorities and Source agencies (see `registry/us/vt.toml`).
