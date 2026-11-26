@@ -129,10 +129,12 @@ and the private review layer until the licence is settled.
    MaineDOT speed layers, MaineDOT signals, FRA crossings, DOT mile points, and agency RCL `SpeedLimit` and
    `OneWay`. Start with speed limits and one-way in Utah, where both a sign inventory and a speed layer exist.
    This is new road content Overture can't get from OSM under open terms, which strengthens the pitch.
-3. **Ask Meta in writing, if Ryan wants it**: a request (person to person, not on an agency's behalf) for
-   permission to use Mapillary map features in public-sector NG911 Packages under a CC BY-style grant. Meta
-   co-founded Overture, so it is a fair ask. Until a written grant exists, Mapillary stays out, including the
-   private review layer.
+3. **Ask Meta in writing** (decided 2026-11-26; Ryan sends it person to person, not on an agency's behalf):
+   permission to pull map features and traffic signs in bulk and to publish rules derived from them
+   (attributes only, never imagery) in public Packages under CC BY 4.0 or CDLA-Permissive-2.0. Meta co-founded
+   Overture and the Packages feed back into Overture's transportation theme. Until a written grant exists,
+   Mapillary stays out, including the private review layer. With a grant, Mapillary becomes one more input to
+   the same engine, behind agency and DOT values.
 4. **Open models on open imagery** later, for markings rather than signs: stop bars, crosswalks and turn
    arrows are visible in public-domain aerials (NAIP, and the states' open orthoimagery). Use models whose
    weights and training data both allow production use, which rules out the Mapillary Traffic Sign Dataset.
