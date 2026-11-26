@@ -15,8 +15,9 @@ Steps:
      IDs attached (roads.py).
   7. Count where the government roads and Overture / the national road layer disagree (upstream.py), and list
      which government sources could stand in for Overture's ODbL themes in each Package (odbl_inventory.py).
-  8. Write one Package per county or census division, the ledger and a job summary; fail the job if a
-     NENA mandatory field isn't filled on every row.
+  8. Build the other NENA layers a Source publishes (layers.py) and report field coverage (coverage.py).
+  9. Write one Package per county or census division, the ledger and a job summary; fail the job if a gated
+     NENA Required field (nena.gated) is empty on any feature of any layer, or an NGUID repeats.
 """
 import argparse
 import json
@@ -199,9 +200,27 @@ def ssap_before(c, job, jurisdiction, updated):
     return fill
 
 
-def gate(c):
-    """NENA mandatory fields filled on every row; returns the failures."""
-    return db.gate(c, "ssap", nena.SSAP_REQUIRED, "nguid")
+def gate(c, job, spec):
+    """Every built layer's gated Required fields (nena.gated) on every feature, and one NGUID per feature;
+    returns the failures as '<layer>.<field>: ...'. spec: coverage_spec."""
+    fails = []
+    for layer, kw in spec.items():
+        if kw["table"]:
+            nguid = "rcl_nguid" if layer == roads.RCL else "nguid"
+            fails += db.gate(c, kw["table"], nena.gated(layer, job.country), nguid, f"{layer}.")
+    return fails
+
+
+def required_gaps(coverage_by_layer):
+    """{layer: {field: {fill, owner}}}: the Required fields the gate leaves out (nena.AGENCY_OWNED, nena.FROM_DATA)
+    that a built layer doesn't fill on every feature: what conformance still needs, and from whom."""
+    out = {}
+    for layer, s in coverage_by_layer.items():
+        for n, f in s["fields"].items():
+            if s["built"] and f.get("required") and f["fill"] < 1 and n in nena.AGENCY_OWNED + nena.FROM_DATA:
+                out.setdefault(layer, {})[n] = {"fill": f["fill"],
+                                                "owner": "agency" if n in nena.AGENCY_OWNED else "source data"}
+    return out
 
 
 def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry_dir=registry.REGISTRY_DIR,
@@ -245,7 +264,8 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     root, summaries = package.write(c, job, jur, release, out_dir, national, spec)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
-    fails = gate(c) + boundaries.gate(c) + roads.gate(c)
+    fails = gate(c, job, spec)
+    cov = {layer: coverage.section(c, layer, job.country, before=before.get(layer), **kw) for layer, kw in spec.items()}
     summary = {"job": job.id, "overture_release": release, "built": updated, "packages": len(summaries),
                "rows": sum(s["rows"] for s in summaries), "records": sum(s["records"] for s in summaries),
                "records_with_gers_id": sum(s["records_with_gers_id"] for s in summaries),
@@ -267,8 +287,9 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "road_sources": dict(c.execute("SELECT road_source, count(*) FROM rcl GROUP BY 1 ORDER BY 1").fetchall()),
                "upstream": upstream.job_totals(s["upstream"] for s in summaries),
                "odbl_replacement": odbl_inventory.job_totals(s["odbl_replacement"] for s in summaries),
-               "nena_coverage": {layer: coverage.section(c, layer, job.country, before=before.get(layer), **kw)
-                                 for layer, kw in spec.items()},
+               "road_segments_without_range": roads.without_range(c),
+               "nena_coverage": cov,
+               "nena_required_gaps": required_gaps(cov),
                "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),
                "gate_failures": fails,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "rows", "records", "gap_fill_candidates",

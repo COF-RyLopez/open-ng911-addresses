@@ -38,7 +38,11 @@ or census division:
    publishes them (the registry's `nena` tables) and empty where it doesn't; nothing is invented.
 10. Report NENA field coverage per layer (filled, partial, no source; before and after the Sources' own fields)
     in job.json and each manifest.
-11. Gate: every NENA mandatory field filled and every NGUID unique, on every layer, or the job fails.
+11. Gate: on every layer built, every NENA Required field the build fills (the schema's own flags, `nena.gated`)
+    is on every feature and every NGUID is unique, or the job fails. The Required fields only the agency can fill
+    (Agency_ID, ServiceURI, AVcard_URI) or only the data has (an unnamed road's St_Name, a zone's DsplayName, a
+    marker's route) are listed in job.json `nena_required_gaps` with who owes them. A road side with no address
+    range is 0, as NENA has it, and counted (`road_segments_without_range`).
 
 ```
 data/output/release=<overture release>/<job>/
