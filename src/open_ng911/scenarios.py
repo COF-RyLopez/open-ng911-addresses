@@ -31,6 +31,8 @@ MAX_CARDINALITY = 40  # a Source field with more distinct values than this is no
 MIN_N = 100          # values with fewer points than this don't count toward a field's spread
 SPREAD = 0.10        # a field whose values' failure rates differ by more than this is reported
 ID_LIKE = 0.5        # a field with more distinct values than this share of its rows is an ID, never a reason
+STATS_ROWS = 50_000  # raw rows sampled per Source for field statistics (a field's cardinality, not its count)
+SPLIT_ROWS = 200_000  # range-checked points sampled for the fail-rate splits; MIN_N still applies per value
 
 
 def _raw(c, jurisdiction, work_dir):
@@ -66,9 +68,12 @@ def _mapped(jurisdiction):
 
 
 def _field_stats(c):
-    """{(source key, field): (distinct values, rows)} of every Source field over all its features."""
-    return {(k, f): (d, n) for k, f, d, n in c.execute("""
-        SELECT source_key, k, approx_count_distinct(p->>k), count(*) FROM _raw_fields, unnest(json_keys(p)) u(k)
+    """{(source key, field): (distinct values, rows)} of every Source field, over a repeatable sample of STATS_ROWS
+    features per Source (cardinality and ID-likeness, not counts)."""
+    return {(k, f): (d, n) for k, f, d, n in c.execute(f"""
+        WITH r AS (SELECT * FROM _raw_fields
+                   QUALIFY row_number() OVER (PARTITION BY source_key ORDER BY hash(source_id)) <= {STATS_ROWS})
+        SELECT source_key, k, approx_count_distinct(p->>k), count(*) FROM r, unnest(json_keys(p)) u(k)
         GROUP BY 1, 2""").fetchall()}
 
 
@@ -144,15 +149,21 @@ def duplicates(c, mapped, stats):
 def _splits(c, table, mapped, stats):
     """Low-cardinality Source fields whose values' failure rates differ by more than SPREAD. table: (source_key,
     source_id, failed BOOLEAN)."""
+    # only the fields that can be a type or status, on a repeatable sample of the points
+    fields = [(key, f) for (key, f), (d, n) in stats.items()
+              if 2 <= d <= MAX_CARDINALITY and d / max(n, 1) <= ID_LIKE]
+    if not fields:
+        return []
+    c.execute("CREATE OR REPLACE TEMP TABLE _split_fields (source_key VARCHAR, k VARCHAR)")
+    c.executemany("INSERT INTO _split_fields VALUES (?, ?)", fields)
     by = db.rows(c, f"""
-        SELECT r.source_key, k AS field, coalesce(r.p->>k, '<empty>') AS value, count(*) AS n,
+        WITH t AS (SELECT * FROM {table} ORDER BY hash(source_key, source_id) LIMIT {SPLIT_ROWS})
+        SELECT r.source_key, f.k AS field, coalesce(r.p->>f.k, '<empty>') AS value, count(*) AS n,
                round(avg(t.failed::INTEGER), 3) AS fail_rate
-        FROM {table} t JOIN _raw_fields r USING (source_key, source_id), unnest(json_keys(r.p)) u(k)
+        FROM t JOIN _raw_fields r USING (source_key, source_id) JOIN _split_fields f USING (source_key)
         GROUP BY ALL""")
     out = []
-    for (key, f), (d, n) in stats.items():
-        if d > MAX_CARDINALITY or d < 2 or d / max(n, 1) > ID_LIKE:
-            continue
+    for key, f in fields:
         vals = sorted((v for v in by if v["source_key"] == key and v["field"] == f), key=lambda v: -v["n"])
         big = [v for v in vals if v["n"] >= MIN_N]
         if len(big) < 2:
