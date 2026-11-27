@@ -16,7 +16,8 @@ Steps:
   7. Count where the government roads and Overture / the national road layer disagree (upstream.py), and list
      which government sources could stand in for Overture's ODbL themes in each Package (odbl_inventory.py).
   8. Build the other NENA layers a Source publishes (layers.py) and report field coverage (coverage.py).
-  9. Score every Package on the NSGIC checks that need no agency data (validate.py: passed / applicable checks).
+  9. Score every Package on the NSGIC checks that need no agency data (validate.py: passed / applicable checks),
+     and read the duplicate and road-range failures back against the Source's own fields (scenarios.py).
  10. Write one Package per county or census division, the ledger and a job summary; fail the job if a gated
      NENA Required field (nena.gated) is empty on any feature of any layer, or an NGUID repeats.
 """
@@ -24,6 +25,8 @@ import argparse
 import json
 import os
 import sys
+
+import duckdb
 
 from . import (
     boundaries,
@@ -41,6 +44,7 @@ from . import (
     ranges,
     registry,
     roads,
+    scenarios,
     street,
     upstream,
     validate,
@@ -271,6 +275,11 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
 
     spec = coverage_spec(c, job, jur)
     scores = validate.run(c, job, spec)
+    try:
+        found = scenarios.run(c, job, jur, work_dir)
+    except (duckdb.Error, KeyError, TypeError, ValueError) as e:  # a finding, never a reason to lose the build
+        print(f"[{job.id}] [WARNING] scenarios failed: {e!r}")
+        found = {"error": repr(e)}
     root, summaries = package.write(c, job, jur, release, out_dir, national, spec, scores)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
@@ -306,12 +315,13 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),
                "gate_failures": fails,
                "validation": validate.job_totals({package.package_key(job, g): v for g, v in scores.items()}),
+               "scenarios": found,
                "by_package": {s["package"]: {k: s[k] for k in ("name", "address_points", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
                               | roads.package_summary(s["road_centerline"]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
         json.dump(summary, f, indent=2)
-    print(json.dumps({k: v for k, v in summary.items() if k not in ("by_package", "nena_coverage", "validation")},
+    print(json.dumps({k: v for k, v in summary.items() if k not in ("by_package", "nena_coverage", "validation", "scenarios")},
                      indent=2))
     # the validation score per Package, gate checks alone (before) and every check, for reading out of a CI log
     v = summary["validation"]

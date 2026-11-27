@@ -332,3 +332,36 @@ def test_validation_scored_per_package(tmp_path, conn):
     assert not after[geoid]["checks"]["RoadCenterLine.range_parity"]["pass"]
     assert after[geoid]["checks"]["RoadCenterLine.range_parity"]["failed"] == \
         scores[geoid]["checks"]["RoadCenterLine.range_parity"]["failed"] + 1
+
+
+def test_scenarios_read_failures_against_source_fields(tmp_path, conn):
+    """scenarios.py reads the duplicate and road-range failures back against the Source's own fields (the features
+    the build fetched, joined on id_field), and the duplicate key holds every CLDXF subaddress element."""
+    import shutil
+
+    out = str(tmp_path / "out")
+    work = os.path.join(out, "_work", "us-vt")
+    os.makedirs(work)
+    shutil.copy(os.path.join(FIXTURES, "vt_agency_points.ndjson"), os.path.join(work, "us-vt-e911-esite.ndjson"))
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    sc = s["scenarios"]
+    assert "error" not in sc
+    assert sc["source_fields_read"] == {"us-vt-e911-esite": "ESITEID"}
+    assert {"structure", "site", "wing", "unitvalue"} <= set(sc["duplicates"]["key"])
+    assert set(sc["rcl_agreement"]["results"]) <= set(build.ranges.RESULTS)
+    assert sum(sc["rcl_agreement"]["results"].values()) == conn.execute(
+        "SELECT count(*) FROM address_range_check").fetchall()[0][0]
+
+    # two Records that differ only in their Building are two sites, not a duplicate
+    conn.execute("CREATE OR REPLACE TABLE ssap AS SELECT * FROM ssap UNION ALL BY NAME "
+                 "SELECT * REPLACE ('dup' AS uid, 'dup' AS nguid, 'B' AS structure) FROM ssap "
+                 "WHERE status = 'record' AND add_number IS NOT NULL LIMIT 1")
+    job = registry.job("us-vt")
+    v = validate.run(conn, job, build.coverage_spec(conn, job, registry.jurisdiction(job)))
+    before = {g: p["checks"]["SiteStructureAddressPoint.duplicate_address"]["failed"] for g, p in v.items()
+              if "SiteStructureAddressPoint.duplicate_address" in p["checks"]}
+    conn.execute("UPDATE ssap SET structure = NULL WHERE uid = 'dup'")
+    v = validate.run(conn, job, build.coverage_spec(conn, job, registry.jurisdiction(job)))
+    after = {g: p["checks"]["SiteStructureAddressPoint.duplicate_address"]["failed"] for g, p in v.items()
+             if "SiteStructureAddressPoint.duplicate_address" in p["checks"]}
+    assert sum(after.values()) >= sum(before.values()) + 2

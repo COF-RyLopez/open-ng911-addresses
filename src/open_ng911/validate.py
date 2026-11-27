@@ -7,7 +7,8 @@ scored per Package as passed / applicable checks.
     domains     <layer>.domains: every value of a coded field inside NENA's domain (CLDXF-CA's street types in Canada)
     A-levels    SiteStructureAddressPoint.inside_package (its A2Polygon), a3_matches_polygon (the A3Polygon it is in;
                 'Unincorporated' in none)
-    duplicates  SiteStructureAddressPoint.duplicate_address: one full address on two points of a Package
+    duplicates  SiteStructureAddressPoint.duplicate_address: one full address (number, street and subaddress) on two
+                points of a Package
     SSAP-RCL    SiteStructureAddressPoint.rcl_agreement (in its side's range, ranges.py), on_named_road (a segment of
                 its street within ranges.MAX_M)
     ranges      RoadCenterLine.range_parity (Parity agrees with the numbers), range_direction (both sides run the same
@@ -64,9 +65,13 @@ def _domains(layer, country):
     return " OR ".join(bad) or "false"
 
 
-# A full address, for duplicates: the number, the street and the unit (CLDXF-US UnitPreTyp + UnitValue, CLDXF-CA Unit)
+# A full address, for duplicates: the number, the street and every CLDXF subaddress element (Site down to Seat;
+# CLDXF-US UnitPreTyp + UnitValue, CLDXF-CA Unit). Two points that differ only in a building, wing or landmark name
+# are two sites (sim/problems/ng911-duplicate-key-misses-subaddress).
+SUBADDRESS = ("site", "subsite", "structure", "wing", "floor", "unit", "unitpretyp", "unitvalue", "section", "row",
+              "room", "seat")
 ADDRESS = ("addnum_pre", "add_number", "addnum_suf", "st_premod", "st_predir", "st_pretyp", "st_presep", "st_name",
-           "st_postyp", "st_posdir", "st_posmod", "unit", "unitpretyp", "unitvalue", "building", "floor", "room", "seat")
+           "st_postyp", "st_posdir", "st_posmod") + SUBADDRESS
 
 
 def _ssap_checks(country):

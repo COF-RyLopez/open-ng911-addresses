@@ -36,6 +36,9 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
   manifests and layer files the jobs wrote, decides public or withheld per Package (ADR 0011), writes
   `data/catalog/public/` and `report.json`. It never changes a Package; layer files are hard-linked in. Vector
   tiles come from manby (`catalog.visual`), which tiles the GeoParquet directly; don't add tippecanoe.
+- `scenarios.py` why duplicate_address, rcl_agreement and range_overlap fail, read back against the Source's own
+  fields (the fetched NDJSON in the work dir, joined on id_field): job.json `scenarios`, one line at the end of each
+  CI build log. Log every new pattern in `docs/standards/source-scenarios.md` and gbrain `sim/problems/`.
 - `street.py` street parse + `street_key` (both sides of every match use it), `nena/` registry words and the
   vendored NENA-STA-006.3 and CLDXF-CA domains, `matcher.py` Record ↔ Overture pairing, `ids.py` Address UID
   and NGUID, `lineage.py` the ledger that carries UIDs across Overture releases, `package.py` writes every
