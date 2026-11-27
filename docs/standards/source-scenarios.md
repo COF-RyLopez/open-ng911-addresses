@@ -24,7 +24,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 | Scenario | Evidence | NENA home | Action | Status |
 |---|---|---|---|---|
 | Duplicate key missed CLDXF subaddress elements (`building` was not a NENA field; no site, subsite, wing, section, row) | Fixed keys tell apart ND structure 145, ME site 229, UT structure 229 groups | duplicate_address key = number + street + Site..Seat | pipeline | fixed in PR #25 |
-| Same number and street in two communities of one A3 | PEI 29/29 Record dup groups differ in COMM_NM (GEORGETOWN vs MONTAGUE); ND Post_Comm, MSAGComm | A4, MSAGComm, Post_Comm in the duplicate key | pipeline | PR #25 (A2) |
+| Same number and street in two communities of one A3 | PEI 29/29 Record dup groups differ in COMM_NM (GEORGETOWN vs MONTAGUE); ND Post_Comm, MSAGComm | A4, MSAGComm, Post_Comm in the duplicate key | pipeline | PR #25 (A2, A3: compared only between two Records) |
 | Overture's own copy of a Record left as a gap-fill candidate on top of it, because the one-round matcher pairs only one of several stacked Records | Record + gap-fill stacked groups: ND 3398, UT 3545, PE 1017, VT 754, ME 376. ND candidate source_record_id = the Record's Site_NGUID without braces | Not a gap (ADR 0001); the Record should carry the GERS ID | pipeline | PR #25 (matcher rounds + unit ranking) |
 | A point farther than 150 m (ranges.MAX_M) from any segment of its street | VT 21,108 of 21,423 no_matching_road; ND 37,032 of 38,126; ME 62,389; UT 72,811 | on_named_road; rural driveways and setbacks | pipeline: consider a longer reach for on_named_road | open |
 | The `mapped` flag in the report reads only registry `nena` tables, so fields mapped by the OpenAddresses conform (city, unit, postcode) show as unmapped | PEI COMM_NM (OA city -> Post_Comm) flagged unmapped | reporting | pipeline | open |
@@ -44,7 +44,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 | Scenario | Evidence | NENA home | Action | Status |
 |---|---|---|---|---|
 | Distinguishers kept in Addtl_Loc (CHURCH / PARSONAGE, TWR 1..4, CP 1..12) | Differs inside Record dup groups | Addtl_Loc is the NENA field, but TWR n / CP n are Structure or Unit | agency | open |
-| Same address in two Post_Comm / MSAGComm / Post_Code within one A3 | Differs inside Record dup groups | Post_Comm, MSAGComm | pipeline | PR #25 (A2) |
+| Same address in two Post_Comm / MSAGComm / Post_Code within one A3 | Differs inside Record dup groups | Post_Comm, MSAGComm | pipeline | PR #25 (A2, A3: compared only between two Records) |
 | Number suffixes C, D, E fail the range check far more often | rcl_agreement split | AddNum_Suf | log | open |
 | ACCURACY and NOTES unmapped | Differs in dup groups | none in NENA (agency notes) | log | open |
 | range_overlap: one segment's range contains another's | one_contains_other 822, same_range 136 | RoadCenterLine.range_overlap | agency | open |
@@ -74,6 +74,6 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 | Scenario | Evidence | NENA home | Action | Status |
 |---|---|---|---|---|
 | Road centreline has names but no ranges | 82,867 no_range | RoadCenterLine ranges | upstream (find a ranged layer) | open |
-| COMM_NM is the civic community; the same number and road recur in neighbouring communities | 29 Record dup groups, all differ in COMM_NM | Post_Comm (via OpenAddresses city); CLDXF-CA community | pipeline | PR #25 (A2) |
+| COMM_NM is the civic community; the same number and road recur in neighbouring communities | 29 Record dup groups, all differ in COMM_NM | Post_Comm (via OpenAddresses city); CLDXF-CA community | pipeline | PR #25 (A2, A3: compared only between two Records) |
 | INFO carries the site use (MULTI BLDG, SFD, DUPLEX, SUMMER COTTAGE, GOVERNMENT WHARF, NESTED PID) | Differs in dup groups | Place_Type | registry | open |
 | LOC_CODE (DT, DS, BT) and FIRE_COV differ in dup groups | Record dup groups | ESN / service zones | log | open |
