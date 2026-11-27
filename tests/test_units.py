@@ -200,4 +200,5 @@ def test_matcher_links_overture_double_copies(conn):
     other = ({"o-a", "o-b"} - {paired}).pop()
     assert conn.execute("SELECT gers_id, address_uid FROM address_copy").fetchall() == [(other, "r1")]
     misses = matcher.copy_misses(conn)["by_difference"]
-    assert sorted((m["same_street"], m["same_unit"], m["n"]) for m in misses) == [(False, True, 1), (True, False, 1)]
+    assert sorted((m["same_number"], m["same_street"], m["same_unit"], m["n"]) for m in misses) == [
+        (True, False, True, 1), (True, True, False, 1)]

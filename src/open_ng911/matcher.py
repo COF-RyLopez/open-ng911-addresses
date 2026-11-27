@@ -79,13 +79,26 @@ def copies(c, max_m=COPY_M):
     return c.execute("SELECT count(*) FROM address_copy").fetchall()[0][0]
 
 
-def copy_misses(c, stacked_m=0.5, examples=5):
-    """Unpaired Overture addresses stacked (< stacked_m) on a Record of the same number that copies() did not
-    link: counts by which of street key / unit differ, and a few examples, for the scenario catalog."""
-    rows = c.execute(f"""SELECT same_street, same_unit, count(DISTINCT gers_id) FROM address_copy_pairs
-        WHERE distance_m < {stacked_m} AND gers_id NOT IN (SELECT gers_id FROM address_copy)
-        GROUP BY ALL ORDER BY 3 DESC""").fetchall()
-    ex = c.execute(f"""SELECT record_street, overture_street, record_unit, overture_unit FROM address_copy_pairs
-        WHERE distance_m < {stacked_m} AND gers_id NOT IN (SELECT gers_id FROM address_copy)
-        ORDER BY gers_id LIMIT {examples}""").fetchall()
-    return {"by_difference": [{"same_street": s, "same_unit": u, "n": n} for s, u, n in rows], "examples": ex}
+def copy_misses(c, examples=5):
+    """Why unpaired Overture addresses that sit on a Record's exact spot (same geoid, coordinates equal to 5
+    decimals, about 1 m) are not copies: counts by which of number / street key / unit differ, and a few
+    examples, for the scenario catalog."""
+    c.execute("""CREATE OR REPLACE TEMP TABLE address_copy_misses AS
+        WITH o AS (SELECT gers_id, geoid, number, skey, street, unit, round(ST_X(geom), 5) AS x, round(ST_Y(geom), 5) AS y
+                   FROM overture_addr WHERE gers_id NOT IN (SELECT gers_id FROM address_match)
+                     AND gers_id NOT IN (SELECT gers_id FROM address_copy)),
+             a AS (SELECT address_uid, geoid, number, skey, street, unit, round(ST_X(geom), 5) AS x, round(ST_Y(geom), 5) AS y
+                   FROM agency_addr)
+        SELECT o.gers_id, upper(a.number) = upper(o.number) AS same_number, a.skey = o.skey AS same_street,
+               upper(trim(coalesce(a.unit, ''))) = upper(trim(coalesce(o.unit, ''))) AS same_unit,
+               a.number AS record_number, o.number AS overture_number, a.street AS record_street,
+               o.street AS overture_street, a.unit AS record_unit, o.unit AS overture_unit
+        FROM o JOIN a USING (geoid, x, y)""")
+    rows = c.execute("""SELECT same_number, same_street, same_unit, count(DISTINCT gers_id) FROM address_copy_misses
+        GROUP BY ALL ORDER BY 4 DESC""").fetchall()
+    ex = c.execute(f"""SELECT * EXCLUDE (gers_id, same_number, same_street, same_unit) FROM address_copy_misses
+        WHERE same_number ORDER BY gers_id LIMIT {examples}""").fetchall()
+    ex_other = c.execute(f"""SELECT * EXCLUDE (gers_id, same_number, same_street, same_unit) FROM address_copy_misses
+        WHERE NOT same_number ORDER BY gers_id LIMIT {examples}""").fetchall()
+    return {"by_difference": [{"same_number": n, "same_street": s, "same_unit": u, "n": k} for n, s, u, k in rows],
+            "examples_same_number": ex, "examples_other_number": ex_other}
