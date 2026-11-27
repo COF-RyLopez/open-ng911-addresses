@@ -1,0 +1,668 @@
+<title>NG911 Pipeline Story Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a dispatch-console map. Full-bleed map, the story card on the left, the NENA data model on the right,
+   chapter rail along the bottom. One committed dark look, so the map reads like a CAD screen. */
+:root {
+  color-scheme: dark;
+  --ground: #0a1316;      /* map ground and page */
+  --panel: #101c20;       /* cards */
+  --panel-2: #15252a;
+  --line: #24383e;
+  --fg: #e4ecee;
+  --muted: #8ea2a7;
+  --faint: #5d7177;
+  --ssap: #f2b441;        /* address points */
+  --gers: #3fd0c9;        /* GERS-linked */
+  --gap: #e0679b;         /* Overture gap-fill candidates */
+  --a2: #a9b9ff;          /* county / census division */
+  --a3: #6d82c4;          /* municipalities */
+  --up: #ff7a45;          /* upstream: missing elsewhere */
+  --ok: #4cc38a;
+  --part: #e8b64c;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+html, body { height: 100%; }
+body { background: var(--ground); color: var(--fg); font-family: var(--body); font-size: 14px; line-height: 1.45; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--gers); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
+header.top {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line); background: var(--ground);
+}
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.brand .eyebrow { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.brand h1 { margin: 2px 0 0; font: 800 19px/1.15 var(--display); letter-spacing: -.01em; text-wrap: balance; }
+.pilots { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.pilots button {
+  border: 1px solid var(--line); background: transparent; border-radius: 4px; padding: 5px 10px; cursor: pointer;
+  font: 500 12px/1.2 var(--mono); color: var(--muted); display: flex; gap: 6px; align-items: center;
+}
+.pilots button[aria-pressed="true"] { border-color: var(--fg); color: var(--fg); background: var(--panel-2); }
+.pilots button .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
+.pilots button[data-open="1"] .dot { background: var(--ssap); }
+
+.stage { position: relative; min-height: 0; }
+#map { position: absolute; inset: 0; }
+.overlay { position: absolute; top: 14px; bottom: 14px; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.overlay > * { pointer-events: auto; }
+.left { overflow-y: auto; scrollbar-width: thin; }
+.left > .card { flex: 0 0 auto; }
+.left { left: max(14px, env(safe-area-inset-left, 0px)); width: min(380px, 34vw); }
+.right { right: max(14px, env(safe-area-inset-right, 0px)); width: min(330px, 30vw); }
+.card { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 6px; padding: 16px 18px; backdrop-filter: blur(6px); }
+
+.story .chap { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.story .chap .layer-tag { color: var(--ground); background: var(--tag, var(--ssap)); padding: 2px 6px; border-radius: 3px; letter-spacing: .04em; }
+.story h2 { margin: 10px 0 8px; font: 700 22px/1.15 var(--display); text-wrap: balance; }
+.story p { margin: 0 0 10px; color: #c6d3d6; max-width: 62ch; }
+.story p:last-child { margin-bottom: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(98px, 1fr)); gap: 12px 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.stat .v { font: 700 20px/1.1 var(--display); font-variant-numeric: tabular-nums; color: var(--c, var(--fg)); }
+.stat .l { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); display: inline-block; }
+.legend i.sq { border-radius: 2px; }
+.legend i.ln { height: 2px; width: 14px; border-radius: 0; }
+.ramp { height: 8px; width: 120px; border-radius: 2px; background: linear-gradient(90deg, #17303a, var(--c)); display: inline-block; }
+
+.model { overflow: auto; min-height: 0; flex: 1 1 auto; }
+.model h3 { margin: 0 0 2px; font: 700 14px/1.2 var(--display); letter-spacing: .01em; }
+.model .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.layers { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.layers li { display: grid; grid-template-columns: 54px 1fr auto; gap: 8px; align-items: center; padding: 3px 6px; border-radius: 4px; transition: background .4s; }
+.layers li.on { background: var(--panel-2); }
+.layers .ind { font: 500 11px/1 var(--mono); color: var(--muted); }
+.layers .nm { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layers .lvl { font-size: 10.5px; color: var(--faint); display: block; }
+.chip { font: 500 10.5px/1 var(--mono); padding: 3px 6px; border-radius: 3px; border: 1px solid var(--cc); color: var(--cc); white-space: nowrap; }
+.chip.filled { --cc: var(--ok); }
+.chip.partial { --cc: var(--part); }
+.chip.gap { --cc: var(--faint); }
+.chip.agency { --cc: var(--a2); border-style: dashed; }
+.chip.lit { background: var(--cc); color: var(--ground); }
+
+.fields { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.fields h4 { margin: 0 0 8px; font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 3px; }
+.f { font: 400 10.5px/1.15 var(--mono); padding: 4px 5px; border-radius: 3px; background: #0d181b; color: var(--faint); border: 1px solid transparent; position: relative; overflow: hidden; transition: color .3s, border-color .3s; }
+.f .bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--ok); transition: width .6s ease-out; }
+.f.filled { color: var(--fg); border-color: #1f3a33; }
+.f.partial { color: var(--fg); border-color: #3c3420; }
+.f.partial .bar { background: var(--part); }
+.f.agency { color: #7f8fc0; border: 1px dashed #2a3557; }
+.f.req::after { content: "•"; color: var(--up); position: absolute; right: 4px; top: 2px; }
+.fkey { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+
+.rail {
+  display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); background: var(--ground);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.rail .ctl { display: flex; gap: 6px; }
+.rail .ctl button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); cursor: pointer; display: grid; place-items: center; }
+.rail .ctl button.play { background: var(--ssap); color: var(--ground); border-color: var(--ssap); }
+.rail .ctl svg { width: 14px; height: 14px; fill: currentColor; }
+.steps { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.steps button { flex: 1 0 auto; min-width: 74px; background: transparent; border: 0; border-top: 3px solid var(--line); padding: 6px 4px 0; text-align: left; cursor: pointer; color: var(--faint); font: 500 11px/1.2 var(--mono); position: relative; }
+.steps button .p { position: absolute; left: 0; top: -3px; height: 3px; width: 0; background: var(--ssap); }
+.steps button.done { border-top-color: #5b4a22; color: var(--muted); }
+.steps button.cur { color: var(--fg); }
+.steps button .n { display: block; font-size: 10px; color: var(--faint); }
+
+.pop { position: absolute; z-index: 5; min-width: 230px; max-width: 300px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 12px; pointer-events: auto; box-shadow: 0 8px 24px rgba(0,0,0,.4); transform: translate(-50%, calc(-100% - 12px)); }
+.pop h5 { margin: 0 0 6px; font: 600 13px/1.25 var(--body); }
+.pop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; }
+.pop dt { font: 400 10.5px/1.4 var(--mono); color: var(--muted); }
+.pop dd { margin: 0; font: 400 10.5px/1.4 var(--mono); word-break: break-all; }
+.pop .x { position: absolute; right: 6px; top: 4px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+.pop .tag { display: inline-block; font: 500 10px/1 var(--mono); padding: 2px 5px; border-radius: 3px; background: var(--c); color: var(--ground); margin-bottom: 6px; }
+
+.recordcard dl { margin: 10px 0 0; display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 10px; }
+.recordcard dl.ids { grid-template-columns: auto 1fr; }
+.recordcard dl + dl { margin-top: 6px; }
+.recordcard dt { font: 400 10.5px/1.5 var(--mono); color: var(--muted); }
+.recordcard dd { margin: 0; font: 400 10.5px/1.5 var(--mono); word-break: break-all; opacity: 0; transform: translateX(-4px); transition: opacity .25s, transform .25s; }
+.recordcard dd.in { opacity: 1; transform: none; }
+.recordcard dd.hl { color: var(--gers); }
+.recordcard .hd { font: 500 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.recordcard .addr { font: 600 15px/1.3 var(--body); margin-top: 4px; }
+
+.pulse { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; border: 2px solid var(--gers); pointer-events: none; z-index: 4; animation: pulse 1.6s ease-out infinite; }
+@keyframes pulse { 0% { transform: scale(.5); opacity: 1 } 100% { transform: scale(1.8); opacity: 0 } }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font: 500 12px var(--mono); z-index: 6; background: var(--ground); transition: opacity .4s; }
+.loading.gone { opacity: 0; pointer-events: none; }
+.foot { font-size: 11px; color: var(--faint); }
+.foot a { color: var(--muted); }
+
+@media (max-width: 860px) {
+  .app { height: auto; min-height: 100%; }
+  .stage { display: flex; flex-direction: column; }
+  #map { position: relative; height: 58vh; min-height: 320px; }
+  .overlay { position: static; width: auto; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); margin-top: 10px; }
+  .left, .right { width: auto; }
+  .rail { position: sticky; bottom: 0; z-index: 7; }
+  .pilots { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse { animation: none; }
+  .f .bar, .recordcard dd { transition: none; }
+}
+/* Map control styles (subset of maplibre-gl.css; external stylesheets are blocked here) */
+.maplibregl-map { overflow: hidden; position: relative; -webkit-tap-highlight-color: transparent; }
+.maplibregl-canvas { left: 0; position: absolute; top: 0; }
+.maplibregl-canvas-container.maplibregl-interactive { cursor: grab; }
+.maplibregl-ctrl-bottom-right { position: absolute; right: 0; bottom: 0; z-index: 2; pointer-events: none; }
+.maplibregl-ctrl-top-right { position: absolute; right: 0; top: 0; z-index: 2; pointer-events: none; }
+.maplibregl-ctrl { pointer-events: auto; clear: both; }
+.maplibregl-ctrl-attrib { display: none; }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="eyebrow">open-ng911-addresses · Phase 1 pilots</span>
+      <h1>What the pipeline delivers to a 9-1-1 authority</h1>
+    </div>
+    <nav class="pilots" id="pilots" aria-label="Pilot"></nav>
+  </header>
+
+  <div class="stage">
+    <div id="map" role="img" aria-label="Map of the selected pilot"></div>
+    <div class="loading" id="loading">Loading the pilot builds…</div>
+    <div class="overlay left">
+      <section class="card story" id="story" aria-live="polite"></section>
+      <section class="card recordcard" id="record" hidden></section>
+    </div>
+    <div class="overlay right">
+      <section class="card model" id="model"></section>
+    </div>
+  </div>
+
+  <footer class="rail">
+    <div class="ctl">
+      <button id="prev" aria-label="Previous chapter"><svg viewBox="0 0 16 16"><path d="M10.5 2 4.5 8l6 6z"/></svg></button>
+      <button id="play" class="play" aria-label="Play the story"><svg viewBox="0 0 16 16" id="playicon"><path d="M4 2v12l10-6z"/></svg></button>
+      <button id="next" aria-label="Next chapter"><svg viewBox="0 0 16 16"><path d="m5.5 2 6 6-6 6z"/></svg></button>
+    </div>
+    <div class="steps" id="steps"></div>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.js"></script>
+<script>
+"use strict";
+const PILOTS = [
+  { job: "ca-pe", label: "PEI", name: "Prince Edward Island", unit: "census division", country: "CA" },
+  { job: "us-vt", label: "VT", name: "Vermont", unit: "county", country: "US" },
+  { job: "us-me", label: "ME", name: "Maine", unit: "county", country: "US" },
+  { job: "us-ut", label: "UT", name: "Utah", unit: "county", country: "US" },
+  { job: "us-nd", label: "ND", name: "North Dakota", unit: "county", country: "US" },
+];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { ground: css("--ground"), ssap: css("--ssap"), gers: css("--gers"), gap: css("--gap"), a2: css("--a2"), a3: css("--a3"), up: css("--up"), fg: css("--fg"), line: css("--line") };
+const fmt = n => (n == null ? "–" : Number(n).toLocaleString("en-US"));
+const pct = (a, b) => (b ? (100 * a / b).toFixed(a / b > 0.995 && a !== b ? 1 : 0) + "%" : "–");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* NENA-STA-006.3 SiteStructureAddressPoint fields (NENA911/NG911GISDataModel, Apache-2.0), in schema order.
+   "agency": values only the 9-1-1 authority can supply (we never invent them, ADR 0004). */
+const SSAP_FIELDS = ["DiscrpAgID","DateUpdate","Effective","Expire","NGUID","Country","A1","A2","AddCode","A3","A4","A5",
+  "AddNum_Pre","Add_Number","AddNum_Suf","AddNum_Cmp","DistMarker","St_PreMod","St_PreDir","St_PreTyp","St_PreSep",
+  "St_Name","St_PosTyp","St_PosDir","St_PosMod","LSt_PreDir","LSt_Name","LSt_Typ","LSt_PosDir","ESN","MSAGComm",
+  "LCountyID","Post_Comm","Post_Code","PostCodeEx","Site","SubSite","Structure","Floor","FloorIndex","Wing","Unit",
+  "UnitPreTyp","UnitValue","Section","Row","Room","Seat","LocMarker","Addtl_Loc","AddDataURI","Place_Type",
+  "Placement","Longitude","Latitude","Elevation","Altitude","Height"];
+const SSAP_REQ = new Set(["DiscrpAgID","DateUpdate","NGUID","Country","A1"]);
+const SSAP_NOT_US = new Set(["AddCode","Unit"]), SSAP_NOT_CA = new Set(["PostCodeEx","UnitPreTyp","UnitValue"]);
+const AGENCY = new Set(["ESN","MSAGComm","LCountyID","AddCode","LSt_PreDir","LSt_Name","LSt_Typ","LSt_PosDir","AddDataURI"]);
+const RCL_FIELDS = ["DiscrpAgID","DateUpdate","Effective","Expire","NGUID","AdNumPre_L","AdNumPre_R","FromAddr_L","ToAddr_L",
+  "FromAddr_R","ToAddr_R","Parity_L","Parity_R","St_PreMod","St_PreDir","St_PreTyp","St_PreSep","St_Name","St_PosTyp",
+  "St_PosDir","St_PosMod","Dir_Travel","LSt_PreDir","LSt_Name","LSt_Typ","LSt_PosDir","ESN_L","ESN_R","MSAGComm_L",
+  "MSAGComm_R","LCntyID_L","LCntyID_R","Country_L","Country_R","A1_L","A1_R","A2_L","A2_R","A3_L","A3_R","A4_L","A4_R",
+  "A5_L","A5_R","PostCode_L","PostCode_R","PostComm_L","PostComm_R","RoadClass","OneWay","SpeedLimit","Valid_L","Valid_R"];
+const RCL_REQ = new Set(["DiscrpAgID","DateUpdate","NGUID","FromAddr_L","ToAddr_L","FromAddr_R","ToAddr_R","Parity_L","Parity_R","St_Name","Country_L","Country_R","A1_L","A1_R"]);
+const RCL_AGENCY = new Set(["ESN_L","ESN_R","MSAGComm_L","MSAGComm_R","LCntyID_L","LCntyID_R","LSt_PreDir","LSt_Name","LSt_Typ","LSt_PosDir","Valid_L","Valid_R"]);
+const FIELD_ALIAS = { nguid: "nguid", rcl_nguid: "nguid" };
+
+/* The NENA layer list, with what a Phase 1 Package carries (docs/standards/gap-review.md). */
+const LAYERS = [
+  { id: "SSAP", name: "SiteStructureAddressPoint", lvl: "Required" },
+  { id: "RCL", name: "RoadCenterLine", lvl: "Required" },
+  { id: "A1", name: "A1Polygon (state / province)", lvl: "Strongly rec." },
+  { id: "A2", name: "A2Polygon (county / CD)", lvl: "Strongly rec." },
+  { id: "A3", name: "A3Polygon (municipality)", lvl: "Strongly rec." },
+  { id: "Prov", name: "ProvisioningPolygon", lvl: "Required" },
+  { id: "PSAP", name: "PSAP, Police, Fire, EMS", lvl: "Required" },
+  { id: "A45", name: "A4 / A5 Polygons", lvl: "Strongly rec." },
+  { id: "SSAPoly", name: "SiteStructureAddressPolygon", lvl: "Recommended" },
+  { id: "Marks", name: "Location / Distance markers", lvl: "Recommended" },
+  { id: "RrHyd", name: "Rail and hydrology", lvl: "Recommended" },
+];
+function layerStatus(D) {
+  const r = D.job.road_segments || 0;
+  return {
+    SSAP: ["filled", "in every Package"], RCL: r ? ["filled", ((D.job.road_sources || {}).government ? "agency, " : "TIGER, ") + fmt(r)] : ["gap", "no road source yet"],
+    A1: ["gap", "next: trivial"], A2: ["filled", D.packages.length + " polygons"], A3: ["filled", fmt(D.job.a3?.a3_polygons) + " polygons"],
+    Prov: ["gap", "next: Package area"], PSAP: ["agency", "authority supplies"], A45: ["gap", "no source yet"],
+    SSAPoly: ["gap", "planned"], Marks: ["gap", "planned"], RrHyd: ["gap", "planned"],
+  };
+}
+
+/* ---------- data ---------- */
+const DATA = {};
+function weightedFill(D, key, rowsKey) {
+  const out = {};
+  let total = 0;
+  for (const p of D.packages) {
+    const ff = key(p) || {}, w = rowsKey(p) || 0;
+    total += w;
+    for (const [k, v] of Object.entries(ff)) if (v != null) out[k] = (out[k] || 0) + v * w;
+  }
+  for (const k in out) out[k] = total ? out[k] / total : 0;
+  return out;
+}
+function decodePoints(P) {
+  const feats = new Array(P.dx.length);
+  let x = 0, y = 0;
+  for (let i = 0; i < P.dx.length; i++) {
+    x += P.dx[i]; y += P.dy[i];
+    feats[i] = { type: "Feature", id: i, geometry: { type: "Point", coordinates: [x / 1e5, y / 1e5] }, properties: { k: P.kind[i] } };
+  }
+  return { type: "FeatureCollection", features: feats };
+}
+function prepare(D) {
+  D.ssapFill = weightedFill(D, p => p.field_fill, p => p.rows);
+  D.rclFill = weightedFill(D, p => p.roads?.field_fill, p => p.roads?.rows);
+  D.bbox = bboxOf(D.a2);
+  D.openPoints = !!D.points;
+  D.licOpen = D.sources.filter(s => s.layer === "addresses").every(s => s.license_status === "open");
+  if (D.points) {
+    D.pointsGeo = decodePoints(D.points);
+    D.a2Order = D.points.a2s;
+  }
+  const up = D.job.upstream || {};
+  D.up = { ov: up.overture || {}, nat: up.national || {} };
+  return D;
+}
+function bboxOf(fc) {
+  let b = [180, 90, -180, -90];
+  const walk = c => { if (typeof c[0] === "number") { b[0] = Math.min(b[0], c[0]); b[1] = Math.min(b[1], c[1]); b[2] = Math.max(b[2], c[0]); b[3] = Math.max(b[3], c[1]); } else c.forEach(walk); };
+  fc.features.forEach(f => walk(f.geometry.coordinates));
+  return b;
+}
+
+/* ---------- chapters ---------- */
+function chapters(D, P) {
+  const j = D.job, unit = P.unit, units = unit === "county" ? "counties" : "census divisions";
+  const recs = j.records, gers = j.records_with_gers_id, gap = j.gap_fill_candidates;
+  const roads = j.road_segments || 0, roadsG = j.road_segments_with_gers_id || 0;
+  const addrSrc = D.sources.filter(s => s.layer === "addresses");
+  const roadSrc = D.sources.filter(s => s.layer === "centerlines");
+  const govRoads = (j.road_sources || {}).government > 0;
+  const lic = s => s.license_status === "open" ? "open licence" : s.license_status === "unknown" ? "licence not stated yet" : s.license_status;
+  const dropped = Object.values(j.agency_points_dropped || {}).reduce((a, b) => a + b, 0);
+  const choro = (label, fn, color) => ({ label, fn, color });
+  return [
+    { key: "sources", step: "Sources", tag: "Inputs", tagc: C.a2,
+      title: `${P.name}: one open build, ${D.packages.length} ${units}`,
+      body: [`The pipeline reads what government agencies already publish and builds a NENA NG9-1-1 GIS dataset for every ${unit}. Nothing is digitized by hand.`,
+        `Address points: ${addrSrc.map(s => `<b>${esc(s.agency)}</b> (${lic(s)})`).join(", ")}. ` +
+        (roadSrc.length ? `Roads: ${roadSrc.map(s => `<b>${esc(s.agency)}</b> (${lic(s)})`).join(", ")}. ` : "No government road layer is read for this pilot yet. ") +
+        `Boundaries: ${esc(D.boundaries?.A2Polygon?.source || "")}. GERS IDs: Overture release ${esc(j.overture_release)}.`],
+      stats: [[fmt(j.rows), "points in the Packages"], [D.packages.length, `${units}`], [j.overture_release, "Overture release"]],
+      layers: [], map: { a2: "outline" } },
+    { key: "a2", step: "A1–A2", tag: "A2Polygon", tagc: C.a2, lit: ["A2"],
+      title: `Each ${unit} becomes its own Package`,
+      body: [`A Package is the NG9-1-1 dataset for one ${unit}: the unit a 9-1-1 authority can take, check and load. Its outline is the A2Polygon, from ${esc(D.boundaries?.A2Polygon?.source || "")} (${esc(D.boundaries?.A2Polygon?.license || "")}).`,
+        `A1Polygon (the ${P.country === "CA" ? "province" : "state"} outline) isn't written yet. It's the cheapest gap on the list.`],
+      stats: [[D.packages.length, "A2 polygons"], ["0", "A1 polygons (next)"]],
+      map: { a2: "draw" } },
+    { key: "a3", step: "A3", tag: "A3Polygon", tagc: C.a3, lit: ["A3"],
+      title: "Municipalities inside every Package",
+      body: [`A3 is the local government the address belongs to (ADR 0009). The pipeline clips ${esc(D.boundaries?.A3Polygon?.source || "municipal boundaries")} to each ${unit}, then stamps every address point with its A3.`,
+        `${fmt(j.a3?.addresses_in_municipality)} points fall inside a municipality and ${fmt(j.a3?.addresses_unincorporated)} are unincorporated. ${fmt(j.a3?.addresses_without_a3)} have no A3.`],
+      stats: [[fmt(j.a3?.a3_polygons), "A3 polygons"], [fmt(j.a3?.addresses_in_municipality), "points with a municipal A3"]],
+      map: { a2: "outline", a3: "draw" } },
+    { key: "ssap", step: "SSAP", tag: "SiteStructureAddressPoint", tagc: C.ssap, lit: ["SSAP"], fields: "ssap",
+      title: "Every addressed site, as a NENA address point",
+      body: [`Each agency point becomes a Record in the SiteStructureAddressPoint layer, with NENA field names and registry words ("Avenue", "North"). Phones, call boxes and un-numbered sites stay in: ${dropped ? fmt(dropped) + " points dropped, each for a counted reason" : "no point was dropped"}.`,
+        D.openPoints ? `Every point on the map is a real Record from the ${esc(addrSrc[0]?.agency || "")}, published under its open licence.` :
+          D.licOpen ? `${P.name}'s points are openly licensed, but ${fmt(recs)} is more than this page embeds, so the shading shows real Record counts per ${unit}.` :
+          `The agency's points stay off this public map until the agency states a licence. The shading shows real Record counts per ${unit}.`],
+      stats: [[fmt(recs), "Records"], [fmt(j.agency_points_dropped ? recs + dropped : recs), "agency points read"], [pct(recs, recs + dropped), "kept"]],
+      legend: D.openPoints ? [["Record", C.ssap]] : null,
+      map: { a2: "outline", points: "sweep", choro: D.openPoints ? null : choro("Records per " + unit, p => p.records, C.ssap) }, record: "ssap" },
+    { key: "ids", step: "IDs", tag: "NGUID + GERS ID", tagc: C.gers, lit: ["SSAP"], fields: "ssap", hl: ["NGUID"],
+      title: "Three IDs on every point",
+      body: [`<b>Address UID</b>: a stable ID derived from the agency's own point ID, so it survives every rebuild. <b>NGUID</b>: the NENA ID, built from the UID (never from a GERS ID, ADR 0002). Its domain stays <code>&lt;package&gt;.unclaimed.invalid</code> until the authority opts in.`,
+        `<b>GERS ID</b>: the Overture address this Record matched, so Overture and the agency can talk about the same place. ${pct(gers, recs)} of Records carry one.`],
+      stats: [[pct(gers, recs), "Records with a GERS ID", C.gers], [fmt(gers), "matched to Overture"], [fmt(recs - gers), "agency-only addresses"]],
+      legend: D.openPoints ? [["has a GERS ID", C.gers], ["agency only", C.ssap]] : null,
+      map: { a2: "outline", points: "gers", choro: D.openPoints ? null : choro("Records with a GERS ID", p => p.record_gers_coverage, C.gers) }, record: "ids" },
+    { key: "gap", step: "Gap-fill", tag: "Review candidates", tagc: C.gap, lit: ["SSAP"],
+      title: "Overture addresses the agency doesn't have",
+      body: [`Agency Records always win (ADR 0001). An Overture address that matches no Record is kept as a <b>gap-fill candidate</b>, a lead for the agency to confirm or reject. It is never treated as an agency address.`,
+        `${fmt(gap)} candidates in ${P.name}${D.openPoints ? ", in pink, each with its Overture source licence" : ""}.`],
+      stats: [[fmt(gap), "gap-fill candidates", C.gap], [pct(gap, recs), "of the Record count"]],
+      legend: D.openPoints ? [["gap-fill candidate", C.gap], ["Record", C.ssap]] : null,
+      map: { a2: "outline", points: "gap", choro: D.openPoints ? null : choro("Gap-fill candidates", p => p.gap_fill_candidates, C.gap) } },
+    { key: "rcl", step: "RCL", tag: "RoadCenterLine", tagc: "#cfd8da", lit: ["RCL"], fields: "rcl",
+      title: !roads ? "Road centerlines: the open gap" : govRoads ? "Government road centerlines, with GERS IDs attached" : "TIGER road centerlines until a state layer is read",
+      body: !roads ? [`Canada has no national road fallback in the pipeline yet, so the ${P.name} Packages ship an empty RoadCenterLine. The next loader is the National Road Network (NRCan / StatCan, Open Government Licence – Canada).`] :
+        govRoads ? [`The RoadCenterLine layer is the agency's own road geometry (${roadSrc.map(s => esc(s.agency)).join(", ")}), not OSM. Each segment gets the GERS ID of the Overture segment it overlaps (20 m, 30°), but no Overture geometry or names (ADR 0010).`,
+          `Road geometry stays off this map until the source's licence is clear. The shading shows real segment counts.`] :
+        [`No state road layer is in the registry for ${P.name} yet, so every Package falls back to Census TIGER ADDRFEAT (public domain): named, address-ranged segments. Each gets the GERS ID of the Overture segment it overlaps, but no Overture geometry or names (ADR 0010).`,
+          `When the state's own NG9-1-1 centerlines are added, they replace TIGER Package by Package. The shading shows real segment counts.`],
+      stats: roads ? [[fmt(roads), "road segments"], [pct(roadsG, roads), "with a GERS ID", C.gers], [govRoads ? "agency" : "TIGER", "road source"]] : [["0", "road segments"], ["NRN", "next loader"]],
+      map: { a2: "outline", choro: roads ? choro("Road segments per " + unit, p => p.roads?.rows, "#cfd8da") : null } },
+    { key: "up", step: "Upstream", tag: "Upstream", tagc: C.up, lit: ["RCL"],
+      title: govRoads ? "Local roads the national maps are missing" : "Where local data could update national maps",
+      body: govRoads ? [`Local road layers are the freshest government roads there are. The pipeline counts where they disagree with TIGER and Overture, so state and federal programs, and Overture, can update from authoritative local data instead of ODbL sources.`,
+        `Counts only: Overture names and classes (ODbL) are compared in memory and never written. Only an open-licensed source goes upstream, and a person proposes it.`] :
+        [roads ? `The road-side comparison needs a local road layer: TIGER can't be checked against itself. Even so, ${fmt(D.up.ov.not_in_overture)} TIGER segments have no Overture match.` :
+          `With no road source in this pilot, the road counts start once the NRN loader lands.`,
+          `Address-side leads are already here: ${fmt(gap)} gap-fill candidates for the agency to review, and ${fmt(recs - gers)} agency Records that Overture doesn't have yet.`],
+      stats: govRoads ? [[fmt(D.up.nat.not_in_national), "segments not in TIGER", C.up], [fmt(Math.round(D.up.nat.not_in_national_km || 0)) + " km", "of local road not in TIGER"], [fmt(D.up.ov.not_in_overture), "segments not in Overture", C.up], [fmt(D.up.ov.name_differs), "name disagreements"]] :
+        [[fmt(recs - gers), "Records not in Overture", C.up], [fmt(gap), "gap-fill leads"], ...(roads ? [[fmt(D.up.ov.not_in_overture), "TIGER segments not in Overture"]] : [])],
+      map: { a2: "outline", points: D.openPoints ? "agencyonly" : null,
+        choro: govRoads ? choro("km of local road not in TIGER", p => p.upstream?.national?.not_in_national_km, C.up) : D.openPoints ? null : choro("Records not in Overture", p => p.records - p.records_with_gers_id, C.up) } },
+    { key: "pkg", step: "Package", tag: "Delivery", tagc: C.ok, lit: ["SSAP", "RCL", "A2", "A3"],
+      title: "Back to the agency, NENA-ready",
+      body: [`Each ${unit} gets one Package: GeoParquet layers, a manifest of counts, field fill and source licences, and the NENA and ${P.country === "CA" ? "CLDXF-CA" : "CLDXF-US"} domains. Packages are opt-in: the authority claims its own, sets its NGUID domain, and adds the values only it holds (ESN, MSAG, service URIs).`,
+        `Recipient: ${esc(D.packages[0]?.recipient || "not named yet")}. ${D.packages.some(p => p.opted_in) ? "" : "No Package is opted in yet."}`],
+      stats: [[D.packages.length, "Packages built"], [D.packages.filter(p => p.opted_in).length, "opted in"], [fmt(j.rows), "address points ready"]],
+      map: { a2: "cycle" } },
+  ];
+}
+const ACTIVE_FROM = { ssap: ["SSAP"], ids: ["SSAP"], gap: ["SSAP"], rcl: ["SSAP", "RCL"], up: ["SSAP", "RCL"], pkg: ["SSAP", "RCL"] };
+
+/* ---------- map ---------- */
+const map = new maplibregl.Map({
+  container: "map", attributionControl: false, dragRotate: false, pitchWithRotate: false,
+  style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": C.ground } }] },
+  center: [-63.3, 46.4], zoom: 7,
+});
+map.touchZoomRotate.disableRotation();
+let state = { pilot: null, D: null, chs: [], i: 0, playing: false, timer: null, anim: [] };
+const $ = id => document.getElementById(id);
+
+function clearAnim() { state.anim.forEach(a => (a.cancel ? a.cancel() : clearTimeout(a))); state.anim = []; }
+function later(fn, ms) { const t = setTimeout(fn, ms); state.anim.push(t); return t; }
+function tween(ms, step, done) {
+  const t0 = performance.now(); let live = true;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const f = now => { if (!live) return; const k = reduce ? 1 : Math.max(0, Math.min(1, (now - t0) / ms)); step(k); if (k < 1) requestAnimationFrame(f); else done && done(); };
+  requestAnimationFrame(f); state.anim.push({ cancel: () => (live = false) });
+}
+
+function setSources(D) {
+  for (const id of ["pts-gap", "pts", "mask", "a3-line", "a3-fill", "a2-choro", "a2-line", "a2-hi"]) if (map.getLayer(id)) map.removeLayer(id);
+  for (const id of ["a2", "a3", "pts", "mask"]) if (map.getSource(id)) map.removeSource(id);
+  map.addSource("a2", { type: "geojson", data: D.a2, promoteId: "geoid" });
+  map.addSource("a3", { type: "geojson", data: D.a3 });
+  map.addLayer({ id: "a2-choro", type: "fill", source: "a2", paint: { "fill-color": ["interpolate", ["linear"], ["coalesce", ["feature-state", "v"], 0], 0, "#14262d", 1, C.ssap], "fill-opacity": 0 } });
+  map.addLayer({ id: "a3-fill", type: "fill", source: "a3", paint: { "fill-color": C.a3, "fill-opacity": 0, "fill-opacity-transition": { duration: 600 } } });
+  map.addLayer({ id: "a3-line", type: "line", source: "a3", paint: { "line-color": C.a3, "line-width": 0.7, "line-opacity": 0, "line-opacity-transition": { duration: 600 } } });
+  map.addSource("mask", { type: "geojson", data: maskGeo(180) });
+  map.addLayer({ id: "mask", type: "fill", source: "mask", paint: { "fill-color": C.ground, "fill-opacity": 1 } });
+  map.addLayer({ id: "a2-line", type: "line", source: "a2", paint: { "line-color": C.a2, "line-width": 1.4, "line-opacity": 0.55 } });
+  map.addLayer({ id: "a2-hi", type: "line", source: "a2", filter: ["==", ["get", "geoid"], ""], paint: { "line-color": C.fg, "line-width": 3 } });
+  if (D.pointsGeo) {
+    map.addSource("pts", { type: "geojson", data: D.pointsGeo });
+    map.addLayer({ id: "pts", type: "circle", source: "pts", filter: ["!=", ["get", "k"], 2], paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 0.9, 10, 1.8, 14, 4],
+      "circle-color": C.ssap, "circle-opacity": 0, "circle-opacity-transition": { duration: 500 }, "circle-color-transition": { duration: 600 } } });
+    map.addLayer({ id: "pts-gap", type: "circle", source: "pts", filter: ["==", ["get", "k"], 2], paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 1.6, 10, 2.6, 14, 5],
+      "circle-color": C.gap, "circle-opacity": 0, "circle-opacity-transition": { duration: 500 } } });
+    map.moveLayer("mask", "a2-line");
+  }
+}
+/* A ground-coloured polygon east of the sweep line hides points not yet "built": one tiny setData per frame,
+   instead of re-filtering every point. */
+function maskGeo(x) { return { type: "Feature", geometry: { type: "Polygon", coordinates: [[[x, -85], [180, -85], [180, 85], [x, 85], [x, -85]]] } }; }
+function fit(D, pad) {
+  const w = map.getContainer().clientWidth, wide = w > 860;
+  map.fitBounds([[D.bbox[0], D.bbox[1]], [D.bbox[2], D.bbox[3]]], { padding: wide ? { top: 40, bottom: 40, left: Math.min(410, w * .36), right: Math.min(360, w * .32) } : 20, duration: pad ? 900 : 0 });
+}
+
+function applyMap(ch, D) {
+  const m = ch.map || {};
+  const has = id => map.getLayer(id);
+  // boundaries
+  map.setPaintProperty("a2-line", "line-opacity", m.a2 === "draw" ? 0 : 0.55);
+  if (m.a2 === "draw") tween(1400, k => map.setPaintProperty("a2-line", "line-opacity", 0.15 + 0.75 * k), () => map.setPaintProperty("a2-line", "line-width", 1.4));
+  map.setPaintProperty("a3-line", "line-opacity", m.a3 ? 0.9 : 0.18);
+  map.setPaintProperty("a3-fill", "fill-opacity", m.a3 ? 0.08 : 0);
+  map.setFilter("a2-hi", ["==", ["get", "geoid"], ""]);
+  // choropleth
+  if (m.choro) {
+    const vals = D.packages.map(p => +m.choro.fn(p) || 0), max = Math.max(...vals, 1e-9);
+    D.packages.forEach((p, i) => map.setFeatureState({ source: "a2", id: p.package.split("-").pop() }, { v: vals[i] / max }));
+    map.setPaintProperty("a2-choro", "fill-color", ["interpolate", ["linear"], ["coalesce", ["feature-state", "v"], 0], 0, "#14262d", 1, m.choro.color]);
+    tween(900, k => map.setPaintProperty("a2-choro", "fill-opacity", 0.85 * k));
+  } else map.setPaintProperty("a2-choro", "fill-opacity", 0);
+  // points
+  if (has("pts")) {
+    const show = m.points;
+    map.setFilter("pts", ["!=", ["get", "k"], 2]);
+    map.setPaintProperty("pts", "circle-color", show === "gers" || show === "agencyonly" ? ["match", ["get", "k"], 0, C.gers, C.ssap] : C.ssap);
+    if (show === "agencyonly") map.setFilter("pts", ["==", ["get", "k"], 1]);
+    map.getSource("mask").setData(maskGeo(180));
+    map.setPaintProperty("pts", "circle-opacity", show ? (show === "gap" ? 0.25 : 0.85) : 0.12);
+    map.setPaintProperty("pts-gap", "circle-opacity", show === "gap" ? 0.95 : 0);
+    if (show === "sweep") {
+      const [x0, , x1] = D.bbox;
+      map.setPaintProperty("pts", "circle-opacity", 0.85);
+      tween(2600, k => map.getSource("mask").setData(maskGeo(k < 1 ? x0 + (x1 - x0) * k : 180)));
+    }
+  }
+  if (m.a2 === "cycle") {
+    D.packages.forEach((p, i) => later(() => map.setFilter("a2-hi", ["==", ["get", "geoid"], p.package.split("-").pop()]), 400 + i * Math.min(900, 5200 / D.packages.length)));
+  }
+}
+
+/* ---------- panels ---------- */
+function renderStory(ch, i, n) {
+  const legend = ch.legend ? `<div class="legend">${ch.legend.map(([l, c]) => `<span><i style="--c:${c}"></i>${esc(l)}</span>`).join("")}</div>` :
+    ch.map?.choro ? `<div class="legend"><span><span class="ramp" style="--c:${ch.map.choro.color}"></span>${esc(ch.map.choro.label)}</span></div>` : "";
+  $("story").innerHTML = `<div class="chap">Chapter ${i + 1} of ${n} <span class="layer-tag" style="--tag:${ch.tagc}">${esc(ch.tag)}</span></div>
+    <h2>${esc(ch.title)}</h2>${ch.body.map(b => `<p>${b}</p>`).join("")}${legend}
+    <div class="stats">${ch.stats.map(([v, l, c]) => `<div class="stat"><div class="v" style="${c ? "--c:" + c : ""}">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join("")}</div>`;
+}
+function fieldGrid(kind, D, P, hl) {
+  const isCA = P.country === "CA";
+  const list = kind === "rcl" ? RCL_FIELDS : SSAP_FIELDS.filter(f => !(isCA ? SSAP_NOT_CA : SSAP_NOT_US).has(f));
+  const fill = kind === "rcl" ? D.rclFill : D.ssapFill, req = kind === "rcl" ? RCL_REQ : SSAP_REQ, ag = kind === "rcl" ? RCL_AGENCY : AGENCY;
+  const cells = list.map(f => {
+    let k = f.toLowerCase();
+    if (kind === "rcl" && k === "nguid") k = "rcl_nguid";
+    let v = fill[k];
+    if (!isCA && kind === "ssap" && (f === "UnitPreTyp" || f === "UnitValue")) v = undefined;
+    const cls = ag.has(f) ? "agency" : v == null ? "" : v >= 0.995 ? "filled" : v > 0 ? "partial" : "";
+    return { f, cls, v, req: req.has(f) };
+  });
+  const filled = cells.filter(c => c.cls === "filled" || c.cls === "partial").length;
+  const html = `<div class="fields"><h4><span>${kind === "rcl" ? "RCL" : "SSAP"} fields · ${isCA ? "CLDXF-CA" : "US"}</span><span>${filled} of ${cells.length} filled</span></h4>
+    <div class="fgrid">${cells.map((c, i) => `<div class="f ${c.req ? "req" : ""}" data-cls="${c.cls}" data-i="${i}" title="${c.f}${c.v != null ? ": " + Math.round(c.v * 100) + "% of rows" : ""}${c.cls === "agency" ? ": the authority's own value" : ""}"><span>${c.f}</span><span class="bar"></span></div>`).join("")}</div>
+    <div class="fkey"><span style="color:var(--ok)">■ filled</span><span style="color:var(--part)">■ partly filled</span><span style="color:#7f8fc0">┅ authority supplies</span><span>■ gap</span><span style="color:var(--up)">• required</span></div></div>`;
+  return { html, cells };
+}
+function renderModel(ch, D, P) {
+  const st = layerStatus(D), active = new Set(ACTIVE_FROM[ch.key] || []);
+  if (ch.key === "a2") active.add("A2");
+  if (ch.key === "a3" || ACTIVE_FROM[ch.key]) { active.add("A2"); active.add("A3"); }
+  const lit = new Set(ch.lit || []);
+  const g = ch.fields ? fieldGrid(ch.fields, D, P, ch.hl) : null;
+  $("model").innerHTML = `<h3>NENA NG9-1-1 GIS Data Model</h3><div class="sub">NENA-STA-006.3 layers, and what a ${esc(P.name)} Package carries today</div>
+    <ul class="layers">${LAYERS.map(L => {
+      const [s, note] = st[L.id], on = lit.has(L.id), shown = active.has(L.id) || on || ch.key === "pkg" || s !== "filled";
+      const label = !shown ? "…" : s === "filled" ? "filled" : s === "agency" ? "authority" : "gap";
+      return `<li class="${on ? "on" : ""}"><span class="ind">${L.id}</span><span class="nm">${esc(L.name)}<span class="lvl">${L.lvl} · ${esc(shown ? note : "building…")}</span></span>
+        <span class="chip ${shown ? s : "gap"} ${on && s === "filled" ? "lit" : ""}">${label}</span></li>`;
+    }).join("")}</ul>${g ? g.html : ""}`;
+  if (g) {
+    const els = $("model").querySelectorAll(".f");
+    const order = g.cells.map((c, i) => i).filter(i => g.cells[i].cls);
+    order.forEach((idx, n) => later(() => {
+      const c = g.cells[idx], el = els[idx];
+      el.classList.add(c.cls);
+      if (c.v != null) el.querySelector(".bar").style.width = Math.max(4, c.v * 100) + "%";
+    }, 300 + n * 70));
+  }
+}
+const REC_ROWS = [["discrpagid", "DiscrpAgID"], ["dateupdate", "DateUpdate"], ["nguid", "NGUID"], ["country", "Country"], ["a1", "A1"], ["a2", "A2"], ["a3", "A3"],
+  ["add_number", "Add_Number"], ["addnum_suf", "AddNum_Suf"], ["st_predir", "St_PreDir"], ["st_pretyp", "St_PreTyp"], ["st_name", "St_Name"], ["st_postyp", "St_PosTyp"], ["st_posdir", "St_PosDir"],
+  ["unit", "Unit"], ["post_comm", "Post_Comm"], ["post_code", "Post_Code"], ["placement", "Placement"], ["uid", "Address UID"], ["gers_id", "GERS ID"], ["source_id", "Agency ID"]];
+let pulseEl = null;
+function placePulse(s) {
+  if (!pulseEl) { pulseEl = document.createElement("div"); pulseEl.className = "pulse"; $("map").appendChild(pulseEl); }
+  pulseEl.hidden = !s;
+  if (!s) return;
+  pulseEl._ll = [s.lon, s.lat];
+  const p = map.project(pulseEl._ll);
+  pulseEl.style.left = p.x + "px"; pulseEl.style.top = p.y + "px";
+}
+map.on("move", () => { if (pulseEl && !pulseEl.hidden && pulseEl._ll) placePulse({ lon: pulseEl._ll[0], lat: pulseEl._ll[1] }); if (popup) placePopup(); });
+function addrLine(s) { return [s.add_number, s.addnum_suf, s.st_predir, s.st_pretyp, s.st_name, s.st_postyp, s.st_posdir].filter(v => v != null && v !== "").join(" "); }
+const LONG = new Set(["uid", "nguid", "gers_id", "discrpagid", "dateupdate"]);
+const dl = (rows, cls) => rows.length ? `<dl class="${cls}">${rows.map(([k, l, v]) => `<dt>${l}</dt><dd class="${["uid", "nguid", "gers_id"].includes(k) ? "hl" : ""}">${esc(v)}</dd>`).join("")}</dl>` : "";
+function renderRecord(ch, D) {
+  const card = $("record");
+  const samples = D.points?.samples?.filter(s => s.status === "record" && (ch.record !== "ids" || s.gers_id)) || [];
+  if (!ch.record || !samples.length || window.innerWidth < 640 && false) { card.hidden = true; placePulse(null); return; }
+  const s = samples[(state.sampleN = ((state.sampleN || 0) + 1)) % samples.length];
+  card.hidden = false;
+  const rows = (ch.record === "ids" ? [["uid", "Address UID"], ["nguid", "NGUID"], ["gers_id", "GERS ID"], ["source_id", "Agency ID"]] : REC_ROWS.filter(([k]) => s[k] != null && s[k] !== "")).map(([k, l]) => [k, l, s[k]]);
+  card.innerHTML = `<div class="hd">${ch.record === "ids" ? "One Record's IDs" : "One Record, field by field"}</div><div class="addr">${esc(addrLine(s))}, ${esc(s.a3 || "")}</div>
+    ${dl(rows.filter(([k]) => ch.record === "ids" || LONG.has(k)), "ids")}${ch.record === "ids" ? "" : dl(rows.filter(([k]) => !LONG.has(k)), "")}`;
+  placePulse(s);
+  card.querySelectorAll("dd").forEach((dd, n) => later(() => dd.classList.add("in"), 250 + n * 90));
+}
+function renderSteps() {
+  $("steps").innerHTML = state.chs.map((c, i) => `<button data-i="${i}" class="${i < state.i ? "done" : ""} ${i === state.i ? "cur" : ""}" aria-current="${i === state.i}"><span class="p"></span><span class="n">${i + 1}</span>${esc(c.step)}</button>`).join("");
+  $("steps").querySelectorAll("button").forEach(b => b.onclick = () => { stop(); go(+b.dataset.i); });
+  const cur = $("steps").querySelector(".cur");
+  if (cur) cur.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+/* ---------- playback ---------- */
+const DWELL = 8500;
+function go(i) {
+  clearAnim(); closePopup();
+  state.i = Math.max(0, Math.min(state.chs.length - 1, i));
+  const ch = state.chs[state.i], D = state.D, P = state.pilot;
+  renderStory(ch, state.i, state.chs.length);
+  renderModel(ch, D, P);
+  renderRecord(ch, D);
+  applyMap(ch, D);
+  renderSteps();
+  if (state.playing) {
+    const bar = $("steps").querySelector(".cur .p");
+    tween(DWELL, k => (bar.style.width = k * 100 + "%"));
+    state.timer = later(() => { if (state.i < state.chs.length - 1) go(state.i + 1); else stop(); }, DWELL);
+  }
+}
+function play() { state.playing = true; $("playicon").innerHTML = '<path d="M3 2h4v12H3zM9 2h4v12H9z"/>'; $("play").setAttribute("aria-label", "Pause"); go(state.i >= state.chs.length - 1 ? 0 : state.i); }
+function stop() { state.playing = false; $("playicon").innerHTML = '<path d="M4 2v12l10-6z"/>'; $("play").setAttribute("aria-label", "Play the story"); const bar = $("steps").querySelector(".cur .p"); if (bar) bar.style.width = "0"; }
+$("play").onclick = () => (state.playing ? (stop(), clearAnim()) : play());
+$("prev").onclick = () => { stop(); go(state.i - 1); };
+$("next").onclick = () => { stop(); go(state.i + 1); };
+document.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("input,textarea")) return;
+  if (e.key === "ArrowRight") { stop(); go(state.i + 1); }
+  if (e.key === "ArrowLeft") { stop(); go(state.i - 1); }
+  if (e.key === " ") { e.preventDefault(); $("play").click(); }
+});
+
+/* ---------- popups ---------- */
+let popup = null;
+function closePopup() { if (popup) { popup.el.remove(); popup = null; } }
+function placePopup() { const p = map.project(popup.ll); popup.el.style.left = p.x + "px"; popup.el.style.top = p.y + "px"; }
+function openPopup(ll, html) {
+  closePopup();
+  const el = document.createElement("div"); el.className = "pop"; el.innerHTML = `<button class="x" aria-label="Close">×</button>${html}`;
+  el.querySelector(".x").onclick = closePopup;
+  $("map").appendChild(el); popup = { el, ll }; placePopup();
+}
+map.on("click", e => {
+  const D = state.D; if (!D) return;
+  const layers = ["pts-gap", "pts"].filter(l => map.getLayer(l) && map.getPaintProperty(l, "circle-opacity") > 0.2);
+  const f = layers.length ? map.queryRenderedFeatures([[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]], { layers })[0] : null;
+  if (f) {
+    const P = D.points, i = f.id, k = P.kind[i];
+    const tag = k === 2 ? ["Overture gap-fill candidate", C.gap] : k === 0 ? ["Record · has a GERS ID", C.gers] : ["Record · agency only", C.ssap];
+    const near = P.samples.find(s => Math.abs(s.lon - f.geometry.coordinates[0]) < 2e-5 && Math.abs(s.lat - f.geometry.coordinates[1]) < 2e-5);
+    const extra = near ? `<dt>Address UID</dt><dd>${esc(near.uid)}</dd><dt>NGUID</dt><dd>${esc(near.nguid)}</dd><dt>GERS ID</dt><dd>${esc(near.gers_id || "–")}</dd>` : "";
+    openPopup(f.geometry.coordinates, `<span class="tag" style="--c:${tag[1]}">${tag[0]}</span><h5>${esc((P.num[i] || "") + " " + P.streets[P.street[i]])}</h5>
+      <dl><dt>A3</dt><dd>${esc(P.a3s[P.a3[i]] || "–")}</dd><dt>A2</dt><dd>${esc(P.a2s[P.a2[i]])}</dd>${extra}</dl>`);
+    return;
+  }
+  const a = map.queryRenderedFeatures(e.point, { layers: ["a2-choro"] })[0];
+  if (a) {
+    const p = D.packages.find(p => p.package.endsWith("-" + a.properties.geoid));
+    if (!p) return;
+    openPopup([e.lngLat.lng, e.lngLat.lat], `<span class="tag" style="--c:${C.a2}">Package ${esc(p.package)}</span><h5>${esc(p.name)}</h5><dl>
+      <dt>Records</dt><dd>${fmt(p.records)}</dd><dt>GERS IDs</dt><dd>${p.record_gers_coverage != null ? Math.round(p.record_gers_coverage * 100) + "%" : "–"}</dd>
+      <dt>Gap-fill</dt><dd>${fmt(p.gap_fill_candidates)}</dd><dt>A3 polygons</dt><dd>${fmt(p.a3_features)}</dd>
+      <dt>Road segs</dt><dd>${fmt(p.roads.rows)}</dd>${p.upstream?.national?.not_in_national_km != null ? `<dt>Not in TIGER</dt><dd>${fmt(Math.round(p.upstream.national.not_in_national_km))} km</dd>` : ""}
+      <dt>NGUID domain</dt><dd>${esc(p.nguid_domain)}</dd></dl>`);
+  }
+});
+map.on("mousemove", e => {
+  const l = ["pts", "pts-gap", "a2-choro"].filter(x => map.getLayer(x));
+  map.getCanvas().style.cursor = l.length && map.queryRenderedFeatures(e.point, { layers: l }).length ? "pointer" : "";
+});
+
+/* ---------- pilots ---------- */
+function renderPilots() {
+  $("pilots").innerHTML = PILOTS.map(P => {
+    const D = DATA[P.job];
+    return `<button data-job="${P.job}" aria-pressed="${state.pilot?.job === P.job}" data-open="${D?.points ? 1 : 0}" ${D ? "" : "disabled"} title="${P.name}${D ? ": " + fmt(D.job.records) + " Records" : ""}">
+      <span class="dot"></span>${P.label}<span style="color:var(--faint)">${D ? fmt(D.job.records) : "…"}</span></button>`;
+  }).join("");
+  $("pilots").querySelectorAll("button").forEach(b => b.onclick = () => selectPilot(b.dataset.job, true));
+}
+function selectPilot(job, animate) {
+  const P = PILOTS.find(p => p.job === job), D = DATA[job];
+  if (!D) return;
+  const wasPlaying = state.playing;
+  stop(); clearAnim(); closePopup();
+  state.pilot = P; state.D = D; state.chs = chapters(D, P);
+  setSources(D); fit(D, animate);
+  try { localStorage.setItem("story-pilot", job); } catch (e) { /* storage unavailable */ }
+  renderPilots();
+  state.i = Math.min(state.i, state.chs.length - 1);
+  if (wasPlaying) play(); else go(state.i);
+}
+
+async function load(job) {
+  const r = await fetch(`pilots/${job}.json`);
+  if (!r.ok) throw new Error(job + ": " + r.status);
+  DATA[job] = prepare(await r.json());
+}
+map.on("load", async () => {
+  let first = "ca-pe";
+  try { const s = localStorage.getItem("story-pilot"); if (s && PILOTS.some(p => p.job === s)) first = s; } catch (e) { /* storage unavailable */ }
+  try {
+    await load(first);
+    selectPilot(first, false);
+    $("loading").classList.add("gone");
+    await Promise.all(PILOTS.filter(p => p.job !== first).map(p => load(p.job).catch(err => console.warn(err))));
+    renderPilots();
+  } catch (err) {
+    $("loading").textContent = "The pilot data didn't load (" + err.message + "). Reload the page to try again.";
+  }
+});
+window.addEventListener("resize", () => state.D && fit(state.D, false));
+</script>

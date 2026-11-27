@@ -1,0 +1,116 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Open NG9-1-1 Addresses: what the pipeline builds</title>
+<style>
+@page { size: 11in 8.5in; margin: 0; }
+:root { --ink: #0f1d21; --muted: #5d6f74; --line: #d5dee0; --paper: #ffffff; --wash: #f2f6f6;
+  --ssap: #c98a12; --gers: #138f89; --gap: #c2457b; --a2: #4659b8; --up: #d4561f; --ok: #2f9a68; --part: #c98a12; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 9.2pt/1.38 "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif; }
+.sheet { width: 11in; height: 8.5in; padding: .36in .5in .3in; display: grid; grid-template-rows: auto auto 1fr auto; gap: .14in; overflow: hidden; }
+header { display: flex; justify-content: space-between; align-items: flex-end; gap: .3in; border-bottom: 2px solid var(--ink); padding-bottom: .1in; }
+.eyebrow { font: 500 7.4pt/1 "IBM Plex Mono", Menlo, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: .05in 0 0; font: 800 19pt/1.05 "Archivo", "Helvetica Neue", Arial, sans-serif; letter-spacing: -.01em; }
+.lede { max-width: 5.6in; color: #33474c; font-size: 8.6pt; margin: .05in 0 0; }
+.big { display: flex; gap: .26in; flex: none; }
+.big span { white-space: nowrap; }
+.big div { text-align: right; }
+.big b { display: block; font: 800 17pt/1 "Archivo", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+.big span { font-size: 7.4pt; color: var(--muted); }
+svg text { font-family: "IBM Plex Sans", Arial, sans-serif; }
+.flow { width: 100%; height: 1.72in; }
+.cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: .28in; min-height: 0; }
+h2 { margin: 0 0 .06in; font: 700 10.5pt/1.2 "Archivo", Arial, sans-serif; display: flex; justify-content: space-between; align-items: baseline; }
+h2 small { font: 400 7.4pt "IBM Plex Mono", monospace; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.pilots th, .pilots td { padding: 3.5px 4px; border-bottom: 1px solid var(--line); text-align: right; font-size: 8.4pt; white-space: nowrap; }
+.pilots thead th { font: 500 6.8pt/1.2 "IBM Plex Mono", monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; vertical-align: bottom; white-space: normal; }
+.pilots tbody th, .pilots thead th:first-child { text-align: left; font-weight: 600; }
+.pilots tfoot th, .pilots tfoot td { font-weight: 700; border-bottom: 0; border-top: 1.5px solid var(--ink); }
+.gapt { color: var(--muted); font-style: italic; }
+.lic { font: 500 7pt "IBM Plex Mono", monospace; padding: 1px 4px; border-radius: 2px; }
+.lic.open { background: #dff1e8; color: #1d6e47; }
+.lic.unk { background: #f6ecd7; color: #7d5a0c; }
+.up { margin-top: .04in; display: grid; grid-template-columns: repeat(4, 1fr); gap: .1in; }
+.up div { border-left: 3px solid var(--up); padding: 2px 0 2px 7px; }
+.up b { display: block; font: 800 13pt/1.05 "Archivo", Arial, sans-serif; font-variant-numeric: tabular-nums; }
+.up span { font-size: 7.4pt; color: var(--muted); line-height: 1.25; display: block; }
+.upnote { font-size: 7.6pt; color: var(--muted); margin-top: .06in; }
+.grid th, .grid td { padding: 1.6px 5px; border-bottom: 1px solid var(--line); text-align: left; font-size: 8.2pt; vertical-align: middle; }
+.grid th small { display: block; font: 400 6.8pt "IBM Plex Mono", monospace; color: var(--muted); }
+.grid { table-layout: fixed; }
+.grid .note { color: #3d5156; font-size: 7.4pt; }
+.grid th { width: 50%; }
+.grid td:nth-child(2) .st { min-width: 0; width: 100%; }
+.grid td:nth-child(2) { width: 17%; }
+.cols > section { min-width: 0; }
+.st { display: inline-block; min-width: .62in; text-align: center; font: 500 7pt/1 "IBM Plex Mono", monospace; padding: 3px 4px; border-radius: 2px; border: 1px solid; }
+.st.filled { background: var(--ok); border-color: var(--ok); color: #fff; }
+.st.partial { background: #f6ecd7; border-color: var(--part); color: #7d5a0c; }
+.st.gap { border-color: #b8c4c7; color: var(--muted); }
+.st.agency { border-style: dashed; border-color: var(--a2); color: var(--a2); }
+footer { display: flex; align-items: flex-start; justify-content: space-between; gap: .3in; font-size: 7pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: .06in; }
+</style></head><body><div class="sheet">
+<header>
+  <div><div class="eyebrow">open-ng911-addresses · Phase 1 · Overture 2026-11-18.0</div>
+    <h1>One open pipeline, a NENA-ready dataset for every county</h1>
+    <p class="lede">It reads what agencies already publish, builds the NG9-1-1 GIS layers for each county or census division, and hands each 9-1-1 authority its own data back NENA-ready. Where local data is newer than the national maps, it shows where.</p></div>
+  <div class="big">
+    <div><b>3,180,638</b><span>agency address Records</span></div>
+    <div><b>93%</b><span>carry an Overture GERS ID</span></div>
+    <div><b>115</b><span>county Packages built</span></div>
+  </div>
+</header>
+<svg class="flow" viewBox="0 0 1000 190" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f1d21"/></marker></defs><rect x="0" y="4" width="196" height="40" rx="4" fill="#fff" stroke="#c98a12" stroke-width="1.4"/><rect x="0" y="4" width="4" height="40" fill="#c98a12"/><text x="12" y="20" font-size="10.5" font-weight="700" fill="#0f1d21">Agency address points</text><text x="12" y="35.0" font-size="8.4" fill="#33474c">via the OpenAddresses registry</text><line x1="197" y1="24" x2="246" y2="95" stroke="#0f1d21" stroke-width="1.5" marker-end="url(#ah)"/><rect x="0" y="50" width="196" height="40" rx="4" fill="#fff" stroke="#5d6f74" stroke-width="1.4"/><rect x="0" y="50" width="4" height="40" fill="#5d6f74"/><text x="12" y="66" font-size="10.5" font-weight="700" fill="#0f1d21">Agency road centerlines</text><text x="12" y="81.0" font-size="8.4" fill="#33474c">state E911; TIGER where none</text><line x1="197" y1="70" x2="246" y2="95" stroke="#0f1d21" stroke-width="1.5" marker-end="url(#ah)"/><rect x="0" y="96" width="196" height="40" rx="4" fill="#fff" stroke="#4659b8" stroke-width="1.4"/><rect x="0" y="96" width="4" height="40" fill="#4659b8"/><text x="12" y="112" font-size="10.5" font-weight="700" fill="#0f1d21">Boundaries</text><text x="12" y="127.0" font-size="8.4" fill="#33474c">TIGER (US), StatCan (Canada)</text><line x1="197" y1="116" x2="246" y2="95" stroke="#0f1d21" stroke-width="1.5" marker-end="url(#ah)"/><rect x="0" y="142" width="196" height="40" rx="4" fill="#fff" stroke="#138f89" stroke-width="1.4"/><rect x="0" y="142" width="4" height="40" fill="#138f89"/><text x="12" y="158" font-size="10.5" font-weight="700" fill="#0f1d21">Overture addresses + GERS IDs</text><text x="12" y="173.0" font-size="8.4" fill="#33474c">matching and gap-fill leads</text><line x1="197" y1="162" x2="246" y2="95" stroke="#0f1d21" stroke-width="1.5" marker-end="url(#ah)"/><rect x="250" y="18" width="230" height="154" rx="4" fill="#f2f6f6" stroke="#0f1d21" stroke-width="1.4"/><rect x="250" y="18" width="4" height="154" fill="#0f1d21"/><text x="262" y="34" font-size="10.5" font-weight="700" fill="#0f1d21">Pipeline · one job per state / province</text><text x="262" y="49.0" font-size="8.4" fill="#33474c">Parse streets to registry words (CLDXF)</text><text x="262" y="61.5" font-size="8.4" fill="#33474c">Match each Record to an Overture address</text><text x="262" y="74.0" font-size="8.4" fill="#33474c">Address UID from the agency&#x27;s own ID</text><text x="262" y="86.5" font-size="8.4" fill="#33474c">NGUID from the UID, never a GERS ID</text><text x="262" y="99.0" font-size="8.4" fill="#33474c">Stamp A2 / A3 on every point</text><text x="262" y="111.5" font-size="8.4" fill="#33474c">Attach GERS IDs to government roads</text><text x="262" y="124.0" font-size="8.4" fill="#33474c">Count where local data beats national</text><text x="262" y="136.5" font-size="8.4" fill="#33474c">Gate: NENA mandatory fields, unique IDs</text><text x="262" y="149.0" font-size="8.4" fill="#33474c">Every dropped point counted by reason</text><line x1="481" y1="95" x2="528" y2="95" stroke="#0f1d21" stroke-width="1.5" marker-end="url(#ah)"/><rect x="532" y="18" width="206" height="154" rx="4" fill="#fff" stroke="#2f9a68" stroke-width="1.4"/><rect x="532" y="18" width="4" height="154" fill="#2f9a68"/><text x="544" y="34" font-size="10.5" font-weight="700" fill="#0f1d21">Package · one per county / CD</text><text x="544" y="49.0" font-size="8.4" fill="#33474c">SiteStructureAddressPoint</text><text x="544" y="61.5" font-size="8.4" fill="#33474c">RoadCenterLine + GERS crosswalk</text><text x="544" y="74.0" font-size="8.4" fill="#33474c">A2Polygon, A3Polygon</text><text x="544" y="86.5" font-size="8.4" fill="#33474c">manifest: counts, field fill, licences</text><text x="544" y="99.0" font-size="8.4" fill="#33474c">NENA + CLDXF domains</text><text x="544" y="111.5" font-size="8.4" fill="#33474c">GeoParquet</text><text x="544" y="124.0" font-size="8.4" fill="#33474c">115 built · 3,323,748 points</text><text x="544" y="136.5" font-size="8.4" fill="#33474c">1,412 A3 polygons</text><line x1="739" y1="60" x2="790" y2="40" stroke="#0f1d21" stroke-width="1.5" marker-end="url(#ah)"/><line x1="739" y1="130" x2="790" y2="150" stroke="#d4561f" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#ah)"/><rect x="794" y="4" width="206" height="76" rx="4" fill="#fff" stroke="#2f9a68" stroke-width="1.4"/><rect x="794" y="4" width="4" height="76" fill="#2f9a68"/><text x="806" y="20" font-size="10.5" font-weight="700" fill="#0f1d21">Back to the 9-1-1 authority</text><text x="806" y="35.0" font-size="8.4" fill="#33474c">Opt-in: it claims its Package</text><text x="806" y="47.5" font-size="8.4" fill="#33474c">sets its NGUID domain, adds ESN,</text><text x="806" y="60.0" font-size="8.4" fill="#33474c">MSAG and service URIs</text><rect x="794" y="104" width="206" height="82" rx="4" fill="#fff" stroke="#d4561f" stroke-width="1.4"/><rect x="794" y="104" width="4" height="82" fill="#d4561f"/><text x="806" y="120" font-size="10.5" font-weight="700" fill="#0f1d21">Upstream (a person proposes)</text><text x="806" y="135.0" font-size="8.4" fill="#33474c">OpenAddresses: source entries</text><text x="806" y="147.5" font-size="8.4" fill="#33474c">Overture: gap-fill, missing roads</text><text x="806" y="160.0" font-size="8.4" fill="#33474c">TIGER / NRN / NAD: newer local data</text><text x="806" y="172.5" font-size="8.4" fill="#33474c">no ODbL in any core layer</text></svg>
+<div class="cols">
+  <section>
+    <h2>Five pilots, built end to end <small>real build counts</small></h2>
+    <table class="pilots"><thead><tr><th>Pilot</th><th>Packages</th><th>Records</th><th>with GERS ID</th><th>Gap-fill leads</th><th>Road segments</th><th>Road source</th><th>Roads with GERS ID</th><th>Address licence</th></tr></thead>
+    <tbody><tr><th>Vermont</th><td>14</td><td>353,161</td>
+            <td>94%</td><td>1,640</td>
+            <td>69,328</td><td>agency</td>
+            <td>97%</td>
+            <td><span class="lic unk">not stated</span></td></tr><tr><th>Maine</th><td>16</td><td>801,785</td>
+            <td>84%</td><td>101,168</td>
+            <td>142,489</td><td>TIGER</td>
+            <td>97%</td>
+            <td><span class="lic open">open</span></td></tr><tr><th>Utah</th><td>29</td><td>1,504,303</td>
+            <td>97%</td><td>16,233</td>
+            <td>186,316</td><td>TIGER</td>
+            <td>99%</td>
+            <td><span class="lic open">open</span></td></tr><tr><th>North Dakota</th><td>53</td><td>438,364</td>
+            <td>97%</td><td>6,607</td>
+            <td>168,971</td><td>TIGER</td>
+            <td>99%</td>
+            <td><span class="lic unk">not stated</span></td></tr><tr><th>Prince Edward Island</th><td>3</td><td>83,025</td>
+            <td>82%</td><td>17,462</td>
+            <td><span class="gapt">none yet</span></td><td>–</td>
+            <td>–</td>
+            <td><span class="lic open">open</span></td></tr></tbody>
+    <tfoot><tr><th>All five</th><td>115</td><td>3,180,638</td><td>93%</td><td>143,110</td><td>567,104</td><td></td><td></td><td></td></tr></tfoot></table>
+    <h2 style="margin-top:.12in">Upstream: what Vermont's local roads add <small>VT E911 roads vs TIGER, Overture</small></h2>
+    <div class="up">
+      <div><b>14,563</b><span>local road segments not in TIGER</span></div>
+      <div><b>5,999 km</b><span>of local road TIGER doesn't have</span></div>
+      <div><b>1,878</b><span>segments not in Overture</span></div>
+      <div><b>9,007</b><span>street names that disagree with Overture</span></div>
+    </div>
+    <p class="upnote">Counts only, compared at 20 m. Not yet sampled, so some differences will be alias or format noise. Only an open-licensed source goes upstream, and a person proposes it.</p>
+  </section>
+  <section>
+    <h2>NENA GIS Data Model coverage <small>NENA-STA-006.3</small></h2>
+    <table class="grid"><tbody><tr><th>SiteStructureAddressPoint<small>Required</small></th><td><span class="st filled">Filled</span></td>
+            <td class="note">12/56 US fields, 5 partly</td></tr><tr><th>RoadCenterLine<small>Required</small></th><td><span class="st partial">Partial</span></td>
+            <td class="note">VT agency; others TIGER</td></tr><tr><th>A2Polygon · county / CD<small>Strongly rec.</small></th><td><span class="st filled">Filled</span></td>
+            <td class="note">every Package</td></tr><tr><th>A3Polygon · municipality<small>Strongly rec.</small></th><td><span class="st filled">Filled</span></td>
+            <td class="note">every Package</td></tr><tr><th>A1Polygon · state / province<small>Strongly rec.</small></th><td><span class="st gap">Gap</span></td>
+            <td class="note">next: cheapest gap</td></tr><tr><th>ProvisioningPolygon<small>Required</small></th><td><span class="st gap">Gap</span></td>
+            <td class="note">next: the Package area</td></tr><tr><th>PSAP, Police, Fire, EMS<small>Required</small></th><td><span class="st agency">Authority</span></td>
+            <td class="note">authority supplies</td></tr><tr><th>A4 / A5 Polygons<small>Strongly rec.</small></th><td><span class="st gap">Gap</span></td>
+            <td class="note">planned</td></tr><tr><th>SiteStructureAddressPolygon<small>Recommended</small></th><td><span class="st gap">Gap</span></td>
+            <td class="note">planned</td></tr><tr><th>Location / Distance markers<small>Recommended</small></th><td><span class="st gap">Gap</span></td>
+            <td class="note">planned</td></tr><tr><th>Rail, Hydrology<small>Recommended</small></th><td><span class="st gap">Gap</span></td>
+            <td class="note">planned</td></tr></tbody></table>
+  </section>
+</div>
+<footer><span>Records are the agency's own points and always win; Overture fills in only as review leads. NGUIDs come from a stable Address UID and stay <i>&lt;package&gt;.unclaimed.invalid</i> until the authority opts in. No OSM geometry or names in any core layer.</span>
+<span style="white-space:nowrap">github.com/COF-RyLopez/open-ng911-addresses</span></footer>
+</div></body></html>
