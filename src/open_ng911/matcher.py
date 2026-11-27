@@ -8,7 +8,7 @@ road check uses) ranks ahead of a nearer pair whose streets differ, and the pair
 so a corner lot with the same number on two streets pairs with the right one.
 
 Inputs: agency_addr and overture_addr, each with columns address number `number`, parsed street key `skey`,
-geom, geoid. Output table address_match(address_uid, gers_id, distance_m, street_key_match).
+geom, geoid (copies() also reads `street` and `unit`). Output table address_match(address_uid, gers_id, distance_m, street_key_match).
 After the pairs, copies(): an Overture address no Record paired that has a Record's number, street key and unit
 within COPY_M is a second copy of that Record (Overture holds some agency points twice), linked to the Record's
 Address UID (lineage link_method 'record_copy'), never a gap-fill candidate.
@@ -63,7 +63,7 @@ def copies(c, max_m=COPY_M):
     """address_copy(gers_id, address_uid, distance_m): each Overture address left unpaired by match() that has a
     Record of the same number, street key and unit (blank = blank) within max_m, with its nearest such Record.
     The unpaired set is small, so it is cut first and joined on geoid + number (a hash join), not spatially.
-    copy_misses() says why stacked ones are not copies. sim/problems/ng911-matcher-stacked-pairs A2."""
+    copy_misses() says why stacked ones are not copies. sim/problems/ng911-matcher-stacked-pairs A2, A3."""
     c.execute(f"""CREATE OR REPLACE TABLE address_copy_pairs AS
         WITH o AS (SELECT gers_id, geoid, upper(number) AS num, skey, upper(trim(coalesce(unit, ''))) AS unit,
                           street, geom
