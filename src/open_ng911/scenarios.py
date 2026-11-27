@@ -83,10 +83,9 @@ def duplicates(c, mapped, stats):
     extra = validate.SUBADDRESS + validate.COMMUNITY
     narrow = [n for n in key if n not in extra]
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _dup AS
-        SELECT uid, status, source AS source_key, source_id, source_site_type, geoid, latitude, longitude,
-               dense_rank() OVER (ORDER BY geoid, a3, {", ".join(f"{n} NULLS FIRST" for n in key)}) AS grp,
-               count(*) OVER (PARTITION BY geoid, a3, {", ".join(key)}) AS n
-        FROM ssap WHERE add_number IS NOT NULL QUALIFY n > 1""")
+        SELECT s.uid, s.status, s.source AS source_key, s.source_id, s.source_site_type, s.geoid, s.latitude,
+               s.longitude, d.grp
+        FROM ssap s JOIN ({validate.duplicate_rows("ssap", have)}) d USING (uid)""")
     groups = db.rows(c, """
         WITH g AS (
             SELECT grp, count(*) FILTER (WHERE status = 'record') AS rec, count(*) FILTER (WHERE status <> 'record') AS gap,

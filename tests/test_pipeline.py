@@ -364,3 +364,14 @@ def test_scenarios_read_failures_against_source_fields(tmp_path, conn):
     after = {g: p["checks"]["SiteStructureAddressPoint.duplicate_address"]["failed"] for g, p in v.items()
              if "SiteStructureAddressPoint.duplicate_address" in p["checks"]}
     assert sum(after.values()) >= sum(before.values()) + 2
+
+    def failed():
+        v = validate.run(conn, job, build.coverage_spec(conn, job, registry.jurisdiction(job)))
+        return sum(p["checks"]["SiteStructureAddressPoint.duplicate_address"]["failed"] for p in v.values()
+                   if "SiteStructureAddressPoint.duplicate_address" in p["checks"])
+
+    # two Records in two postal communities are two addresses; a Gap-fill candidate's community never tells it apart
+    conn.execute("UPDATE ssap SET post_comm = 'ELSEWHERE' WHERE uid = 'dup'")
+    assert failed() == sum(before.values())
+    conn.execute("UPDATE ssap SET status = 'gap_fill_candidate' WHERE uid = 'dup'")
+    assert failed() == sum(after.values())

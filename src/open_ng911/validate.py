@@ -77,10 +77,24 @@ ADDRESS = ("addnum_pre", "add_number", "addnum_suf", "st_premod", "st_predir", "
            "st_postyp", "st_posdir", "st_posmod") + SUBADDRESS + COMMUNITY
 
 
+def duplicate_rows(t, have):
+    """SQL: the duplicate_address rows of table t, (uid, grp) with grp numbering the groups of one address without its
+    community. Two points of one address are duplicates when their communities agree, or when either is a Gap-fill
+    candidate: a candidate's Post_Comm is Overture's postal city, not the agency's community, so it never tells the
+    candidate apart from a Record (sim/problems/ng911-duplicate-key-misses-subaddress A3)."""
+    narrow = ", ".join(n for n in ADDRESS if n in have and n not in COMMUNITY)
+    full = ", ".join(n for n in ADDRESS if n in have)
+    return f"""SELECT uid, dense_rank() OVER (ORDER BY geoid, a3, {", ".join(n + " NULLS FIRST" for n in narrow.split(", "))})
+                      AS grp
+        FROM {t} WHERE add_number IS NOT NULL
+        QUALIFY count(*) OVER (PARTITION BY geoid, a3, {full}) > 1
+             OR (status <> 'record' AND count(*) OVER (PARTITION BY geoid, a3, {narrow}) > 1)
+             OR (status = 'record' AND sum((status <> 'record')::INTEGER) OVER (PARTITION BY geoid, a3, {narrow}) > 0)"""
+
+
 def _ssap_checks(country):
     t = "ssap"
     have = {f["name"] for f in nena.layer_fields("SiteStructureAddressPoint", country)}
-    street = ", ".join(n for n in ADDRESS if n in have)
     return {
         "single_part": _flag(t, "ST_GeometryType(t.geom) <> 'POINT'"),
         "inside_package": _flag(t, "p.geoid IS NULL", f"""LEFT JOIN (
@@ -90,8 +104,7 @@ def _ssap_checks(country):
                                            ELSE NOT list_contains(h.a3s, t.a3) END""", f"""LEFT JOIN (
             SELECT s.uid, list(q.a3) AS a3s FROM {t} s JOIN a3_polygon q ON ST_Intersects(q.geom, s.geom)
             WHERE q.geoid = s.geoid GROUP BY 1) h ON h.uid = t.uid"""),
-        "duplicate_address": _in(t, "uid", f"""SELECT uid FROM {t} WHERE add_number IS NOT NULL
-            QUALIFY count(*) OVER (PARTITION BY geoid, a3, {street}) > 1"""),
+        "duplicate_address": _in(t, "uid", f"SELECT uid FROM ({duplicate_rows(t, have)})"),
         "rcl_agreement": "SELECT geoid, count(*), count(*) FILTER (WHERE result <> 'in_range') FROM address_range_check "
                          "WHERE result IN ('in_range', 'wrong_side', 'outside_range', 'wrong_parity') GROUP BY 1",
         "on_named_road": "SELECT geoid, count(*), count(*) FILTER (WHERE result = 'no_matching_road') "
