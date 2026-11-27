@@ -305,7 +305,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "nena_required_gaps": required_gaps(cov),
                "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),
                "gate_failures": fails,
-               "validation": validate.job_totals(scores),
+               "validation": validate.job_totals({package.package_key(job, g): v for g, v in scores.items()}),
                "by_package": {s["package"]: {k: s[k] for k in ("name", "address_points", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
                               | roads.package_summary(s["road_centerline"]) for s in summaries}}
