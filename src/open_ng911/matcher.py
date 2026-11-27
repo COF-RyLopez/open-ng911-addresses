@@ -62,16 +62,30 @@ def match(c, max_m=DEFAULT_MAX_M, rounds=ROUNDS):
 def copies(c, max_m=COPY_M):
     """address_copy(gers_id, address_uid, distance_m): each Overture address left unpaired by match() that has a
     Record of the same number, street key and unit (blank = blank) within max_m, with its nearest such Record.
-    sim/problems/ng911-matcher-stacked-pairs A2."""
-    deg = max_m / 111_320.0 * 2
-    c.execute(f"""CREATE OR REPLACE TABLE address_copy AS
-        SELECT o.gers_id, arg_min(a.address_uid, ST_Distance_Sphere(a.geom, o.geom)) AS address_uid,
-               round(min(ST_Distance_Sphere(a.geom, o.geom)), 2) AS distance_m
-        FROM overture_addr o JOIN agency_addr a
-          ON a.geoid = o.geoid AND upper(a.number) = upper(o.number) AND a.skey = o.skey
-         AND upper(trim(coalesce(a.unit, ''))) = upper(trim(coalesce(o.unit, '')))
-         AND ST_DWithin(a.geom, o.geom, {deg})
-        WHERE o.gers_id NOT IN (SELECT gers_id FROM address_match)
-          AND ST_Distance_Sphere(a.geom, o.geom) <= {max_m}
-        GROUP BY 1""")
+    The unpaired set is small, so it is cut first and joined on geoid + number (a hash join), not spatially.
+    copy_misses() says why stacked ones are not copies. sim/problems/ng911-matcher-stacked-pairs A2."""
+    c.execute(f"""CREATE OR REPLACE TABLE address_copy_pairs AS
+        WITH o AS (SELECT gers_id, geoid, upper(number) AS num, skey, upper(trim(coalesce(unit, ''))) AS unit,
+                          street, geom
+                   FROM overture_addr WHERE gers_id NOT IN (SELECT gers_id FROM address_match))
+        SELECT o.gers_id, a.address_uid, round(ST_Distance_Sphere(a.geom, o.geom), 2) AS distance_m,
+               a.skey = o.skey AS same_street, upper(trim(coalesce(a.unit, ''))) = o.unit AS same_unit,
+               a.street AS record_street, o.street AS overture_street, a.unit AS record_unit, o.unit AS overture_unit
+        FROM o JOIN agency_addr a ON a.geoid = o.geoid AND upper(a.number) = o.num
+        WHERE ST_Distance_Sphere(a.geom, o.geom) <= {max_m}""")
+    c.execute("""CREATE OR REPLACE TABLE address_copy AS
+        SELECT gers_id, arg_min(address_uid, distance_m) AS address_uid, min(distance_m) AS distance_m
+        FROM address_copy_pairs WHERE same_street AND same_unit GROUP BY 1""")
     return c.execute("SELECT count(*) FROM address_copy").fetchall()[0][0]
+
+
+def copy_misses(c, stacked_m=0.5, examples=5):
+    """Unpaired Overture addresses stacked (< stacked_m) on a Record of the same number that copies() did not
+    link: counts by which of street key / unit differ, and a few examples, for the scenario catalog."""
+    rows = c.execute(f"""SELECT same_street, same_unit, count(DISTINCT gers_id) FROM address_copy_pairs
+        WHERE distance_m < {stacked_m} AND gers_id NOT IN (SELECT gers_id FROM address_copy)
+        GROUP BY ALL ORDER BY 3 DESC""").fetchall()
+    ex = c.execute(f"""SELECT record_street, overture_street, record_unit, overture_unit FROM address_copy_pairs
+        WHERE distance_m < {stacked_m} AND gers_id NOT IN (SELECT gers_id FROM address_copy)
+        ORDER BY gers_id LIMIT {examples}""").fetchall()
+    return {"by_difference": [{"same_street": s, "same_unit": u, "n": n} for s, u, n in rows], "examples": ex}

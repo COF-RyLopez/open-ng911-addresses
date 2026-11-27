@@ -260,6 +260,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     print(f"[{job.id}] {matched:,} Records matched to an Overture address")
     copied = matcher.copies(c)
     print(f"[{job.id}] {copied:,} more Overture addresses are copies of a matched or unmatched Record (not gaps)")
+    print(f"[{job.id}] stacked on a same-number Record but not copies: {json.dumps(matcher.copy_misses(c))}")
     lineage.load_previous(c, ledger_path)
     links = lineage.link(c, release)
     print(f"[{job.id}] Overture address UIDs by link method: {links}")
