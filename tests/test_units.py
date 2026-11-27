@@ -182,3 +182,19 @@ def test_matcher_pairs_stacked_units(conn):
     # without the unit ranking the rounds still pair them all
     conn.execute("UPDATE overture_addr SET unit = NULL")
     assert matcher.match(conn) == 3
+
+
+def test_matcher_links_overture_double_copies(conn):
+    """Overture holds some agency points twice: one copy pairs, the other is a copy of the Record, not a gap.
+    A different number, street or unit, or a copy farther than COPY_M, stays unpaired."""
+    conn.execute("""CREATE TABLE agency_addr AS SELECT *, ST_Point(-72.5, 44.2) AS geom
+        FROM (VALUES ('r1', '10', 'MAIN', NULL::VARCHAR, 'g')) t(address_uid, number, skey, unit, geoid)""")
+    conn.execute("""CREATE TABLE overture_addr AS SELECT gers_id, number, skey, unit, geoid, ST_Point(x, 44.2) AS geom
+        FROM (VALUES ('o-a', '10', 'MAIN', NULL::VARCHAR, 'g', -72.5), ('o-b', '10', 'MAIN', NULL, 'g', -72.5),
+                     ('o-c', '10', 'MAIN', '2', 'g', -72.5), ('o-d', '10', 'OAK', NULL, 'g', -72.5),
+                     ('o-e', '10', 'MAIN', NULL, 'g', -72.49)) t(gers_id, number, skey, unit, geoid, x)""")
+    assert matcher.match(conn) == 1
+    assert matcher.copies(conn) == 1
+    paired = conn.execute("SELECT gers_id FROM address_match").fetchall()[0][0]
+    other = ({"o-a", "o-b"} - {paired}).pop()
+    assert conn.execute("SELECT gers_id, address_uid FROM address_copy").fetchall() == [(other, "r1")]

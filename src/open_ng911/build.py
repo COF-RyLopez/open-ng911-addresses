@@ -258,6 +258,8 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     package.create_domains(c, job, jur)
     matched = matcher.match(c)
     print(f"[{job.id}] {matched:,} Records matched to an Overture address")
+    copied = matcher.copies(c)
+    print(f"[{job.id}] {copied:,} more Overture addresses are copies of a matched or unmatched Record (not gaps)")
     lineage.load_previous(c, ledger_path)
     links = lineage.link(c, release)
     print(f"[{job.id}] Overture address UIDs by link method: {links}")

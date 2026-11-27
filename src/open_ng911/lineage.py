@@ -5,7 +5,9 @@ location change (plan, "GERS churn").
 
 Each Overture address in this release gets its Address UID by the first rule that applies:
 
-    agency_record   it matched a Source agency Record: the Record's UID (matcher.py)
+    agency_record   it matched a Source agency Record: the Record's UID (matcher.match)
+    record_copy     a second Overture copy of a Record (same number, street and unit within matcher.COPY_M):
+                    the Record's UID, so it is never offered as a gap (matcher.copies)
     same_id         its GERS ID is already in the ledger
     source_record   a GERS ID retired since the last release came from the same upstream record
                     (Overture sources[1].dataset + record_id): that one's UID
@@ -28,7 +30,9 @@ def load_previous(c, path=None):
 
 
 def link(c, release):
-    """overture_uid(gers_id, address_uid, link_method) for this release, and the updated ledger table."""
+    """overture_uid(gers_id, address_uid, link_method) for this release, and the updated ledger table.
+    Reads address_match and address_copy (matcher.py); an empty address_copy when matcher.copies didn't run."""
+    c.execute("CREATE TABLE IF NOT EXISTS address_copy (gers_id VARCHAR, address_uid VARCHAR, distance_m DOUBLE)")
     c.execute("""CREATE OR REPLACE TABLE overture_uid AS
         WITH retired AS (  -- ledger rows whose GERS ID is gone this release, keyed by upstream record
             SELECT source_dataset, source_record_id, arg_max(address_uid, last_release) AS address_uid
@@ -37,14 +41,17 @@ def link(c, release):
             GROUP BY ALL HAVING count(DISTINCT address_uid) = 1),
         known AS (SELECT gers_id, arg_max(address_uid, last_release) AS address_uid FROM prev_ledger GROUP BY 1)
         SELECT o.gers_id,
-               coalesce(m.address_uid, k.address_uid, r.address_uid, minted_uid(o.gers_id)) AS address_uid,
+               coalesce(m.address_uid, x.address_uid, k.address_uid, r.address_uid, minted_uid(o.gers_id))
+                   AS address_uid,
                CASE WHEN m.address_uid IS NOT NULL THEN 'agency_record'
+                    WHEN x.address_uid IS NOT NULL THEN 'record_copy'  -- a second Overture copy of a Record
                     WHEN k.address_uid IS NOT NULL THEN 'same_id'
                     WHEN r.address_uid IS NOT NULL THEN 'source_record'
                     ELSE 'minted' END AS link_method,
                o.source_dataset, o.source_record_id
         FROM overture_addr o
         LEFT JOIN address_match m USING (gers_id)
+        LEFT JOIN address_copy x USING (gers_id)
         LEFT JOIN known k USING (gers_id)
         LEFT JOIN retired r ON r.source_dataset = o.source_dataset AND r.source_record_id = o.source_record_id""")
     c.execute(f"""CREATE OR REPLACE TABLE ledger AS

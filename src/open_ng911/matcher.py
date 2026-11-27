@@ -9,12 +9,16 @@ so a corner lot with the same number on two streets pairs with the right one.
 
 Inputs: agency_addr and overture_addr, each with columns address number `number`, parsed street key `skey`,
 geom, geoid. Output table address_match(address_uid, gers_id, distance_m, street_key_match).
+After the pairs, copies(): an Overture address no Record paired that has a Record's number, street key and unit
+within COPY_M is a second copy of that Record (Overture holds some agency points twice), linked to the Record's
+Address UID (lineage link_method 'record_copy'), never a gap-fill candidate.
 Statuses that follow from it:
     record             an agency Record (matched or not); the truth wherever it exists
     gap_fill_candidate an Overture address no Record matched, offered for the agency to accept or reject
 """
 
 DEFAULT_MAX_M = 15.0  # the prototype's 0.00015 degrees, about 15 m in California
+COPY_M = 25.0  # an unpaired Overture address this near a Record of the same full address is a copy of it
 ROUNDS = 3  # rounds of best mutual pairs; each pairs what the round before left (stacked units, sim/problems/ng911-matcher-stacked-pairs)
 
 
@@ -53,3 +57,21 @@ def match(c, max_m=DEFAULT_MAX_M, rounds=ROUNDS):
         if not added:
             break
     return c.execute("SELECT count(*) FROM address_match").fetchall()[0][0]
+
+
+def copies(c, max_m=COPY_M):
+    """address_copy(gers_id, address_uid, distance_m): each Overture address left unpaired by match() that has a
+    Record of the same number, street key and unit (blank = blank) within max_m, with its nearest such Record.
+    sim/problems/ng911-matcher-stacked-pairs A2."""
+    deg = max_m / 111_320.0 * 2
+    c.execute(f"""CREATE OR REPLACE TABLE address_copy AS
+        SELECT o.gers_id, arg_min(a.address_uid, ST_Distance_Sphere(a.geom, o.geom)) AS address_uid,
+               round(min(ST_Distance_Sphere(a.geom, o.geom)), 2) AS distance_m
+        FROM overture_addr o JOIN agency_addr a
+          ON a.geoid = o.geoid AND upper(a.number) = upper(o.number) AND a.skey = o.skey
+         AND upper(trim(coalesce(a.unit, ''))) = upper(trim(coalesce(o.unit, '')))
+         AND ST_DWithin(a.geom, o.geom, {deg})
+        WHERE o.gers_id NOT IN (SELECT gers_id FROM address_match)
+          AND ST_Distance_Sphere(a.geom, o.geom) <= {max_m}
+        GROUP BY 1""")
+    return c.execute("SELECT count(*) FROM address_copy").fetchall()[0][0]
