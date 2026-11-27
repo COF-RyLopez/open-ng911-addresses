@@ -80,7 +80,8 @@ def duplicates(c, mapped, stats):
     """The duplicate_address groups (validate.ADDRESS, per Package and A3)."""
     have = _have(c, "ssap")
     key = [n for n in validate.ADDRESS if n in have]
-    narrow = [n for n in key if n not in validate.SUBADDRESS]
+    extra = validate.SUBADDRESS + validate.COMMUNITY
+    narrow = [n for n in key if n not in extra]
     c.execute(f"""CREATE OR REPLACE TEMP TABLE _dup AS
         SELECT uid, status, source AS source_key, source_id, source_site_type, geoid, latitude, longitude,
                dense_rank() OVER (ORDER BY geoid, a3, {", ".join(f"{n} NULLS FIRST" for n in key)}) AS grp,
@@ -99,10 +100,10 @@ def duplicates(c, mapped, stats):
                     ELSE 'apart (>=25 m)' END AS spread,
                count(*) AS groups, sum(rec + gap) AS points
         FROM g GROUP BY ALL ORDER BY groups DESC""")
-    # groups under the key without its subaddress fields that the subaddress fields already tell apart
+    # groups under the key without its subaddress and community fields that each of those fields tells apart
     told_apart = {}
     if narrow != key:
-        for n in [n for n in key if n in validate.SUBADDRESS]:
+        for n in [n for n in key if n in extra]:
             told_apart[n] = db.one(c, f"""SELECT count(*) AS g FROM (
                 SELECT 1 FROM ssap WHERE add_number IS NOT NULL GROUP BY geoid, a3, {", ".join(narrow)}
                 HAVING count(*) > 1 AND count(DISTINCT {n}) > 1)""")["g"]
@@ -246,6 +247,10 @@ def main(argv=None):
         with open(path) as f:
             s = json.load(f)
         print(f"[{s['job']}] scenarios: " + json.dumps(s.get("scenarios"), separators=(",", ":"), default=str))
+        # the score again, so the log's last lines carry it next to the findings
+        v = s.get("validation") or {}
+        print(f"[{s['job']}] validation score: {v.get('before')} -> {v.get('score')}; Packages failing each check: "
+              + json.dumps(v.get("packages_failing"), separators=(",", ":")))
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ scored per Package as passed / applicable checks.
     domains     <layer>.domains: every value of a coded field inside NENA's domain (CLDXF-CA's street types in Canada)
     A-levels    SiteStructureAddressPoint.inside_package (its A2Polygon), a3_matches_polygon (the A3Polygon it is in;
                 'Unincorporated' in none)
-    duplicates  SiteStructureAddressPoint.duplicate_address: one full address (number, street and subaddress) on two
+    duplicates  SiteStructureAddressPoint.duplicate_address: one full address (number, street, subaddress, community) on two
                 points of a Package
     SSAP-RCL    SiteStructureAddressPoint.rcl_agreement (in its side's range, ranges.py), on_named_road (a segment of
                 its street within ranges.MAX_M)
@@ -70,8 +70,11 @@ def _domains(layer, country):
 # are two sites (sim/problems/ng911-duplicate-key-misses-subaddress).
 SUBADDRESS = ("site", "subsite", "structure", "wing", "floor", "unit", "unitpretyp", "unitvalue", "section", "row",
               "room", "seat")
+# The community the address is in, beside A3: one number and street in two MSAG, postal or unincorporated communities
+# of one A3 are two addresses a call-taker tells apart by the community (ND Post_Comm / MSAGComm, PEI COMM_NM).
+COMMUNITY = ("a4", "msagcomm", "post_comm")
 ADDRESS = ("addnum_pre", "add_number", "addnum_suf", "st_premod", "st_predir", "st_pretyp", "st_presep", "st_name",
-           "st_postyp", "st_posdir", "st_posmod") + SUBADDRESS
+           "st_postyp", "st_posdir", "st_posmod") + SUBADDRESS + COMMUNITY
 
 
 def _ssap_checks(country):

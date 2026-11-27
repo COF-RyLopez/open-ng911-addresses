@@ -347,7 +347,7 @@ def test_scenarios_read_failures_against_source_fields(tmp_path, conn):
     sc = s["scenarios"]
     assert "error" not in sc
     assert sc["source_fields_read"] == {"us-vt-e911-esite": "ESITEID"}
-    assert {"structure", "site", "wing", "unitvalue"} <= set(sc["duplicates"]["key"])
+    assert {"structure", "site", "wing", "unitvalue", "post_comm", "msagcomm"} <= set(sc["duplicates"]["key"])
     assert set(sc["rcl_agreement"]["results"]) <= set(build.ranges.RESULTS)
     assert sum(sc["rcl_agreement"]["results"].values()) == conn.execute(
         "SELECT count(*) FROM address_range_check").fetchall()[0][0]
