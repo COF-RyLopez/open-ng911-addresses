@@ -353,9 +353,8 @@ def test_scenarios_read_failures_against_source_fields(tmp_path, conn):
         "SELECT count(*) FROM address_range_check").fetchall()[0][0]
 
     # two Records that differ only in their Building are two sites, not a duplicate
-    conn.execute("CREATE OR REPLACE TABLE ssap AS SELECT * FROM ssap UNION ALL BY NAME "
-                 "SELECT * REPLACE ('dup' AS uid, 'dup' AS nguid, 'B' AS structure) FROM ssap "
-                 "WHERE status = 'record' AND add_number IS NOT NULL LIMIT 1")
+    conn.execute("INSERT INTO ssap BY NAME (SELECT * REPLACE ('dup' AS uid, 'dup' AS nguid, 'B' AS structure) "
+                 "FROM ssap WHERE status = 'record' AND add_number IS NOT NULL ORDER BY uid LIMIT 1)")
     job = registry.job("us-vt")
     v = validate.run(conn, job, build.coverage_spec(conn, job, registry.jurisdiction(job)))
     before = {g: p["checks"]["SiteStructureAddressPoint.duplicate_address"]["failed"] for g, p in v.items()
