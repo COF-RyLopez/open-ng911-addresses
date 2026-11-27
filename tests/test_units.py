@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from open_ng911 import ids, overture_release, registry, street
+from open_ng911 import ids, matcher, overture_release, registry, street
 from open_ng911.sources.openaddresses import conform_sql
 
 
@@ -164,3 +164,21 @@ def test_discover_openaddresses_sources():
     whole = {**defs, "us/zz/statewide": {"coverage": {}, "layers": {"addresses": [layer("state")]}}}
     found = openaddresses.discover(job, jur, paths=list(whole), definition=whole.__getitem__)
     assert [s.openaddresses for s in found] == ["us/zz/statewide"]
+
+
+def test_matcher_pairs_stacked_units(conn):
+    """Records for units 1 and 2 at one spot, and Overture's two copies there: both pair, each with its own unit.
+    One round of best mutual pairs left the second Record unpaired and its copy a gap-fill candidate."""
+    pt = "ST_Point(-72.5, 44.2)"
+    conn.execute(f"""CREATE TABLE agency_addr AS SELECT * FROM (VALUES
+        ('r1', '10', 'MAIN', '1', 'g'), ('r2', '10', 'MAIN', '2', 'g'), ('r3', '12', 'MAIN', NULL, 'g'))
+        t(address_uid, number, skey, unit, geoid), (SELECT {pt} AS geom)""")
+    conn.execute(f"""CREATE TABLE overture_addr AS SELECT * FROM (VALUES
+        ('o-a', '10', 'MAIN', '2', 'g'), ('o-b', '10', 'MAIN', '1', 'g'), ('o-c', '12', 'MAIN', NULL, 'g'))
+        t(gers_id, number, skey, unit, geoid), (SELECT {pt} AS geom)""")
+    assert matcher.match(conn) == 3
+    assert dict(conn.execute("SELECT address_uid, gers_id FROM address_match").fetchall()) == {
+        "r1": "o-b", "r2": "o-a", "r3": "o-c"}
+    # without the unit ranking the rounds still pair them all
+    conn.execute("UPDATE overture_addr SET unit = NULL")
+    assert matcher.match(conn) == 3

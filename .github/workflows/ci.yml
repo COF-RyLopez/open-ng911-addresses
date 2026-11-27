@@ -66,6 +66,10 @@ jobs:
       - id: export
         continue-on-error: true
         run: python -m open_ng911.export data/output/release=*/${{ matrix.job }} data/output/${{ matrix.job }}.gpkg
+      # Why the duplicate and road-range checks fail, against the Source's own fields (scenarios.py): one line, last
+      # in the log, so it can be read without the artifact
+      - if: always()
+        run: python -m open_ng911.scenarios data/output/release=*/${{ matrix.job }}/job.json
       # Only the summaries are uploaded. Package data carries sources whose license is still "unknown" and
       # isn't handed out until an authority opts in (ADR 0003), so it never goes into a public artifact.
       - if: always()
