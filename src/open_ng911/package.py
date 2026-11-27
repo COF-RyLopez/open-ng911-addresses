@@ -13,7 +13,8 @@ for opted-in Packages (ADR 0007).
         road_centerline.parquet                RoadCenterline: NENA RCL fields + uid, gers_id, road_source
         road_gers_crosswalk.parquet            segment UID x GERS ID, overlap, primary flag
         address_range_check.parquet            every Record against the road range on its side (ranges.py)
-        manifest.json                          counts, sources and their licenses, opt-in state, NENA coverage
+        manifest.json                          counts, sources and their licenses, opt-in state, NENA coverage,
+                                               the validation score (validate.py)
         domains.json                           the value domains the layers use: NENA's, and CLDXF-CA's in Canada
 """
 import json
@@ -44,10 +45,11 @@ def create_domains(c, job, jurisdiction):
     c.executemany("INSERT INTO package_domain VALUES (?, ?, ?, ?)", rows)
 
 
-def write(c, job, jurisdiction, release, out_dir, national, spec=None):
+def write(c, job, jurisdiction, release, out_dir, national, spec=None, validation=None):
     """Every Package's layer files and its manifest.json, written once with every layer's section; returns the
     job folder and the manifests. national: the national road layer upstream.build compared with, or None.
-    spec: build.coverage_spec, for each Package's `nena_coverage`."""
+    spec: build.coverage_spec, for each Package's `nena_coverage`. validation: validate.run, each Package's
+    `validation` section."""
     root = os.path.join(out_dir, f"release={release}", job.id)
     summaries = []
     sources = [{"source_key": s.key, "agency": s.agency, "layer": s.layer, "openaddresses": s.openaddresses,
@@ -101,6 +103,7 @@ def write(c, job, jurisdiction, release, out_dir, national, spec=None):
             "nena_layers": other,
             "nena_coverage": {layer: coverage.section(c, layer, job.country, where=f"geoid = '{geoid}'", **kw)
                               for layer, kw in (spec or {}).items()},
+            "validation": (validation or {}).get(geoid),
             "upstream": upstream.package_section(c, jurisdiction, geoid, national, release),
             "odbl_replacement": odbl_inventory.manifest_section(c, job, geoid, catalogue),
         }

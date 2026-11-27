@@ -6,7 +6,7 @@ import os
 import duckdb
 from vt_fixtures import FIXTURES, OVERTURE, fixture_loaders
 
-from open_ng911 import build, fieldmap, ids, nena, registry, street
+from open_ng911 import build, fieldmap, ids, nena, registry, street, validate
 from open_ng911.sources import openaddresses
 
 RELEASE = "2026-11-18.0"
@@ -304,3 +304,31 @@ def test_address_ranges_against_records(tmp_path, conn):
     assert {x["result"] for x in checks} >= {"in_range", "wrong_side", "no_range"}
     with open(os.path.join(root, "manifest.json")) as f:
         assert json.load(f)["address_ranges"]["wrong_side"] == 1, "Bennington's Route 9 is in another Package"
+
+
+def test_validation_scored_per_package(tmp_path, conn):
+    """Every Package is scored on the NSGIC checks that need no agency data (validate.py): the gate checks alone
+    (`before`) and every check; a check fails the Package only where one of its features fails it."""
+    out = str(tmp_path / "out")
+    s = build.run("us-vt", out, loaders=fixture_loaders(tmp_path), release=RELEASE, c=conn)
+    v = s["validation"]
+    assert set(v["by_package"]) == set(s["by_package"])
+    job = registry.job("us-vt")
+    scores = validate.run(conn, job, build.coverage_spec(conn, job, registry.jurisdiction(job)))
+    for geoid, p in scores.items():
+        gate = {k: c for k, c in p["checks"].items() if k.rsplit(".", 1)[1] in validate.GATE}
+        assert gate and all(c["pass"] for c in gate.values())  # the job passed its gate
+        assert p["before"] == f"{len(gate)}/{len(gate)}" and p["score"] == f"{p['passed']}/{p['applicable']}"
+        assert {"SiteStructureAddressPoint.domains", "RoadCenterLine.range_parity"} <= set(p["checks"])
+        with open(os.path.join(out, f"release={RELEASE}", "us-vt", geoid, "manifest.json")) as f:
+            assert json.load(f)["validation"]["score"] == p["score"]
+
+    # a parity that disagrees with its numbers ('Z', no range, on a ranged side) fails range_parity in that
+    # segment's Package
+    geoid, uid = conn.execute("SELECT geoid, uid FROM rcl WHERE fromaddr_l > 0 AND parity_l <> 'Z' "
+                              "ORDER BY uid LIMIT 1").fetchall()[0]
+    conn.execute(f"UPDATE rcl SET parity_l = 'Z' WHERE uid = '{uid}'")
+    after = validate.run(conn, job, build.coverage_spec(conn, job, registry.jurisdiction(job)))
+    assert not after[geoid]["checks"]["RoadCenterLine.range_parity"]["pass"]
+    assert after[geoid]["checks"]["RoadCenterLine.range_parity"]["failed"] == \
+        scores[geoid]["checks"]["RoadCenterLine.range_parity"]["failed"] + 1
