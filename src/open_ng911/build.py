@@ -16,7 +16,8 @@ Steps:
   7. Count where the government roads and Overture / the national road layer disagree (upstream.py), and list
      which government sources could stand in for Overture's ODbL themes in each Package (odbl_inventory.py).
   8. Build the other NENA layers a Source publishes (layers.py) and report field coverage (coverage.py).
-  9. Write one Package per county or census division, the ledger and a job summary; fail the job if a gated
+  9. Score every Package on the NSGIC checks that need no agency data (validate.py: passed / applicable checks).
+ 10. Write one Package per county or census division, the ledger and a job summary; fail the job if a gated
      NENA Required field (nena.gated) is empty on any feature of any layer, or an NGUID repeats.
 """
 import argparse
@@ -42,6 +43,7 @@ from . import (
     roads,
     street,
     upstream,
+    validate,
 )
 from .sources import centerlines, openaddresses, overture
 
@@ -268,7 +270,8 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     national = upstream.build(c, job, jur, work_dir, loaders)
 
     spec = coverage_spec(c, job, jur)
-    root, summaries = package.write(c, job, jur, release, out_dir, national, spec)
+    scores = validate.run(c, job, spec)
+    root, summaries = package.write(c, job, jur, release, out_dir, national, spec, scores)
     c.execute(f"COPY (SELECT * FROM ledger ORDER BY address_uid, first_release) TO "
               f"'{os.path.join(root, 'address_lineage.parquet')}' (FORMAT parquet)")
     fails = gate(c, job, spec)
@@ -302,12 +305,19 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
                "nena_required_gaps": required_gaps(cov),
                "native_fields": db.rows(c, "SELECT * FROM native_fields ORDER BY layer, source_key, field"),
                "gate_failures": fails,
+               "validation": validate.job_totals({package.package_key(job, g): v for g, v in scores.items()}),
                "by_package": {s["package"]: {k: s[k] for k in ("name", "address_points", "records", "gap_fill_candidates",
                                                                "record_gers_coverage")}
                               | roads.package_summary(s["road_centerline"]) for s in summaries}}
     with open(os.path.join(root, "job.json"), "w") as f:
         json.dump(summary, f, indent=2)
-    print(json.dumps({k: v for k, v in summary.items() if k not in ("by_package", "nena_coverage")}, indent=2))
+    print(json.dumps({k: v for k, v in summary.items() if k not in ("by_package", "nena_coverage", "validation")},
+                     indent=2))
+    # the validation score per Package, gate checks alone (before) and every check, for reading out of a CI log
+    v = summary["validation"]
+    print(f"[{job.id}] validation score (passed/applicable checks, gate only -> all): {v['before']} -> {v['score']}; "
+          + json.dumps({g: f"{p['before']} -> {p['score']}" for g, p in v["by_package"].items()}, separators=(",", ":")))
+    print(f"[{job.id}] Packages failing each check: " + json.dumps(v["packages_failing"], separators=(",", ":")))
     # one line per layer and field, so a build log shows the coverage without the artifact
     print(f"[{job.id}] NENA coverage (filled/partial/no_source, before -> after): {coverage.brief(summary['nena_coverage'])}")
     # the built layers' statuses, field by field, for reading coverage out of a CI log (job.json has it all)
