@@ -54,8 +54,8 @@ unit = "APT_NO"
 
 # Road centerlines: the Province's road centreline layer (16,917 segments, checked 2026-11-26). It has names but no
 # address ranges, so ranges stay empty (parity 'Z') until a ranged layer is found; it still gives every PEI Package a
-# government RoadCenterline where it had none (Canada has no national fallback wired yet). OpenAddresses lists no
-# centerlines for PEI, so the entry is written here in its schema. No ID field: UIDs from geometry. No licence on
+# government RoadCenterline where it had none (Canada has no national fallback wired yet). Read through
+# OpenAddresses' ca/pe/province `centerlines` layer (openaddresses/openaddresses#10180). No ID field: UIDs from geometry. No licence on
 # the layer itself: unknown until confirmed under the OGL-PEI (tracker: ca-pe-ng911-layers).
 [[source]]
 key = "ca-pe-road-centreline"
@@ -67,17 +67,6 @@ oa_layer = "state"
 license_status = "unknown"
 license_url = "https://www.princeedwardisland.ca/en/information/finance/open-government-licence-prince-edward-island"
 attribution = "Contains information licensed under the Open Government Licence - Prince Edward Island"
-
-[source.oa_entry]
-name = "state"
-website = "https://gis.princeedwardisland.ca/server/rest/services/road_centerline/FeatureServer"
-data = "https://gis.princeedwardisland.ca/server/rest/services/road_centerline/FeatureServer/0"
-protocol = "ESRI"
-note = "Provincial road centreline. Names only: the layer publishes no address ranges or segment ID."
-
-[source.oa_entry.conform]
-format = "geojson"
-name = "NAME"
 
 # Service boundaries from the Province's Emergency Service Zones (134 zones), each naming its ESN, PSAP, police, fire
 # and EMS agency, merged by each name into the four layers (layers.py `dissolve`), as for Vermont. The zones follow

@@ -76,8 +76,7 @@ placement = "Placement"
 elevation = "Elev"
 
 # Road centerlines: the GIS Hub's NG9-1-1 road centerlines (DBO_Roads_NG911, 176,669 segments, NENA's own schema).
-# OpenAddresses' us/nd/statewide lists no centerlines, so the entry is written here in its schema to propose
-# upstream. Only a disclaimer is published: unknown (tracker: us-nd-ng911-layers).
+# Read through OpenAddresses' us/nd/statewide `centerlines` layer (openaddresses/openaddresses#10179). Only a disclaimer is published: unknown (tracker: us-nd-ng911-layers).
 [[source]]
 key = "us-nd-gishub-rcl"
 agency = "North Dakota GIS Hub (NG9-1-1 Road Centerlines), compiled from local addressing authorities"
@@ -89,27 +88,6 @@ license_status = "unknown"
 license_url = "https://gishubdata-ndgov.hub.arcgis.com/"
 attribution = "North Dakota GIS Hub"
 
-[source.oa_entry]
-name = "state"
-website = "https://gishubdata-ndgov.hub.arcgis.com/"
-data = "https://services1.arcgis.com/GOcSXpzwBHyk2nog/arcgis/rest/services/NDGISHUBRoadsNG911/FeatureServer/0"
-protocol = "ESRI"
-note = "NG9-1-1 road centerlines in the NENA NG9-1-1 GIS Data Model schema, compiled by the GIS Hub from local addressing authorities."
-
-[source.oa_entry.conform]
-format = "geojson"
-id = "RCL_NGUID"
-name = "FULL_NAME"
-addr_from_left = "FromAddr_L"
-addr_to_left = "ToAddr_L"
-addr_from_right = "FromAddr_R"
-addr_to_right = "ToAddr_R"
-zip_left = "PostCode_L"
-zip_right = "PostCode_R"
-oneway = { function = "map", field = "OneWay", mapping = { FT = "yes", TF = "reverse", B = "no" }, else = "no" }
-speed = { function = "mph_to_kph", field = "SpeedLimit" }
-# RoadClass (NENA words) in OpenAddresses' words; trails, walkways, stairways and paths are unclassified.
-classification = { function = "map", field = "RoadClass", else = "unclassified", mapping = { "Primary" = "motorway", "Ramp" = "motorway_link", "Secondary" = "primary", "Local" = "residential", "Service Drive" = "service", "Alley" = "service", "Private" = "service", "Parking Lot" = "service" } }
 
 # The NENA fields themselves, so nothing is lost through the OpenAddresses words (RoadClass 'Service Drive').
 [source.nena]
