@@ -8,6 +8,12 @@ from open_ng911.sources import centerlines, openaddresses, overture, tiger
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 
+
+def oa_entry(source):
+    """The OpenAddresses layer entry a Source reads, from the copy of its source file at the pin (fixtures/openaddresses)."""
+    with open(os.path.join(FIXTURES, "openaddresses", source.openaddresses + ".json")) as fh:
+        return openaddresses.layer_entry(json.load(fh), source.layer, source.oa_layer)
+
 # Two square Packages: Addison (around Middlebury) and Bennington
 PACKAGES = [("50001", "Addison County", (-73.2, 44.0, -73.0, 44.2)),
             ("50003", "Bennington County", (-73.2, 42.8, -73.0, 43.0))]
@@ -155,12 +161,12 @@ ADDISON_ADDRFEAT = [
 def road_loaders(tmp_path, segments=SEGMENTS):
     def gov_roads(c, job, jur, work):
         source = next(s for s in jur.sources if s.layer == "centerlines")
-        centerlines.insert_government(c, source, os.path.join(FIXTURES, "vt_e911_rds.ndjson"),
-                                      source.oa_entry["conform"], True)
+        entry = oa_entry(source)
+        centerlines.insert_government(c, source, os.path.join(FIXTURES, "vt_e911_rds.ndjson"), entry["conform"], True)
         centerlines.add_meta(c, {"source_key": source.key, "road_source": "government", "agency": source.agency,
                                  "license_status": source.license_status, "license_url": source.license_url,
                                  "attribution": source.attribution, "source_date": "2026-02-19",
-                                 "fetched": "2026-11-26T00:00:00Z", "data_url": source.oa_entry["data"]})
+                                 "fetched": "2026-11-26T00:00:00Z", "data_url": entry["data"]})
 
     def tiger_roads(c, job, jur, work):
         assert [g for g, in c.execute("SELECT geoid FROM road_fallback").fetchall()] == ["50003"]

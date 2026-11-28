@@ -59,16 +59,24 @@ def _oa_checkout(tmp_path, centerlines=None):
     return str(tmp_path / "oa")
 
 
-def _vt_entry():
-    import tomllib
-    with open(os.path.join(os.path.dirname(__file__), "..", "registry", "us", "vt.toml"), "rb") as fh:
-        reg = tomllib.load(fh)
-    return next(s for s in reg["source"] if s["key"] == "us-vt-e911-rds")["oa_entry"]
+ENTRY = {"name": "state", "data": "https://example.com/roads/0", "protocol": "ESRI",
+         "conform": {"format": "geojson", "id": "SEGMENTID", "name": "SN"}}
+
+
+def _registry(tmp_path):
+    """A registry with one Source written as an `oa_entry` (Vermont-shaped)."""
+    d = tmp_path / "registry" / "us"
+    d.mkdir(parents=True)
+    (d / "vt.toml").write_text(
+        'job = "us-vt"\n\n[[source]]\nkey = "us-vt-e911-rds"\nlayer = "centerlines"\nagency = "Example"\n'
+        'openaddresses = "us/vt/statewide"\noa_layer = "state"\nlicense_status = "unknown"\n\n[source.oa_entry]\n'
+        'name = "state"\ndata = "https://example.com/roads/0"\nprotocol = "ESRI"\n\n[source.oa_entry.conform]\n'
+        'format = "geojson"\nid = "SEGMENTID"\nname = "SN"\n')
+    return str(tmp_path / "registry")
 
 
 def test_oa_upstream_status(tmp_path):
-    registry = os.path.join(os.path.dirname(__file__), "..", "registry")
-    entry = _vt_entry()
+    registry, entry = _registry(tmp_path), ENTRY
     row = lambda oa: next(r for r in up.proposals(oa, registry) if r["source_key"] == "us-vt-e911-rds")
     new = row(_oa_checkout(tmp_path / "new"))
     assert new["status"] == "new" and new["patched"]["layers"]["centerlines"] == [entry]
@@ -81,7 +89,7 @@ def test_oa_upstream_status(tmp_path):
 
 
 def test_oa_upstream_draft_never_speaks_for_the_agency(tmp_path):
-    registry = os.path.join(os.path.dirname(__file__), "..", "registry")
+    registry = _registry(tmp_path)
     rows = up.proposals(_oa_checkout(tmp_path), registry)
     up.write(rows, str(tmp_path / "out"))
     body = (tmp_path / "out" / "us" / "vt" / "statewide.md").read_text()

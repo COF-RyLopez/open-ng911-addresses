@@ -3,5 +3,5 @@
 # jobs whose sources changed between the two commits are the ones to rebuild (openaddresses.source_paths).
 # OPENADDRESSES_COMMIT in the environment overrides it for one run.
 [openaddresses]
-commit = "1d9762c36aa2a35cce4b28bd2191ee92ef3190f3"
-date = "2026-11-20"
+commit = "2d1f38b5ff834b61436e087eaf9ba34403228aef"
+date = "2026-11-26"
