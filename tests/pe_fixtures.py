@@ -36,10 +36,10 @@ def _q(v):
     return "'" + str(v).replace("'", "''") + "'"
 
 
-def write_overture_parquet(c, rows, path):
+def write_overture_parquet(c, rows, path, licence="OGL-CA"):
     values = ", ".join(
         f"({_q(i)}, {_q(n)}, {_q(s)}, NULL, NULL, 'Charlottetown', [{{'value': 'PE'}}], "
-        f"[{{'dataset': 'OpenAddresses/Statistics Canada', 'record_id': {_q(r)}, 'license': 'OGL-CA'}}], "
+        f"[{{'dataset': 'OpenAddresses/Statistics Canada', 'record_id': {_q(r)}, 'license': {_q(licence)}}}], "
         f"ST_Point({x}, {y}), {{'xmin': {x}, 'xmax': {x}, 'ymin': {y}, 'ymax': {y}}})"
         for i, n, s, x, y, r in rows)
     c.execute(f"""COPY (SELECT * FROM (VALUES {values})
@@ -47,7 +47,7 @@ def write_overture_parquet(c, rows, path):
                   TO '{path}' (FORMAT parquet)""")
 
 
-def fixture_loaders(tmp_path, overture_rows=OVERTURE):
+def fixture_loaders(tmp_path, overture_rows=OVERTURE, overture_licence="OGL-CA"):
     def package_area(c, job, jur, work):
         c.execute("CREATE OR REPLACE TABLE package_area AS SELECT * FROM (VALUES "
                   + ", ".join(f"('{g}', '{n}', ST_MakeEnvelope({b[0]}, {b[1]}, {b[2]}, {b[3]}))" for g, n, b in PACKAGES)
@@ -69,7 +69,7 @@ def fixture_loaders(tmp_path, overture_rows=OVERTURE):
 
     def overture_addr(c, job, jur, work):
         path = str(tmp_path / "overture_pe.parquet")
-        write_overture_parquet(c, overture_rows, path)
+        write_overture_parquet(c, overture_rows, path, overture_licence)
         overture.create_overture_addr(c, path)
 
     def overture_segment(c, job, jur, work):

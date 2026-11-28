@@ -18,9 +18,10 @@ and writes:
                                      metadata assets, a thumbnail, one Item per NENA layer
                     us-me-23001-site-structure-address-point/   Item: the layer's GeoParquet
 
-A Package goes public when every source it carries is openly licensed (an `unknown` or `share-alike` source,
-or a Gap-fill candidate whose Overture source licence isn't open, keeps it out) and its job passed the gate
-(ADR 0011). Opting in isn't required: a Package whose 911 authority hasn't opted in is published as
+A Package goes public when its address Sources are openly licensed (an `unknown` or `share-alike` address
+Source keeps it out) and its job passed the gate (ADR 0011). Any other layer with a closed source is left out of
+it on its own, and so is every Gap-fill candidate whose Overture source licence isn't open: the public copy of the
+address points is written without those rows (ng911:withheld_gap_fill counts them). Opting in isn't required: a Package whose 911 authority hasn't opted in is published as
 *unclaimed*, under its `.unclaimed.invalid` placeholder domain and labelled as not issued by that authority
 (ADR 0003 as amended). A withheld Package is still a scorecard row and a
 report.json entry, never a data file in public/. Layer files are hard-linked from the build output where the
@@ -137,16 +138,25 @@ COLUMNS = {
 }
 
 # Licence names a Gap-fill candidate can carry from Overture's per-source licences that are open (no
-# share-alike); anything else, 'unstated' included, keeps the Package out of public/.
+# share-alike, no non-commercial); a row with any other licence, 'unstated' included, is left out of public/.
 OPEN_LICENSE_PREFIXES = ("cc0", "cc-by", "cc by", "public domain", "pddl", "odc-by", "ogl", "open government",
-                         "cdla-permissive", "us government", "u.s. government")
+                         "cdla-permissive", "us government", "u.s. government",
+                         # Overture's SPDX-style tag for US government address data (NAD and state sources)
+                         "licenseref-public-domain")
+NON_COMMERCIAL = ("-nc", " nc", "noncommercial", "non-commercial")
 
 
 def open_license(name):
     n = (name or "").strip().lower()
-    if not n or "odbl" in n or "-sa" in n or " sa" in n or "share" in n:
+    if not n or "odbl" in n or "-sa" in n or " sa" in n or "share" in n or any(w in n for w in NON_COMMERCIAL):
         return False
     return n.startswith(OPEN_LICENSE_PREFIXES)
+
+
+def held_gap_fill(m):
+    """{licence: rows} of the Package's Gap-fill candidates whose Overture licence isn't open. Those rows are left
+    out of the public copy of the address points (write_package); they never withhold the Package itself."""
+    return {n: k for n, k in m["gap_fill_licenses"].items() if not open_license(n)}
 
 
 def layer_reasons(m):
@@ -157,9 +167,8 @@ def layer_reasons(m):
     def closed(sources):
         return [f"source_license:{s['source_key']}={s['license_status']}"
                 for s in sources if "license_status" in s and s["license_status"] != "open"]
-    out = {"site_structure_address_point":
-           closed(s for s in m["sources"] if s["layer"] == "addresses")
-           + [f"gap_fill_license:{n}" for n in m["gap_fill_licenses"] if not open_license(n)],
+    # Gap-fill rows with a closed licence don't close the layer: they are filtered out of it (held_gap_fill)
+    out = {"site_structure_address_point": closed(s for s in m["sources"] if s["layer"] == "addresses"),
            "road_centerline": closed(m["road_centerline"]["sources"])}
     for stem, layer, _ in LAYERS:
         if layer in m.get("nena_layers", {}):
@@ -365,7 +374,8 @@ def write_package(c, m, job, built, src_dir, coll_dir):
     """One published Package: its Collection, an Item per non-empty NENA layer, and the metadata assets.
     Returns the collection's bbox."""
     key, country = m["package"], job.country
-    items, extents, held = [], [], layer_reasons(m)
+    items, extents, held, gap_held = [], [], layer_reasons(m), held_gap_fill(m)
+    filtered = {}  # stem -> the public copy written in place of the build's file (thumbnail and tiles read it)
     for stem, layer, what in LAYERS:
         src = os.path.join(src_dir, f"{stem}.parquet")
         if not os.path.exists(src) or stem in held:
@@ -373,18 +383,32 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         b = bbox(c, [src])
         if b is None:
             continue  # an empty layer (no centerlines here yet) gets no Item; the manifest says why
-        extents.append(b)
         item_id = f"{key}-{stem.replace('_', '-')}"
         d = os.path.join(coll_dir, item_id)
-        place(src, os.path.join(d, f"{stem}.parquet"))
-        assets = {stem: asset(src, f"./{stem}.parquet", ["data"], f"{layer} GeoParquet", what, PARQUET)}
+        dst = os.path.join(d, f"{stem}.parquet")
+        if stem == "site_structure_address_point" and gap_held:
+            # a copy without the Gap-fill rows whose licence isn't open, never the build's own file
+            os.makedirs(d, exist_ok=True)
+            closed = ", ".join(db.quote(n) for n in gap_held)
+            db.write_geoparquet(c, f"SELECT * FROM read_parquet({db.quote(src)}) WHERE NOT (status = "
+                                   f"'gap_fill_candidate' AND coalesce(source_license, 'unstated') IN ({closed}))",
+                                dst, "uid")
+            filtered[stem] = dst
+            b = bbox(c, [dst])
+            if b is None:  # only closed Gap-fill rows here: no Item, like an empty layer
+                shutil.rmtree(d)
+                continue
+        else:
+            place(src, dst)
+        extents.append(b)
+        assets = {stem: asset(dst, f"./{stem}.parquet", ["data"], f"{layer} GeoParquet", what, PARQUET)}
         if stem == "road_centerline":
             xw = os.path.join(src_dir, f"{CROSSWALK}.parquet")
             place(xw, os.path.join(d, f"{CROSSWALK}.parquet"))
             assets[CROSSWALK] = asset(xw, f"./{CROSSWALK}.parquet", ["metadata"], "Road segment to GERS ID crosswalk",
                                       "Every road segment x Overture segment link with its overlap; join on uid.",
                                       PARQUET)
-        n = c.execute(f"SELECT count(*) FROM read_parquet({db.quote(src)})").fetchall()[0][0]
+        n = c.execute(f"SELECT count(*) FROM read_parquet({db.quote(dst)})").fetchall()[0][0]
         write_json(os.path.join(d, f"{item_id}.json"), {
             "type": "Feature", "stac_version": STAC, "stac_extensions": [TABLE, FILE], "id": item_id,
             "collection": key, "geometry": box_polygon(b), "bbox": b,
@@ -397,17 +421,19 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         items.append((item_id, f"{m['name']}: {layer}"))
     for name in ("manifest.json", "domains.json"):
         place(os.path.join(src_dir, name), os.path.join(coll_dir, name))
+    def public(s):
+        return filtered.get(s, os.path.join(src_dir, f"{s}.parquet"))
     shown = [s for s in ("a2_polygon", "a3_polygon", "road_centerline", "site_structure_address_point")
-             if s not in held and os.path.exists(os.path.join(src_dir, f"{s}.parquet"))]
+             if s not in held and os.path.exists(public(s))]
     colours = {"a2_polygon": ((60, 60, 60), "fill", "#3c3c3c"), "a3_polygon": ((200, 200, 200), "line", "#a0a0a0"),
                "road_centerline": ((230, 140, 40), "line", "#e68c28"),
                "site_structure_address_point": ((30, 90, 200), "circle", "#1e5ac8")}
-    thumbnail(c, [(os.path.join(src_dir, f"{s}.parquet"), colours[s][0]) for s in shown],
+    thumbnail(c, [(public(s), colours[s][0]) for s in shown],
               os.path.join(coll_dir, "thumbnail.png"))
     ext = [min(e[0] for e in extents), min(e[1] for e in extents), max(e[2] for e in extents),
            max(e[3] for e in extents)]
     vis_links, vis_assets = visual(c, coll_dir, key, [
-        (s, os.path.join(src_dir, f"{s}.parquet"), colours[s][1], colours[s][2]) for s in shown], m["name"])
+        (s, public(s), colours[s][1], colours[s][2]) for s in shown], m["name"])
     rcl = m["road_centerline"]
     title = f"{m['name']}, {job.name}: NG9-1-1 Package" + ("" if m["opted_in"] else " (unclaimed)")
     desc = (f"The NENA NG9-1-1 GIS dataset for {m['name']} ({job.name}), built from the Source agencies' own "
@@ -422,6 +448,9 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         names = {s: n for s, n, _ in LAYERS}
         desc += (" Left out because a source's licence isn't open yet: "
                  + ", ".join(names[s] for s in held) + " (ng911:withheld_layers says which source).")
+    if gap_held:
+        desc += (f" {sum(gap_held.values()):,} Gap-fill candidates are left out of the address points because "
+                 "their Overture source licence isn't open (ng911:withheld_gap_fill gives rows by licence).")
     coll = {
         "type": "Collection", "stac_version": STAC, "stac_extensions": [PORTOLAN, TABLE, FILE, WEB_MAP_LINKS],
         "id": key,
@@ -440,6 +469,7 @@ def write_package(c, m, job, built, src_dir, coll_dir):
         "ng911:road_segments": rcl["features"], "ng911:road_gers_coverage": rcl["gers_coverage"],
         "ng911:road_source": rcl["road_source"] if "road_centerline" not in held else None,
         "ng911:withheld_layers": held,
+        "ng911:withheld_gap_fill": gap_held,
         "links": nav(3) + [{"rel": "item", "href": f"./{i}/{i}.json", "type": "application/geo+json", "title": t}
                            for i, t in items] + vis_links + license_links(m) + via_links(m) + doc_links(),
         "assets": {
@@ -540,7 +570,7 @@ SCORECARD_COLUMNS = {
     "job": "Build job (state or province)", "country": "US or CA", "recipient": "The 911 authority it is built for",
     "opted_in": "Whether the 911 authority has opted in; a published Package that hasn't is unclaimed",
     "published": "Whether the Package's data is in this catalog",
-    "withheld_reasons": "Why its data isn't: a non-open source licence, a Gap-fill licence that isn't open, or a "
+    "withheld_reasons": "Why its data isn't: an address Source licence that isn't open, or a "
                         "failed gate",
     "overture_release": "Overture release the build used", "records": "The Source agency's address points",
     "gap_fill_candidates": "Overture addresses no Record matched",
@@ -578,7 +608,8 @@ def build(release, out_dir="data/output", catalog_dir="data/catalog", registry_d
                 held = layer_reasons(m)
                 tree.setdefault(job.country, {}).setdefault(job.id, []).append((m["package"], m["name"], ext))
                 href = f"{job.country.lower()}/{job.id}/{m['package']}/collection.json"
-                report["published"].append({"package": m["package"], "collection": href, "withheld_layers": held})
+                report["published"].append({"package": m["package"], "collection": href, "withheld_layers": held,
+                                            "withheld_gap_fill": held_gap_fill(m)})
             else:
                 report["withheld"].append({"package": m["package"], "reasons": reasons})
             cards.append((m["package"], m["name"], m["job"], job.country, m["recipient"], m["opted_in"], not reasons,

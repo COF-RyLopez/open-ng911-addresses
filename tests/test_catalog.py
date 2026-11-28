@@ -36,10 +36,41 @@ def builds(tmp_path_factory):
 
 
 def test_open_license():
-    for name in ("CC0-1.0", "CC-BY-4.0", "Public Domain", "OGL-CA", "PDDL-1.0", "ODC-By-1.0"):
+    for name in ("CC0-1.0", "CC-BY-4.0", "Public Domain", "OGL-CA", "PDDL-1.0", "ODC-By-1.0",
+                 "LicenseRef-Public-Domain-US"):  # Overture's tag on US government addresses (ME, UT, VT, ND)
         assert catalog.open_license(name), name
-    for name in ("ODbL-1.0", "CC-BY-SA-4.0", "unstated", "", None, "proprietary"):
+    for name in ("ODbL-1.0", "CC-BY-SA-4.0", "unstated", "", None, "proprietary", "LicenseRef-Proprietary",
+                 "CC-BY-NC-4.0", "CC BY-NC-SA 4.0"):
         assert not catalog.open_license(name), name
+
+
+def test_closed_gap_fill_rows_left_out(tmp_path):
+    """Overture labels its Canadian addresses LicenseRef-Proprietary: a Package whose Gap-fill candidates carry a
+    closed licence is still published, its public address points without those rows, and the report and the
+    collection count them. The build's own file keeps every row."""
+    out = str(tmp_path / "out")
+    build.run("ca-pe", out, loaders=pe_loaders(tmp_path, overture_licence="LicenseRef-Proprietary"), release=RELEASE,
+              c=db.connect(s3=False))
+    r = catalog.build(RELEASE, out, str(tmp_path / "cat"))
+    assert [p["package"] for p in r["published"]] == ["ca-pe-1102", "ca-pe-1103"] and r["withheld"] == []
+    pe = {p["package"]: p for p in r["published"]}
+    assert pe["ca-pe-1102"]["withheld_gap_fill"] == {"LicenseRef-Proprietary": 1}
+    assert "site_structure_address_point" not in pe["ca-pe-1102"]["withheld_layers"]
+    d = os.path.join(tmp_path, "cat", "public", "ca", "ca-pe", "ca-pe-1102")
+    pub = os.path.join(d, "ca-pe-1102-site-structure-address-point", "site_structure_address_point.parquet")
+    src = os.path.join(out, f"release={RELEASE}", "ca-pe", "1102", "site_structure_address_point.parquet")
+    q = "SELECT count(*) FILTER (status = 'gap_fill_candidate'), count(*) FROM read_parquet('{}')"
+    built, public = (duckdb.connect().execute(q.format(p)).fetchall()[0] for p in (src, pub))
+    assert built[0] == 1 and public == (0, built[1] - 1)
+    assert json.loads(pq.read_metadata(pub).metadata[b"geo"])["version"] == "2.0.0"
+    with open(os.path.join(d, "collection.json")) as f:
+        coll = json.load(f)
+    assert coll["ng911:withheld_gap_fill"] == {"LicenseRef-Proprietary": 1} and "left out" in coll["description"]
+    with open(os.path.join(d, "ca-pe-1102-site-structure-address-point",
+                           "ca-pe-1102-site-structure-address-point.json")) as f:
+        item = json.load(f)
+    a = item["assets"]["site_structure_address_point"]
+    assert item["properties"]["table:row_count"] == public[1] and a["file:checksum"] == catalog.checksum(pub)
 
 
 def test_pilots_as_registered(builds):

@@ -42,6 +42,7 @@ OA_TREE = "https://api.github.com/repos/openaddresses/openaddresses/git/trees/{c
 OPEN_LICENCES = ("cc0", "publicdomain", "public domain", "pddl", "creativecommons.org/licenses/by/", "cc-by", "cc by",
                  "cc-by-4.0", "odc-by", "open government licence", "open government license", "ogl")
 SHARE_ALIKE = ("odbl", "by-sa", "share-alike", "sharealike")
+NON_COMMERCIAL = ("by-nc", "-nc-", "noncommercial", "non-commercial")
 
 
 def source_paths(job, commit=None, registry_dir=registry.REGISTRY_DIR):
@@ -76,6 +77,8 @@ def licence_status(layer):
     lic = str(lic or "").lower()
     if any(w in lic for w in SHARE_ALIKE):
         return "share-alike"
+    if any(w in lic for w in NON_COMMERCIAL):
+        return "unknown"  # non-commercial isn't open; someone has to read the terms
     return "open" if any(w in lic for w in OPEN_LICENCES) else "unknown"
 
 

@@ -10,8 +10,10 @@ Portolan models those as Items. Each collection's vector tiles (PMTiles, with a 
 tippecanoe's tiles from GeoParquet or a DuckDB query in one pip-installable binary (BSD-2-Clause), so the
 build needs no tippecanoe toolchain.
 
-A Package's data is public when every source in it is openly licensed (ADR 0004), including the Overture
-licences of its Gap-fill candidates, and its job passed the gate. The address points are the core: if their Sources aren't open the whole Package is held back,
+A Package's data is public when every source in it is openly licensed (ADR 0004) and its job passed the gate.
+A Gap-fill candidate whose Overture source licence isn't open (Overture tags its Canadian addresses
+LicenseRef-Proprietary) is left out of the public copy of the address points, row by row, and counted in
+`ng911:withheld_gap_fill`; it no longer holds back the Package (Ryan, 2026-11-28). The address points are the core: if their Sources aren't open the whole Package is held back,
 while any other layer with a closed Source (a PSAP or fire boundary, the roads) is left out of a published
 Package on its own and named in `ng911:withheld_layers`. Opting in is not required (Ryan, 2026-11-26,
 amending ADR 0003): a Package whose authority hasn't opted in is published as *unclaimed*, under the
