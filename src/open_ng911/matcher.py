@@ -8,13 +8,17 @@ road check uses) ranks ahead of a nearer pair whose streets differ, and the pair
 so a corner lot with the same number on two streets pairs with the right one.
 
 Inputs: agency_addr and overture_addr, each with columns address number `number`, parsed street key `skey`,
-geom, geoid. Output table address_match(address_uid, gers_id, distance_m, street_key_match).
+geom, geoid (copies() also reads `street` and `unit`). Output table address_match(address_uid, gers_id, distance_m, street_key_match).
+After the pairs, copies(): an Overture address no Record paired that has a Record's number, street key and unit
+within COPY_M is a second copy of that Record (Overture holds some agency points twice), linked to the Record's
+Address UID (lineage link_method 'record_copy'), never a gap-fill candidate.
 Statuses that follow from it:
     record             an agency Record (matched or not); the truth wherever it exists
     gap_fill_candidate an Overture address no Record matched, offered for the agency to accept or reject
 """
 
 DEFAULT_MAX_M = 15.0  # the prototype's 0.00015 degrees, about 15 m in California
+COPY_M = 25.0  # an unpaired Overture address this near a Record of the same full address is a copy of it
 ROUNDS = 3  # rounds of best mutual pairs; each pairs what the round before left (stacked units, sim/problems/ng911-matcher-stacked-pairs)
 
 
@@ -53,3 +57,48 @@ def match(c, max_m=DEFAULT_MAX_M, rounds=ROUNDS):
         if not added:
             break
     return c.execute("SELECT count(*) FROM address_match").fetchall()[0][0]
+
+
+def copies(c, max_m=COPY_M):
+    """address_copy(gers_id, address_uid, distance_m): each Overture address left unpaired by match() that has a
+    Record of the same number, street key and unit (blank = blank) within max_m, with its nearest such Record.
+    The unpaired set is small, so it is cut first and joined on geoid + number (a hash join), not spatially.
+    copy_misses() says why stacked ones are not copies. sim/problems/ng911-matcher-stacked-pairs A2, A3."""
+    c.execute(f"""CREATE OR REPLACE TABLE address_copy_pairs AS
+        WITH o AS (SELECT gers_id, geoid, upper(number) AS num, skey, upper(trim(coalesce(unit, ''))) AS unit,
+                          street, geom
+                   FROM overture_addr WHERE gers_id NOT IN (SELECT gers_id FROM address_match))
+        SELECT o.gers_id, a.address_uid, round(ST_Distance_Sphere(a.geom, o.geom), 2) AS distance_m,
+               a.skey = o.skey AS same_street, upper(trim(coalesce(a.unit, ''))) = o.unit AS same_unit,
+               a.street AS record_street, o.street AS overture_street, a.unit AS record_unit, o.unit AS overture_unit
+        FROM o JOIN agency_addr a ON a.geoid = o.geoid AND upper(a.number) = o.num
+        WHERE ST_Distance_Sphere(a.geom, o.geom) <= {max_m}""")
+    c.execute("""CREATE OR REPLACE TABLE address_copy AS
+        SELECT gers_id, arg_min(address_uid, distance_m) AS address_uid, min(distance_m) AS distance_m
+        FROM address_copy_pairs WHERE same_street AND same_unit GROUP BY 1""")
+    return c.execute("SELECT count(*) FROM address_copy").fetchall()[0][0]
+
+
+def copy_misses(c, examples=5):
+    """Why unpaired Overture addresses that sit on a Record's exact spot (same geoid, coordinates equal to 5
+    decimals, about 1 m) are not copies: counts by which of number / street key / unit differ, and a few
+    examples, for the scenario catalog."""
+    c.execute("""CREATE OR REPLACE TEMP TABLE address_copy_misses AS
+        WITH o AS (SELECT gers_id, geoid, number, skey, street, unit, round(ST_X(geom), 5) AS x, round(ST_Y(geom), 5) AS y
+                   FROM overture_addr WHERE gers_id NOT IN (SELECT gers_id FROM address_match)
+                     AND gers_id NOT IN (SELECT gers_id FROM address_copy)),
+             a AS (SELECT address_uid, geoid, number, skey, street, unit, round(ST_X(geom), 5) AS x, round(ST_Y(geom), 5) AS y
+                   FROM agency_addr)
+        SELECT o.gers_id, upper(a.number) = upper(o.number) AS same_number, a.skey = o.skey AS same_street,
+               upper(trim(coalesce(a.unit, ''))) = upper(trim(coalesce(o.unit, ''))) AS same_unit,
+               a.number AS record_number, o.number AS overture_number, a.street AS record_street,
+               o.street AS overture_street, a.unit AS record_unit, o.unit AS overture_unit
+        FROM o JOIN a USING (geoid, x, y)""")
+    rows = c.execute("""SELECT same_number, same_street, same_unit, count(DISTINCT gers_id) FROM address_copy_misses
+        GROUP BY ALL ORDER BY 4 DESC""").fetchall()
+    ex = c.execute(f"""SELECT * EXCLUDE (gers_id, same_number, same_street, same_unit) FROM address_copy_misses
+        WHERE same_number ORDER BY gers_id LIMIT {examples}""").fetchall()
+    ex_other = c.execute(f"""SELECT * EXCLUDE (gers_id, same_number, same_street, same_unit) FROM address_copy_misses
+        WHERE NOT same_number ORDER BY gers_id LIMIT {examples}""").fetchall()
+    return {"by_difference": [{"same_number": n, "same_street": s, "same_unit": u, "n": k} for n, s, u, k in rows],
+            "examples_same_number": ex, "examples_other_number": ex_other}

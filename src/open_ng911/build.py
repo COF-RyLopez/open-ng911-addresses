@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import sys
+import time
 
 import duckdb
 
@@ -252,15 +253,22 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     updated = db.now()
 
     print(f"[{job.id}] {job.name}, Overture {release}")
+    t0 = time.monotonic()  # elapsed seconds in the lines below show where a slow build spends its time
     for table in ("package_area", "municipality", "agency_addr", "overture_addr"):  # overture_addr reads package_area's extent
         loaders[table](c, job, jur, work_dir)
     prepare(c)
     package.create_domains(c, job, jur)
     matched = matcher.match(c)
-    print(f"[{job.id}] {matched:,} Records matched to an Overture address")
+    print(f"[{job.id}] {matched:,} Records matched to an Overture address ({time.monotonic() - t0:.0f} s)")
+    copied = matcher.copies(c)
+    print(f"[{job.id}] {copied:,} more Overture addresses are copies of a matched or unmatched Record (not gaps)"
+          f" ({time.monotonic() - t0:.0f} s)")
+    misses = matcher.copy_misses(c)
+    print(f"[{job.id}] unpaired Overture on a Record's spot but not copies ({time.monotonic() - t0:.0f} s): "
+          f"{json.dumps(misses)}")
     lineage.load_previous(c, ledger_path)
     links = lineage.link(c, release)
-    print(f"[{job.id}] Overture address UIDs by link method: {links}")
+    print(f"[{job.id}] Overture address UIDs by link method: {links} ({time.monotonic() - t0:.0f} s)")
     assemble_ssap(c, job, jur, updated)
     boundaries.assign_a3(c)
     before = {SSAP: ssap_before(c, job, jur, updated)}
@@ -268,7 +276,7 @@ def run(job_id, out_dir, work_dir=None, ledger_path=None, loaders=None, registry
     roads.build(c, job, jur, work_dir, loaders, updated)
     before[roads.RCL] = roads.rcl_before(c, job, updated)
     checked = ranges.check(c)
-    print(f"[{job.id}] address points against road ranges: {checked}")
+    print(f"[{job.id}] address points against road ranges: {checked} ({time.monotonic() - t0:.0f} s)")
     loaders["nena_layers"](c, job, jur, work_dir)
     layers.build(c, job, jur, updated)
     national = upstream.build(c, job, jur, work_dir, loaders)
