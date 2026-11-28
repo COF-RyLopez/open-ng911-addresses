@@ -48,20 +48,43 @@ def geojson(c, path, props, tolerance):
     return out
 
 
+def _fill(m, layer, v1_section):
+    """Per-field fill for one layer: manifest v2 keeps it in `nena_coverage`, v1 had `field_fill` sections."""
+    cov = (m.get("nena_coverage") or {}).get(layer)
+    if cov is not None:
+        return {f: v.get("fill") for f, v in cov.get("fields", {}).items()} if cov.get("built") else {}
+    return v1_section.get("field_fill", {}) if v1_section else {}
+
+
 def manifest_subset(m):
+    """The page's per-Package record. Reads manifest v2 (package.MANIFEST_VERSION) and v1, and writes the same
+    story keys either way, so story/index.html and onepager.py don't follow manifest renames."""
     road = m.get("road_centerline", {})
     up = m.get("upstream", {})
     return {
-        "package": m["package"], "name": m["name"], "rows": m["rows"], "records": m["records"],
+        "package": m["package"], "name": m["name"], "rows": m.get("address_points", m.get("rows")),
+        "records": m["records"],
         "records_with_gers_id": m["records_with_gers_id"], "gap_fill_candidates": m["gap_fill_candidates"],
-        "record_gers_coverage": m["record_gers_coverage"], "field_fill": m["field_fill"],
+        "record_gers_coverage": m["record_gers_coverage"],
+        "field_fill": _fill(m, "SiteStructureAddressPoint", m),
         "nguid_domain": m["nguid_domain"], "opted_in": m["opted_in"], "recipient": m["recipient"],
         "a3_features": m["boundaries"].get("A3Polygon", {}).get("features", 0),
-        "roads": {"rows": road.get("rows", 0), "with_gers_id": road.get("with_gers_id", 0),
-                  "road_source": road.get("road_source"), "field_fill": road.get("field_fill", {})},
+        "roads": {"rows": road.get("features", road.get("rows", 0)), "with_gers_id": road.get("with_gers_id", 0),
+                  "road_source": road.get("road_source"), "field_fill": _fill(m, "RoadCenterLine", road)},
         "upstream": {"overture": up.get("overture", {}), "national": up.get("national", {})},
         "odbl": {k: v.get("status") for k, v in m.get("odbl_replacement", {}).items() if isinstance(v, dict)},
     }
+
+
+# job.json keys the page and the one-pager read; the rest (coverage, validation, by_package ...) stays out
+JOB_KEYS = ("job", "overture_release", "built", "packages", "rows", "records", "records_with_gers_id",
+            "gap_fill_candidates", "agency_points_dropped", "a3", "road_segments", "road_segments_with_gers_id",
+            "road_sources", "upstream")
+
+
+def job_subset(j):
+    j = {**j, "rows": j.get("address_points", j.get("rows"))}
+    return {k: j[k] for k in JOB_KEYS if k in j}
 
 
 def points(c, files, rng):
@@ -108,7 +131,7 @@ def main():
         sys.exit(f"no build output for {a.job} under {a.out}")
     root = roots[-1]
     with open(os.path.join(root, "job.json")) as f:
-        job = json.load(f)
+        job = job_subset(json.load(f))
     c = db.connect(s3=False)
     packages, a2, a3, open_sources = [], [], [], None
     for d in sorted(glob.glob(os.path.join(root, "*", "manifest.json"))):
