@@ -84,8 +84,9 @@ data/catalog/
                                  per NENA layer with its GeoParquet
 ```
 
-A Package's data goes public only when every source in it is openly licensed (no `unknown` or `share-alike`
-source, no Gap-fill candidate whose Overture source licence isn't open) and its job passed the gate. A Package
+A Package's data goes public only when its address Sources are openly licensed (no `unknown` or `share-alike`
+Source) and its job passed the gate. Other layers with a closed source, and Gap-fill candidates whose Overture
+source licence isn't open, are left out of the public copy on their own. A Package
 whose 911 authority hasn't opted in is published as *unclaimed*, under its placeholder domain (ADR 0003 as
 amended, ADR 0011). [examples/catalog](examples/catalog) is the catalog built from the test fixtures
 (`python scripts/sample_catalog.py`). To check and upload one:

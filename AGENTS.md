@@ -87,8 +87,9 @@ prototype is `COF-RyLopez/ng911-pipeline` (ADR 0008).
 - **Unclear licences go in the tracker** (`registry/remediation/requests.toml`, `docs/license-remediation.md`),
   never into a guess. Agents don't contact agencies; a person does.
 - **Public catalog** (ADR 0011): a Package's data goes into `catalog/public/` only when every source is
-  open (address Sources and Gap-fill licences, `catalog.open_license`) and the job's gate passed;
-  any other layer with a closed Source is left out on its own (`catalog.layer_reasons`). A Package whose
+  open (address Sources, `catalog.open_license`) and the job's gate passed; any other layer with a closed
+  Source is left out on its own (`catalog.layer_reasons`), and so is each Gap-fill row whose Overture licence
+  isn't open (`catalog.held_gap_fill`: the public address file is a filtered copy, never the build's file). A Package whose
   authority hasn't opted in is published as *unclaimed* (placeholder domain, labelled in its title, description
   and AGENTS.md); keep that label prominent and never put a real agency domain on it.
 - **Layer files go through `db.write_geoparquet`** (GeoParquet 2.0, Hilbert order, row groups under 150k) so

@@ -166,6 +166,16 @@ def test_discover_openaddresses_sources():
     assert [s.openaddresses for s in found] == ["us/zz/statewide"]
 
 
+def test_licence_status_non_commercial():
+    """A non-commercial licence isn't open, though its text starts like CC BY."""
+    from open_ng911.sources import openaddresses
+    st = openaddresses.licence_status
+    assert st({"license": "CC-BY-4.0"}) == "open"
+    assert st({"license": "CC-BY-NC-4.0"}) == "unknown"
+    assert st({"license": {"text": "CC BY-NC 4.0", "url": "https://creativecommons.org/licenses/by-nc/4.0/"}}) == "unknown"
+    assert st({"license": "CC BY-NC-SA 4.0"}) != "open"
+
+
 def test_matcher_pairs_stacked_units(conn):
     """Records for units 1 and 2 at one spot, and Overture's two copies there: both pair, each with its own unit.
     One round of best mutual pairs left the second Record unpaired and its copy a gap-fill candidate."""
