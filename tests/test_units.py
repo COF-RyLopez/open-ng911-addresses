@@ -212,3 +212,17 @@ def test_matcher_links_overture_double_copies(conn):
     misses = matcher.copy_misses(conn)["by_difference"]
     assert sorted((m["same_number"], m["same_street"], m["same_unit"], m["n"]) for m in misses) == [
         (True, False, True, 1), (True, True, False, 1)]
+
+
+def test_matcher_compares_the_full_number(conn):
+    """A Source that keeps the suffix in its own field (VT HOUSE_NUMBERSUFFIX) gives OpenAddresses number '95';
+    Overture holds '95 1/2'. They pair; plain '95' on Overture does not pair with 95 1/2."""
+    conn.execute("""CREATE TABLE agency_addr AS SELECT *, skey AS street, ST_Point(-72.5, 44.2) AS geom
+        FROM (VALUES ('r1', '95', 95, '1/2', NULL::VARCHAR, 'MAIN', NULL::VARCHAR, 'g'))
+             t(address_uid, number, n_add_number, n_addnum_suf, n_addnum_pre, skey, unit, geoid)""")
+    conn.execute("""CREATE TABLE overture_addr AS SELECT *, skey AS street, ST_Point(-72.5, 44.2) AS geom
+        FROM (VALUES ('o-half', '95 1/2', 'MAIN', NULL::VARCHAR, 'g'), ('o-plain', '95', 'MAIN', NULL, 'g'))
+             t(gers_id, number, skey, unit, geoid)""")
+    assert matcher.match(conn) == 1
+    assert conn.execute("SELECT address_uid, gers_id FROM address_match").fetchall() == [("r1", "o-half")]
+    assert matcher.copies(conn) == 0
