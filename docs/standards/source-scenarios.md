@@ -27,6 +27,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 | Same number and street in two communities of one A3 | PEI 29/29 Record dup groups differ in COMM_NM (GEORGETOWN vs MONTAGUE); ND Post_Comm, MSAGComm | A4, MSAGComm, Post_Comm in the duplicate key | pipeline | PR #25 (A2, A3: compared only between two Records) |
 | Overture's own copy of a Record left as a gap-fill candidate on top of it, because the one-round matcher pairs only one of several stacked Records | Record + gap-fill stacked groups: ND 3398, UT 3545, PE 1017, VT 754, ME 376. ND candidate source_record_id = the Record's Site_NGUID without braces | Not a gap (ADR 0001); the Record should carry the GERS ID | pipeline | PR #25: matcher rounds + unit ranking cut stacked groups ND 3398 -> 512, UT 3555 -> 63, PE 1017 -> 0, ME 376 -> 0 |
 | A point farther than 150 m (ranges.MAX_M) from any segment of its street | VT 21,108 of 21,423 no_matching_road; ND 37,032 of 38,126; ME 62,389; UT 72,811 | on_named_road; rural driveways and setbacks | pipeline: consider a longer reach for on_named_road | open |
+| Overture's second copy of a Record (same full address within 25 m) kept as a gap-fill candidate | record_copy linked: VT 34, ND 94, ME 3,957, UT 1,649, PE 504; near Record + gap-fill groups UT 1,171 -> 4, PE 502 -> 0 (run 46026293927) | Not a gap (ADR 0001); lineage link_method record_copy | pipeline | PR #26 |
 | The `mapped` flag in the report reads only registry `nena` tables, so fields mapped by the OpenAddresses conform (city, unit, postcode) show as unmapped | PEI COMM_NM (OA city -> Post_Comm) flagged unmapped | reporting | pipeline | open |
 
 ## Vermont (us-vt, VCGI E911 ESITE)
@@ -35,7 +36,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 |---|---|---|---|---|
 | Outbuildings carry the primary structure's address (SITETYPE ACCESSORY BUILDING, ACCESSORY BARN) | 2250 + 466 of 3176 Record dup groups, all > 25 m apart; ACCESSORY BUILDING fails rcl_agreement 91.8% (n 13,615) | Structure / Site (CLDXF) or Place_Type; agency decides if they are separate addressable sites | agency + log | open |
 | UNITCOUNT 0 vs 1 marks accessory vs primary | Differs inside Record dup groups | Place_Type / Placement hint | log | open |
-| Overture holds two copies of some E911 points at one spot: one pairs with the Record, the other stays a Gap-fill candidate on top of it | 754 stacked Record + candidate groups unchanged by the matcher rounds (run 45952540188) | Not a gap (ADR 0001) | pipeline: a candidate stacked < 0.5 m on a Record with the same address is a copy, not a gap | open |
+| Overture's number carries the suffix the agency keeps in its own field (Overture '95 1/2', '41 B'; OpenAddresses number '95' + HOUSE_NUMBERSUFFIX '1/2'), so the matcher never paired them and the Overture copy stayed a stacked gap-fill on top of the Record | 754 stacked Record + candidate groups; 1,470 unpaired Overture points on a Record's spot differ only in number (run 46038701141) | AddNum_Suf; matcher compares the full number (prefix + number + suffix) | pipeline | PR #26 |
 | SUBTYPE field (unmapped): '0' (30,719 points) fails rcl_agreement 45%, empty 4.3% | Many fields split the same way on "" vs null: a second population of points | Ask VCGI what SUBTYPE means before mapping | agency | open |
 | HOUSE_NUMBERPREFIX letters always fail the range check | rcl_agreement split | AddNum_Pre (ranges ignore prefixes) | log | open |
 | SITETYPE_MULTI1..5 list several uses of one site | Differs in dup groups | Place_Type (one value) | log | open |
@@ -44,6 +45,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 
 | Scenario | Evidence | NENA home | Action | Status |
 |---|---|---|---|---|
+| Same suffix split as VT: Overture '825 B', '29 1/2' vs OpenAddresses number + AddNum_Suf | 512 stacked Record + candidate groups; 1,397 number-only misses (run 46038701141) | AddNum_Suf | pipeline | PR #26 (full-number match) |
 | Distinguishers kept in Addtl_Loc (CHURCH / PARSONAGE, TWR 1..4, CP 1..12) | Differs inside Record dup groups | Addtl_Loc is the NENA field, but TWR n / CP n are Structure or Unit | agency | open |
 | Same address in two Post_Comm / MSAGComm / Post_Code within one A3 | Differs inside Record dup groups | Post_Comm, MSAGComm | pipeline | PR #25 (A2, A3: compared only between two Records) |
 | Number suffixes C, D, E fail the range check far more often | rcl_agreement split | AddNum_Suf | log | open |
@@ -58,6 +60,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 | TIGER range overlap is an artifact of TIGER, not of the agency | one_contains_other 74,531, partial 23,032, same_range 7,973 | RoadCenterLine.range_overlap | log; replace roads when the E911 centerlines open | open |
 | PLACE_TYPE (Apartment vs Single Family) and MAP_BK_LOT / STATE_ID (parcels) differ inside dup groups | Record dup groups | Place_Type; parcel ID has no NENA field | registry (Place_Type) | open |
 | GC_EXCEPTION (geocode exception codes 300/402) and MAO_EXCEPTION ("USPS County Project") | Record dup groups | none; agency QA flags | log | open |
+| Overture lists units (UNIT J, APARTMENT 305) on a Record that has none or another unit, at the same spot | 629 unit-only misses (run 46038701141) | UnitPreTyp / UnitValue; real gap-fill units, not copies | log | open |
 | "Structure - Interior Unit" placement fails rcl_agreement 17% | by_placement | Placement | log | open |
 
 ## Utah (us-ut, UGRC address points)
@@ -66,6 +69,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 |---|---|---|---|---|
 | UTAddPtID is a concatenated address ("LOGAN \| 230 W 100 N"), not a unique ID | Record dup groups share it | Site_NGUID must come from somewhere else | registry (id_field) | open |
 | Unmapped Structure flag (Yes / YES / Y / Unknown) | Differs in dup groups | Placement or a Structure hint, not CLDXF Structure (a name) | log | open |
+| Overture holds a base-address point (no unit) on top of unit Records (1175, 1172) | 1,887 unit-only misses (run 46038701141) | not a copy; a building-level address the agency does not list | log | open |
 | UnitType TRLR, SPC, UNIT fail rcl_agreement 35%, 32%, 24% | rcl_agreement split | UnitPreTyp; mobile home parks addressed off the park road | log | open |
 | CountyID splits the rcl_agreement fail rate by 0.22 | source_fields_splitting | county-by-county range quality | agency | open |
 | Ogden-style numbered and president streets unmatched (GRANT, 25TH, ADAMS, JEFFERSON) | 67,034 name mismatches | St_PreDir / St_PosDir or alias names | pipeline (alias) | open |
@@ -76,5 +80,7 @@ First pass: PR #25, CI run 45945329812 (2026-11-27), Overture release resolved a
 |---|---|---|---|---|
 | Road centreline has names but no ranges | 82,867 no_range | RoadCenterLine ranges | upstream (find a ranged layer) | open |
 | COMM_NM is the civic community; the same number and road recur in neighbouring communities | 29 Record dup groups, all differ in COMM_NM | Post_Comm (via OpenAddresses city); CLDXF-CA community | pipeline | PR #25 (A2, A3: compared only between two Records) |
+| Overture numbers written as decimals with a suffix ('23.0 A', '222.0 A') | examples in copy misses (run 46038701141) | Add_Number / AddNum_Suf; an Overture conform defect | upstream (Overture) | open |
+| Overture lists unit points on a Record without a unit | 9,404 unit-only misses (run 46038701141) | Unit (CLDXF-CA) | log | open |
 | INFO carries the site use (MULTI BLDG, SFD, DUPLEX, SUMMER COTTAGE, GOVERNMENT WHARF, NESTED PID) | Differs in dup groups | Place_Type | registry | open |
 | LOC_CODE (DT, DS, BT) and FIRE_COV differ in dup groups | Record dup groups | ESN / service zones | log | open |
