@@ -22,7 +22,7 @@ the agencies can be asked later. Nothing here is a claim about what an agency al
 | `registry/remediation/oa_sources.csv` | generated | Every US/CA OpenAddresses source layer (addresses, centerlines, parcels, buildings) with the licence OA records and our first-read class |
 | `registry/remediation/oa_coverage.csv` | generated | Per state/province and layer: sources, statewide sources, counties with their own source, counts per class |
 | `registry/remediation/county_gaps.csv` | generated with `--counties` | US counties with no OA address source, or only unclear ones |
-| `registry/remediation/oa_proposals.csv` | generated | Endpoints our registry reads through an `oa_entry` that OpenAddresses doesn't list yet: entries to propose upstream |
+| `registry/remediation/oa_proposals.csv` | generated | Endpoints our registry reads through an `oa_entry`, and whether OpenAddresses lists them (`new`, `fix`, `listed`) |
 
 Regenerate with `python scripts/license_remediation.py` (downloads OpenAddresses master) or
 `--oa <checkout>`. Add `--counties <geoid,name csv>` (the Census Gazetteer counties file works) for the county
@@ -56,8 +56,9 @@ So 87% of the centerline sources (187 of 211) state no licence. Canada has no OA
 When a job finds a government layer OpenAddresses doesn't list (addresses, centerlines, parcels or buildings),
 write it in the job's registry as an `oa_entry` in OpenAddresses' own schema (endpoint, protocol, licence,
 attribution, conform), so the build reads it and the entry can go upstream unchanged. `oa_proposals.csv` lists
-every one with `status = to_propose` until the OpenAddresses source file has the same endpoint, then `listed`
-(and the `oa_entry` can be dropped from the registry). A person opens the OpenAddresses pull request.
+every one with `status` `new` (OpenAddresses doesn't list it) or `fix` (it lists the layer differently) until the
+OpenAddresses source file has the same entry, then `listed` (and the `oa_entry` can be dropped from the registry).
+`scripts/oa_upstream.py` drafts each pull request; a person opens it (docs/openaddresses-upstream.md).
 OpenAddresses takes sources with no stated licence, so a proposal doesn't wait on the licence ask; the licence
 travels in the entry as found.
 

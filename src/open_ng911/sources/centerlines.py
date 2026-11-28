@@ -34,8 +34,9 @@ INSERT = ("INSERT INTO road_seg (source_key, road_source, source_id, uid, street
 META_COLUMNS = ("source_key VARCHAR, road_source VARCHAR, agency VARCHAR, license_status VARCHAR, "
                 "license_url VARCHAR, attribution VARCHAR, source_date VARCHAR, fetched VARCHAR, data_url VARCHAR")
 
-# OpenAddresses centerline `classification` (OSM-style words) -> NENA RoadClass
-OA_CLASS = {"motorway": "Primary", "trunk": "Primary", "primary": "Secondary", "secondary": "Secondary",
+# OpenAddresses centerline `classification` (OSM-style words) -> NENA RoadClass. NENA's Primary is limited-access
+# only, so OpenAddresses' trunk (a major road that isn't a motorway, a US highway) is Secondary.
+OA_CLASS = {"motorway": "Primary", "trunk": "Secondary", "primary": "Secondary", "secondary": "Secondary",
             "tertiary": "Local", "residential": "Local", "unclassified": "Local", "service": "Local",
             "living_street": "Local", "track": "Vehicular Trail", "path": "Walkway/Pedestrian Trail",
             "footway": "Walkway/Pedestrian Trail", "pedestrian": "Walkway/Pedestrian Trail", "steps": "Stairway"}
